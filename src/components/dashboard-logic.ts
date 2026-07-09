@@ -3,8 +3,11 @@ import type { DragEndEvent } from "@dnd-kit/core";
 import { findColumn, moveWidget, toPositions, type Columns } from "@/lib/layout";
 
 export function buildColumns(widgets: Widget[], columnCount: number): Widget[][] {
-  const cols: Widget[][] = Array.from({ length: columnCount }, () => []);
-  for (const w of widgets.filter((x) => !x.hidden)) cols[Math.min(w.column, columnCount - 1)].push(w);
+  const n = Math.max(1, Number.isFinite(columnCount) ? Math.floor(columnCount) : 3);
+  const cols: Widget[][] = Array.from({ length: n }, () => []);
+  for (const w of widgets.filter((x) => !x.hidden)) {
+    cols[Math.max(0, Math.min(w.column, n - 1))].push(w);
+  }
   cols.forEach((c) => c.sort((a, b) => a.order - b.order));
   return cols;
 }
@@ -29,7 +32,11 @@ export function reorderWidgets(widgets: Widget[], columnCount: number, activeId:
   const moved = moveWidget(cols, activeId, toCol, toIndex);
   const positions = toPositions(moved);
   const byId = Object.fromEntries(widgets.map((w) => [w.id, w]));
-  return positions.map((p) => ({ ...byId[p.id], column: p.column, order: p.order }));
+  const visible = positions.map((p) => ({ ...byId[p.id], column: p.column, order: p.order }));
+  // buildColumns drops hidden widgets; re-append them unchanged so client state and
+  // the persisted PATCH keep every widget.
+  const hidden = widgets.filter((w) => w.hidden);
+  return [...visible, ...hidden];
 }
 
 export function applyDragEnd(widgets: Widget[], columnCount: number, e: DragEndEvent): Widget[] | null {

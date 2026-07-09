@@ -12,7 +12,11 @@ export function WidgetCard({ widget }: { widget: Widget }) {
     return <WidgetShell title={widget.type} state="error" error={`No renderer for ${widget.type}`} fetchedAt={null} onRefresh={() => {}} />;
   }
 
-  const state: WidgetState = isLoading ? "loading" : data?.status === "error" ? "error" : "ok";
+  const hasData = data != null && data.payload != null;
+  const errored = data?.status === "error";
+  // Keep showing last-good data on error (per spec); only blank to an error state
+  // when there's nothing cached to fall back to.
+  const state: WidgetState = isLoading ? "loading" : hasData ? "ok" : errored ? "error" : "empty";
   const Body = def.Component;
 
   return (
@@ -22,9 +26,19 @@ export function WidgetCard({ widget }: { widget: Widget }) {
       error={data?.error}
       fetchedAt={data?.fetchedAt ?? null}
       onRefresh={refresh}
+      headerExtra={
+        errored && hasData ? (
+          <span
+            title={data?.error ?? "Refresh failed"}
+            className="rounded-full bg-warn/15 px-1.5 py-0.5 text-[0.6875rem] font-medium text-warn"
+          >
+            stale
+          </span>
+        ) : undefined
+      }
     >
-      {data && data.payload != null && (
-        <Body data={data.payload} config={widget.config} runAction={async () => {}} />
+      {hasData && (
+        <Body data={data!.payload} config={widget.config} runAction={async () => {}} />
       )}
     </WidgetShell>
   );

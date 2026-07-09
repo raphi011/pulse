@@ -1,3 +1,4 @@
+import "server-only";
 import { randomUUID } from "node:crypto";
 import { eq, asc } from "drizzle-orm";
 import { getDb } from "@/db/client";

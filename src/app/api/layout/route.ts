@@ -11,7 +11,17 @@ export async function GET() {
 }
 
 export async function PATCH(req: Request) {
-  const body = (await req.json()) as { positions?: { id: string; column: number; order: number }[] };
-  if (body.positions) setPositions(body.positions);
+  let body: { positions?: { id: string; column: number; order: number }[] };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+  if (body.positions !== undefined) {
+    if (!Array.isArray(body.positions)) {
+      return NextResponse.json({ error: "positions must be an array" }, { status: 400 });
+    }
+    setPositions(body.positions);
+  }
   return NextResponse.json({ ok: true });
 }
