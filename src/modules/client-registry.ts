@@ -1,0 +1,20 @@
+import type { ClientWidget } from "./contracts";
+
+const registry = new Map<string, ClientWidget>();
+
+export function registerClientWidget(def: ClientWidget<any, any>): void {
+  if (registry.has(def.type)) throw new Error(`Client widget already registered: ${def.type}`);
+  registry.set(def.type, def as ClientWidget);
+}
+
+export function getClientWidget(type: string): ClientWidget | undefined {
+  return registry.get(type);
+}
+
+export function listClientWidgets(): { type: string; title: string }[] {
+  return [...registry.values()].map((d) => ({ type: d.type, title: d.title }));
+}
+
+export function __clearClientRegistry(): void {
+  registry.clear();
+}
