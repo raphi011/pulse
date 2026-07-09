@@ -735,12 +735,11 @@ export function addWidget(type: string, config: Record<string, unknown>): Widget
 
 export function setPositions(positions: { id: string; column: number; order: number }[]): void {
   const db = getDb();
-  const tx = db.transaction((ps: typeof positions) => {
-    for (const p of ps) {
-      db.update(widgets).set({ column: p.column, order: p.order }).where(eq(widgets.id, p.id)).run();
+  db.transaction((tx) => {
+    for (const p of positions) {
+      tx.update(widgets).set({ column: p.column, order: p.order }).where(eq(widgets.id, p.id)).run();
     }
   });
-  tx(positions);
 }
 
 export function setHidden(id: string, hidden: boolean): void {
