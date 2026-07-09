@@ -108,7 +108,7 @@ dashboard.db-*
 
 ```bash
 git add -A
-git commit -m "[CORE-0000] Scaffold Next.js app"
+git commit -m "chore: scaffold Next.js app"
 ```
 
 ---
@@ -134,7 +134,7 @@ Expected: all resolve with no missing-peer errors.
 
 ```bash
 git add package.json package-lock.json
-git commit -m "[CORE-0000] Add project dependencies"
+git commit -m "Add project dependencies"
 ```
 
 ---
@@ -199,7 +199,7 @@ Expected: 1 passed.
 
 ```bash
 git add -A
-git commit -m "[CORE-0000] Configure Vitest"
+git commit -m "Configure Vitest"
 ```
 
 ---
@@ -257,7 +257,7 @@ Expected: build succeeds (Tailwind v4 already wired by the scaffold via `@tailwi
 
 ```bash
 git add -A
-git commit -m "[CORE-0000] Add Tailwind theme tokens and dark base"
+git commit -m "Add Tailwind theme tokens and dark base"
 ```
 
 ---
@@ -366,7 +366,7 @@ Expected: `dashboard.db` created, tables applied.
 
 ```bash
 git add -A
-git commit -m "[CORE-0000] Add Drizzle schema, client, and initial migration"
+git commit -m "Add Drizzle schema, client, and initial migration"
 ```
 
 ---
@@ -448,7 +448,7 @@ Expected: PASS.
 
 ```bash
 git add -A
-git commit -m "[CORE-0000] Add pure layout reducer"
+git commit -m "Add pure layout reducer"
 ```
 
 ---
@@ -610,7 +610,7 @@ Expected: PASS.
 
 ```bash
 git add -A
-git commit -m "[CORE-0000] Add widget contracts and server/client registries"
+git commit -m "Add widget contracts and server/client registries"
 ```
 
 ---
@@ -769,7 +769,7 @@ Expected: PASS (4 tests).
 
 ```bash
 git add -A
-git commit -m "[CORE-0000] Add config repository"
+git commit -m "Add config repository"
 ```
 
 ---
@@ -852,7 +852,7 @@ Expected: PASS (3 tests).
 
 ```bash
 git add -A
-git commit -m "[CORE-0000] Add cache repository"
+git commit -m "Add cache repository"
 ```
 
 ---
@@ -974,7 +974,7 @@ Expected: PASS (4 tests).
 
 ```bash
 git add -A
-git commit -m "[CORE-0000] Add cache-first widget data service"
+git commit -m "Add cache-first widget data service"
 ```
 
 ---
@@ -1053,7 +1053,7 @@ Expected: PASS.
 
 ```bash
 git add -A
-git commit -m "[CORE-0000] Add core.status server module"
+git commit -m "Add core.status server module"
 ```
 
 ---
@@ -1138,7 +1138,7 @@ Expected: PASS.
 
 ```bash
 git add -A
-git commit -m "[CORE-0000] Add core.status client widget and registration barrels"
+git commit -m "Add core.status client widget and registration barrels"
 ```
 
 ---
@@ -1287,7 +1287,7 @@ Expected: PASS (4 tests).
 
 ```bash
 git add -A
-git commit -m "[CORE-0000] Add layout and widget mutation API routes"
+git commit -m "Add layout and widget mutation API routes"
 ```
 
 ---
@@ -1363,7 +1363,7 @@ Expected: PASS (2 tests).
 
 ```bash
 git add -A
-git commit -m "[CORE-0000] Add cache-first widget data API route"
+git commit -m "Add cache-first widget data API route"
 ```
 
 ---
@@ -1407,7 +1407,7 @@ Expected: success.
 
 ```bash
 git add -A
-git commit -m "[CORE-0000] Add TanStack Query provider"
+git commit -m "Add TanStack Query provider"
 ```
 
 ---
@@ -1511,7 +1511,7 @@ Expected: PASS (3 tests).
 
 ```bash
 git add -A
-git commit -m "[CORE-0000] Add widget shell with loading/error/empty/ok states"
+git commit -m "Add widget shell with loading/error/empty/ok states"
 ```
 
 ---
@@ -1594,7 +1594,7 @@ Expected: success.
 
 ```bash
 git add -A
-git commit -m "[CORE-0000] Add widget data hook and widget card"
+git commit -m "Add widget data hook and widget card"
 ```
 
 ---
@@ -1668,7 +1668,7 @@ Expected: success.
 
 ```bash
 git add -A
-git commit -m "[CORE-0000] Add edit-mode context and add-widget drawer"
+git commit -m "Add edit-mode context and add-widget drawer"
 ```
 
 ---
@@ -1796,7 +1796,7 @@ Expected: success.
 
 ```bash
 git add -A
-git commit -m "[CORE-0000] Add dnd-kit masonry dashboard (logic stubbed)"
+git commit -m "Add dnd-kit masonry dashboard (logic stubbed)"
 ```
 
 ---
@@ -1905,7 +1905,7 @@ Expected: build success; all tests pass.
 
 ```bash
 git add -A
-git commit -m "[CORE-0000] Implement dashboard drag reorder logic"
+git commit -m "Implement dashboard drag reorder logic"
 ```
 
 ---
@@ -1958,7 +1958,7 @@ Open http://localhost:3000. Expected:
 
 ```bash
 git add -A
-git commit -m "[CORE-0000] Wire dashboard page with default seed"
+git commit -m "Wire dashboard page with default seed"
 ```
 
 ---
@@ -1993,7 +1993,7 @@ Storage lives in `dashboard.db` (SQLite). Layout is the `widgets` table; cached 
 
 ```bash
 git add -A
-git commit -m "[CORE-0000] Add README with module authoring guide"
+git commit -m "Add README with module authoring guide"
 ```
 
 ---
@@ -2011,7 +2011,7 @@ Expected: all green.
 
 ```bash
 git add -A
-git commit -m "[CORE-0000] Verification fixes"
+git commit -m "Verification fixes"
 ```
 
 ---
@@ -2033,7 +2033,7 @@ Expected: all green (no structural changes, so tests still pass).
 
 ```bash
 git add -A
-git commit -m "[CORE-0000] Polish dashboard visuals (impeccable pass)"
+git commit -m "Polish dashboard visuals (impeccable pass)"
 ```
 
 ---
