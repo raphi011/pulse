@@ -2,7 +2,7 @@ import type { ClientWidget } from "./contracts";
 
 const registry = new Map<string, ClientWidget>();
 
-export function registerClientWidget(def: ClientWidget<any, any>): void {
+export function registerClientWidget<Data, Config>(def: ClientWidget<Data, Config>): void {
   if (registry.has(def.type)) throw new Error(`Client widget already registered: ${def.type}`);
   registry.set(def.type, def as ClientWidget);
 }
