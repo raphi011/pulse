@@ -3,8 +3,15 @@ import { getClientWidget } from "@/modules/client-registry";
 import type { Widget } from "@/server/config-repo";
 import { WidgetShell, type WidgetState } from "./widget-shell";
 import { useWidgetData } from "./use-widget-data";
+import { CardMenu } from "./card-menu";
 
-export function WidgetCard({ widget }: { widget: Widget }) {
+export function WidgetCard({
+  widget, onConfigure, onRemove,
+}: {
+  widget: Widget;
+  onConfigure?: (w: Widget) => void;
+  onRemove?: (id: string) => void;
+}) {
   const def = getClientWidget(widget.type);
   const { data, isLoading, refresh } = useWidgetData(widget.id, widget.refreshInterval);
 
@@ -18,6 +25,10 @@ export function WidgetCard({ widget }: { widget: Widget }) {
   // when there's nothing cached to fall back to.
   const state: WidgetState = isLoading ? "loading" : hasData ? "ok" : errored ? "error" : "empty";
   const Body = def.Component;
+  const menu =
+    onConfigure && onRemove ? (
+      <CardMenu onConfigure={() => onConfigure(widget)} onRemove={() => onRemove(widget.id)} />
+    ) : undefined;
 
   return (
     <WidgetShell
@@ -26,6 +37,7 @@ export function WidgetCard({ widget }: { widget: Widget }) {
       error={data?.error}
       fetchedAt={data?.fetchedAt ?? null}
       onRefresh={refresh}
+      menu={menu}
       headerExtra={
         errored && hasData ? (
           <span

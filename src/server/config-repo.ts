@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { eq, asc } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { widgets, prefs } from "@/db/schema";
+import { getServerWidget } from "@/modules/server-registry";
 
 export type Widget = typeof widgets.$inferSelect;
 
@@ -17,6 +18,8 @@ export function getWidget(id: string): Widget | undefined {
 const COLUMN_COUNT_DEFAULT = 3;
 
 export function addWidget(type: string, config: Record<string, unknown>): Widget {
+  const def = getServerWidget(type);
+  const validated = def ? (def.configSchema.parse(config) as Record<string, unknown>) : config;
   const columnCount = Number(getPref("columnCount", String(COLUMN_COUNT_DEFAULT)));
   const existing = getWidgets();
   const counts = Array.from({ length: columnCount }, () => 0);
@@ -24,7 +27,7 @@ export function addWidget(type: string, config: Record<string, unknown>): Widget
   const column = counts.indexOf(Math.min(...counts));
   const order = existing.filter((w) => w.column === column).length;
   const row: Widget = {
-    id: randomUUID(), type, column, order, hidden: false, config, refreshInterval: null,
+    id: randomUUID(), type, column, order, hidden: false, config: validated, refreshInterval: null,
   };
   getDb().insert(widgets).values(row).run();
   return row;
@@ -41,6 +44,10 @@ export function setPositions(positions: { id: string; column: number; order: num
 
 export function setHidden(id: string, hidden: boolean): void {
   getDb().update(widgets).set({ hidden }).where(eq(widgets.id, id)).run();
+}
+
+export function setConfig(id: string, config: Record<string, unknown>): void {
+  getDb().update(widgets).set({ config }).where(eq(widgets.id, id)).run();
 }
 
 export function removeWidget(id: string): void {

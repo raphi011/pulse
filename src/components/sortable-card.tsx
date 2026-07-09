@@ -5,7 +5,7 @@ import type { Widget } from "@/server/config-repo";
 import { WidgetCard } from "./widget-card";
 import { useEditMode } from "./edit-mode";
 
-export function SortableCard({ widget, onRemove }: { widget: Widget; onRemove: (id: string) => void }) {
+export function SortableCard({ widget, onRemove, onConfigure }: { widget: Widget; onRemove: (id: string) => void; onConfigure: (w: Widget) => void }) {
   const { editing } = useEditMode();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: widget.id });
   const style = {
@@ -39,7 +39,7 @@ export function SortableCard({ widget, onRemove }: { widget: Widget; onRemove: (
           </button>
         </div>
       )}
-      <WidgetCard widget={widget} />
+      <WidgetCard widget={widget} onRemove={onRemove} onConfigure={onConfigure} />
     </div>
   );
 }

@@ -21,7 +21,7 @@ function Skeleton() {
 }
 
 export function WidgetShell({
-  title, state, error, fetchedAt, onRefresh, children, headerExtra,
+  title, state, error, fetchedAt, onRefresh, children, headerExtra, menu,
 }: {
   title: string;
   state: WidgetState;
@@ -30,6 +30,7 @@ export function WidgetShell({
   onRefresh: () => void;
   children?: ReactNode;
   headerExtra?: ReactNode;
+  menu?: ReactNode;
 }) {
   return (
     <section className="group/card overflow-hidden rounded-xl bg-card shadow-sm ring-1 ring-border transition-shadow duration-150 hover:shadow-md dark:bg-card-dark dark:shadow-none dark:ring-border-dark dark:hover:ring-white/15">
@@ -38,6 +39,7 @@ export function WidgetShell({
         <div className="flex shrink-0 items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
           {fetchedAt && <span className="tabular-nums">{ago(fetchedAt)}</span>}
           {headerExtra}
+          {menu}
           <button
             aria-label="Refresh"
             onClick={onRefresh}
