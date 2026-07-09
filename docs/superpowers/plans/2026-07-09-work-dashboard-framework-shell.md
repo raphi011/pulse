@@ -735,12 +735,11 @@ export function addWidget(type: string, config: Record<string, unknown>): Widget
 
 export function setPositions(positions: { id: string; column: number; order: number }[]): void {
   const db = getDb();
-  const tx = db.transaction((ps: typeof positions) => {
-    for (const p of ps) {
-      db.update(widgets).set({ column: p.column, order: p.order }).where(eq(widgets.id, p.id)).run();
+  db.transaction((tx) => {
+    for (const p of positions) {
+      tx.update(widgets).set({ column: p.column, order: p.order }).where(eq(widgets.id, p.id)).run();
     }
   });
-  tx(positions);
 }
 
 export function setHidden(id: string, hidden: boolean): void {
@@ -1741,7 +1740,10 @@ export function Dashboard({ initialWidgets, columnCount }: { initialWidgets: Wid
 
   async function onAdd(type: string) {
     const res = await fetch("/api/widgets", { method: "POST", body: JSON.stringify({ type }) });
-    if (res.ok) setWidgets((w) => [...w, await res.json()]);
+    if (res.ok) {
+      const added = await res.json();
+      setWidgets((w) => [...w, added]);
+    }
   }
   async function onRemove(id: string) {
     await fetch(`/api/widgets/${id}`, { method: "DELETE" });
