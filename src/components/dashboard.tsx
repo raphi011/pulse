@@ -6,6 +6,7 @@ import type { Widget } from "@/server/config-repo";
 import { buildColumns, applyDragEnd, persistPositions } from "@/components/dashboard-logic";
 import { SortableCard } from "./sortable-card";
 import { AddWidgetDrawer } from "./add-widget-drawer";
+import { ConfigureDialog } from "./configure-dialog";
 import { EditModeProvider, useEditMode } from "./edit-mode";
 
 function Toolbar({ onAdd }: { onAdd: (type: string) => void }) {
@@ -54,6 +55,7 @@ function EmptyState() {
 
 export function Dashboard({ initialWidgets, columnCount }: { initialWidgets: Widget[]; columnCount: number }) {
   const [widgets, setWidgets] = useState(initialWidgets);
+  const [configuring, setConfiguring] = useState<Widget | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const columns = buildColumns(widgets, columnCount);
   const isEmpty = columns.every((col) => col.length === 0);
@@ -73,6 +75,9 @@ export function Dashboard({ initialWidgets, columnCount }: { initialWidgets: Wid
     const next = applyDragEnd(widgets, columnCount, e);
     if (next) { setWidgets(next); void persistPositions(next); }
   }
+  function onConfigSaved(id: string, config: Record<string, unknown>) {
+    setWidgets((ws) => ws.map((w) => (w.id === id ? { ...w, config } : w)));
+  }
 
   return (
     <EditModeProvider>
@@ -86,7 +91,7 @@ export function Dashboard({ initialWidgets, columnCount }: { initialWidgets: Wid
               {columns.map((col, i) => (
                 <SortableContext key={i} items={col.map((w) => w.id)} strategy={verticalListSortingStrategy}>
                   <div className="flex flex-col gap-4">
-                    {col.map((w) => <SortableCard key={w.id} widget={w} onRemove={onRemove} />)}
+                    {col.map((w) => <SortableCard key={w.id} widget={w} onRemove={onRemove} onConfigure={setConfiguring} />)}
                   </div>
                 </SortableContext>
               ))}
@@ -94,6 +99,13 @@ export function Dashboard({ initialWidgets, columnCount }: { initialWidgets: Wid
           </DndContext>
         )}
       </main>
+      {configuring && (
+        <ConfigureDialog
+          widget={configuring}
+          onClose={() => setConfiguring(null)}
+          onSaved={onConfigSaved}
+        />
+      )}
     </EditModeProvider>
   );
 }
