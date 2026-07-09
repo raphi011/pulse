@@ -29,7 +29,10 @@ describe("registries", () => {
   });
 
   it("registers and lists a client widget", () => {
-    registerClientWidget({ type: "t.a", title: "A", Component: () => null });
+    registerClientWidget({
+      type: "t.a", title: "A", Component: () => null,
+      configSchema: z.object({}), defaultConfig: {},
+    });
     expect(getClientWidget("t.a")?.title).toBe("A");
     expect(listClientWidgets()).toEqual([{ type: "t.a", title: "A" }]);
   });

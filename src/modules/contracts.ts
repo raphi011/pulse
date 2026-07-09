@@ -27,4 +27,6 @@ export interface ClientWidget<Data = unknown, Config = unknown> {
   type: string;
   title: string;
   Component: FC<WidgetBodyProps<Data, Config>>;
+  configSchema: ZodType<Config>;
+  defaultConfig: Config;
 }
