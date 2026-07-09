@@ -1,0 +1,55 @@
+import { randomUUID } from "node:crypto";
+import { eq, asc } from "drizzle-orm";
+import { getDb } from "@/db/client";
+import { widgets, prefs } from "@/db/schema";
+
+export type Widget = typeof widgets.$inferSelect;
+
+export function getWidgets(): Widget[] {
+  return getDb().select().from(widgets).orderBy(asc(widgets.column), asc(widgets.order)).all();
+}
+
+export function getWidget(id: string): Widget | undefined {
+  return getDb().select().from(widgets).where(eq(widgets.id, id)).get();
+}
+
+const COLUMN_COUNT_DEFAULT = 3;
+
+export function addWidget(type: string, config: Record<string, unknown>): Widget {
+  const columnCount = Number(getPref("columnCount", String(COLUMN_COUNT_DEFAULT)));
+  const existing = getWidgets();
+  const counts = Array.from({ length: columnCount }, () => 0);
+  for (const w of existing) if (w.column < columnCount) counts[w.column]++;
+  const column = counts.indexOf(Math.min(...counts));
+  const order = existing.filter((w) => w.column === column).length;
+  const row: Widget = {
+    id: randomUUID(), type, column, order, hidden: false, config, refreshInterval: null,
+  };
+  getDb().insert(widgets).values(row).run();
+  return row;
+}
+
+export function setPositions(positions: { id: string; column: number; order: number }[]): void {
+  const db = getDb();
+  db.transaction((tx) => {
+    for (const p of positions) {
+      tx.update(widgets).set({ column: p.column, order: p.order }).where(eq(widgets.id, p.id)).run();
+    }
+  });
+}
+
+export function setHidden(id: string, hidden: boolean): void {
+  getDb().update(widgets).set({ hidden }).where(eq(widgets.id, id)).run();
+}
+
+export function removeWidget(id: string): void {
+  getDb().delete(widgets).where(eq(widgets.id, id)).run();
+}
+
+export function getPref(key: string, fallback: string): string {
+  return getDb().select().from(prefs).where(eq(prefs.key, key)).get()?.value ?? fallback;
+}
+
+export function setPref(key: string, value: string): void {
+  getDb().insert(prefs).values({ key, value }).onConflictDoUpdate({ target: prefs.key, set: { value } }).run();
+}
