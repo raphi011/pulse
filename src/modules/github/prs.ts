@@ -6,14 +6,14 @@ export type GhSearchPr = {
   number: number; title: string; url: string;
   repository: { nameWithOwner: string };
   author: { login: string };
-  updatedAt: string; isDraft: boolean;
+  updatedAt: string;
 };
 
 type GhCheck = { status?: string; conclusion?: string; state?: string };
 type GhPrView = { statusCheckRollup?: GhCheck[]; reviewDecision?: string };
 
 const FAIL = new Set(["FAILURE", "TIMED_OUT", "CANCELLED", "ERROR", "STARTUP_FAILURE", "ACTION_REQUIRED"]);
-const PENDING = new Set(["IN_PROGRESS", "QUEUED", "PENDING", "WAITING", "REQUESTED"]);
+const PENDING = new Set(["IN_PROGRESS", "QUEUED", "PENDING", "WAITING", "REQUESTED", "EXPECTED"]);
 
 export function rollupCi(checks: GhCheck[] | undefined): CiStatus {
   if (!checks || checks.length === 0) return "none";
@@ -47,10 +47,11 @@ async function enrichPr(pr: PrItem): Promise<PrItem> {
 async function searchAndEnrich(searchArgs: string[]): Promise<PrItem[]> {
   const raw = await ghJson<GhSearchPr[]>(searchArgs);
   const base = raw.map(normalizeSearchPr);
-  return Promise.all(base.map(enrichPr));
+  const settled = await Promise.allSettled(base.map(enrichPr));
+  return settled.map((r, i) => (r.status === "fulfilled" ? r.value : base[i]));
 }
 
-const SEARCH_JSON = "number,title,url,repository,author,updatedAt,isDraft";
+const SEARCH_JSON = "number,title,url,repository,author,updatedAt";
 
 export async function fetchMyPrs(config: MyPrsConfig): Promise<MyPrsData> {
   const prs = await searchAndEnrich([
