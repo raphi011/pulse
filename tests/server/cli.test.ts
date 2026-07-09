@@ -27,6 +27,7 @@ describe("runCli", () => {
   it("resolves stdout/stderr on success", async () => {
     whenExec(null, "hello", "");
     await expect(runCli("gh", ["--version"])).resolves.toEqual({ stdout: "hello", stderr: "" });
+    expect(mockExec).toHaveBeenCalledWith("gh", ["--version"], expect.anything(), expect.any(Function));
   });
 
   it("throws not-found on ENOENT", async () => {
@@ -47,10 +48,32 @@ describe("runCli", () => {
     expect(err.message).toBe("Not authenticated — run `gh auth login`");
   });
 
+  it("uses default auth message when none is provided", async () => {
+    whenExec(Object.assign(new Error("exit 1"), { code: 1 }), "", "gh auth login required");
+    const err = await runCli("gh", ["x"], { notAuthenticatedPattern: /gh auth login/i }).catch((e) => e);
+    expect(err.kind).toBe("auth");
+    expect(err.message).toBe("Not authenticated");
+  });
+
   it("throws failed with stderr for other non-zero exits", async () => {
     whenExec(Object.assign(new Error("exit 1"), { code: 1 }), "", "some error text");
     const err = await runCli("gh", ["x"]).catch((e) => e);
     expect(err.kind).toBe("failed");
     expect(err.message).toBe("some error text");
+  });
+
+  it("falls back to the error message when stderr is empty on failure", async () => {
+    whenExec(Object.assign(new Error("spawn EACCES"), { code: "EACCES" }), "", "");
+    const err = await runCli("gh", ["x"]).catch((e) => e);
+    expect(err.kind).toBe("failed");
+    expect(err.message).toBe("spawn EACCES");
+  });
+
+  it("throws timeout when the process is killed", async () => {
+    whenExec(Object.assign(new Error("killed"), { killed: true, signal: "SIGTERM" }));
+    const err = await runCli("gh", ["x"]).catch((e) => e);
+    expect(err).toBeInstanceOf(CliError);
+    expect(err.kind).toBe("timeout");
+    expect(err.message).toMatch(/timed out/);
   });
 });
