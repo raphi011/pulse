@@ -19,14 +19,28 @@ section). The same risk applies here: the raw Chat API shapes below (`sender.dis
 `getSpaceReadState.name` numeric id, the browser deep-link format) are **provisional until Task 0 records
 real authenticated output**. Task 0 is mandatory and gates every later task's field access.
 
+## ✅ Task 0 findings (already recorded — these override the code sketches below where they differ)
+
+Task 0 ran against live auth. Fixtures are committed under `tests/fixtures/gws/chat/`. Three corrections:
+
+1. **A message's `sender` is `{ name: "users/<id>", type }` — NO `displayName`.** `members.list` also
+   returns only ids. The partner name is resolved via the **People API**:
+   `gws people people get --params '{"resourceName":"people/<id>","personFields":"names"}'` →
+   `names[0].displayName`, mapping `users/<id>` → `people/<id>`.
+2. **Deep links come from `Space.spaceUri`** (`https://chat.google.com/dm/<id>?cls=11` for DMs,
+   `.../room/<id>?cls=11` for named spaces) — present in `spaces.list` and `spaces.get`. No URL building;
+   the `chatUrl`/`spaceIdSegment` helpers are **dropped**.
+3. Confirmed: `getSpaceReadState.name` is `users/<numeric-id>/...` (so `callerUserId` works) and named
+   spaces return `displayName` (channels need no People call).
+
 ## File Structure
 
 - **New** `src/modules/gws/chat.ts` — server-only: pure helpers (`isUnread`, `callerUserId`,
-  `spaceIdSegment`, `chatUrl`, `normalizeDm`, `normalizeChannel`) + orchestrators (`fetchChatDms`,
+  `peopleResourceName`, `normalizeDm`, `normalizeChannel`) + orchestrators (`fetchChatDms`,
   `fetchChatChannels`), built on `gwsJson` from `./gws`.
 - **New** `src/modules/gws/widgets/chat-dms-widget.tsx` — `"use client"` body.
 - **New** `src/modules/gws/widgets/chat-channels-widget.tsx` — `"use client"` body.
-- **New** `tests/fixtures/gws/chat/{dm-spaces,space-read-state,messages-latest,space-get}.json`.
+- **New** `tests/fixtures/gws/chat/{dm-spaces,space-read-state,messages-latest,space-get,people-get}.json` (done in Task 0).
 - **New** `tests/modules/gws-chat.test.ts` — helper unit tests + mocked-`gwsJson` orchestration tests.
 - **Modify** `src/modules/gws/manifest.ts` — add type ids, config schemas/defaults, data shapes.
 - **Modify** `src/modules/gws/server.ts` — register the two server widgets.
@@ -37,40 +51,12 @@ No barrel edits: `gws/server.ts` and `gws/client.ts` are already imported by `sr
 
 ---
 
-### Task 0: Record real fixtures (auth prerequisite)
+### Task 0: Record + sanitize fixtures — ✅ DONE
 
-**Files:**
-- Create: `tests/fixtures/gws/chat/dm-spaces.json`, `space-read-state.json`, `messages-latest.json`, `space-get.json`
-
-- [ ] **Step 1: Confirm auth**
-
-Run: `gws chat spaces list --params '{"pageSize":1}'`
-Expected: JSON with a `spaces` array (not an `{ "error": { code: 401 } }` body). If 401, run `gws auth login` first.
-
-- [ ] **Step 2: Record the four fixtures**
-
-```bash
-mkdir -p tests/fixtures/gws/chat
-gws chat spaces list --params '{"filter":"spaceType = \"DIRECT_MESSAGE\"","pageSize":50}' > tests/fixtures/gws/chat/dm-spaces.json
-# Pick one DM space name from the file above, e.g. spaces/AAAA:
-gws chat users spaces getSpaceReadState --params '{"name":"users/me/spaces/AAAA/spaceReadState"}' > tests/fixtures/gws/chat/space-read-state.json
-gws chat spaces messages list --params '{"parent":"spaces/AAAA","orderBy":"createTime desc","pageSize":1}' > tests/fixtures/gws/chat/messages-latest.json
-gws chat spaces get --params '{"name":"spaces/AAAA"}' > tests/fixtures/gws/chat/space-get.json
-```
-
-- [ ] **Step 3: Verify the three provisional assumptions and record findings as comments in `chat.ts` later**
-
-Confirm by inspecting the fixtures:
-1. `messages-latest.json`: the message has `text`, `createTime`, and `sender.displayName` (non-empty for a human sender). If `sender.displayName` is empty, note it — Task 3's `normalizeDm` fallback ("Direct message") covers it, but flag for a possible `members.list` follow-up.
-2. `space-read-state.json`: the `name` field is `users/<numeric-id>/spaces/.../spaceReadState` (not literally `users/me/...`). Either way `callerUserId` handles it.
-3. Open the DM and a named space in a browser; note the URL fragment (`#chat/dm/<id>` vs `#chat/space/<id>`). If it differs from Task 2's `chatUrl`, adjust `chatUrl` accordingly.
-
-- [ ] **Step 4: Commit the fixtures**
-
-```bash
-git add tests/fixtures/gws/chat/
-git commit -m "test(gws): record Google Chat API fixtures"
-```
+Recorded live, sanitized (real names/message text replaced with placeholders), and committed:
+`tests/fixtures/gws/chat/{dm-spaces,space-read-state,messages-latest,space-get,people-get}.json`.
+Findings are captured in the "Task 0 findings" callout above and folded into the tasks below. No action
+remains here.
 
 ---
 
@@ -146,7 +132,7 @@ git commit -m "feat(gws): add Chat widget config schemas and data shapes"
 import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("@/modules/gws/gws", () => ({ gwsJson: vi.fn() }));
 import {
-  isUnread, callerUserId, spaceIdSegment, chatUrl, normalizeDm, normalizeChannel,
+  isUnread, callerUserId, peopleResourceName, normalizeDm, normalizeChannel,
 } from "@/modules/gws/chat";
 
 describe("isUnread", () => {
@@ -166,43 +152,43 @@ describe("callerUserId", () => {
   it("returns null when absent", () => expect(callerUserId(undefined)).toBeNull());
 });
 
-describe("spaceIdSegment / chatUrl", () => {
-  it("strips the spaces/ prefix", () => expect(spaceIdSegment("spaces/AAAA")).toBe("AAAA"));
-  it("builds a dm deep link", () =>
-    expect(chatUrl("spaces/AAAA", "dm")).toBe("https://mail.google.com/chat/u/0/#chat/dm/AAAA"));
-  it("builds a space deep link", () =>
-    expect(chatUrl("spaces/AAAA", "space")).toBe("https://mail.google.com/chat/u/0/#chat/space/AAAA"));
+describe("peopleResourceName", () => {
+  it("maps users/<id> to people/<id>", () =>
+    expect(peopleResourceName("users/9")).toBe("people/9"));
+  it("returns null when missing", () => expect(peopleResourceName(undefined)).toBeNull());
 });
 
 describe("normalizeDm", () => {
-  it("maps sender name, text, time, url", () => {
+  it("maps partner name, text, time, url (from spaceUri)", () => {
     const dm = normalizeDm(
-      { name: "spaces/AAAA", lastActiveTime: "2026-07-10T10:00:00Z" },
-      { name: "spaces/AAAA/messages/m1", text: "  hi  ", createTime: "2026-07-10T10:00:00Z", sender: { name: "users/9", displayName: "Jane Doe" } },
+      { name: "spaces/AAAA", spaceUri: "https://chat.google.com/dm/AAAA?cls=11", lastActiveTime: "2026-07-10T10:00:00Z" },
+      { name: "spaces/AAAA/messages/m1", text: "  hi  ", createTime: "2026-07-10T10:00:00Z", sender: { name: "users/9" } },
+      "Jane Doe",
     );
     expect(dm).toEqual({
       spaceId: "spaces/AAAA", partner: "Jane Doe", snippet: "hi",
-      time: "2026-07-10T10:00:00Z", url: "https://mail.google.com/chat/u/0/#chat/dm/AAAA",
+      time: "2026-07-10T10:00:00Z", url: "https://chat.google.com/dm/AAAA?cls=11",
     });
   });
-  it("falls back to 'Direct message' when sender has no displayName", () => {
-    const dm = normalizeDm({ name: "spaces/AAAA" }, { name: "spaces/AAAA/messages/m1", sender: { name: "users/9" } });
+  it("falls back to 'Direct message' when no name resolved", () => {
+    const dm = normalizeDm({ name: "spaces/AAAA" }, { name: "spaces/AAAA/messages/m1", sender: { name: "users/9" } }, null);
     expect(dm.partner).toBe("Direct message");
     expect(dm.snippet).toBe("");
+    expect(dm.url).toBe("");
   });
 });
 
 describe("normalizeChannel", () => {
-  it("derives unread and prefers displayName", () => {
+  it("derives unread, prefers displayName, url from spaceUri", () => {
     const ch = normalizeChannel(
       "spaces/BBBB",
-      { name: "spaces/BBBB", displayName: "Team Chat", lastActiveTime: "2026-07-10T12:00:00Z" },
+      { name: "spaces/BBBB", displayName: "Team Chat", spaceUri: "https://chat.google.com/room/BBBB?cls=11", lastActiveTime: "2026-07-10T12:00:00Z" },
       { lastReadTime: "2026-07-10T11:00:00Z" },
       { name: "spaces/BBBB/messages/m2", text: "ping", createTime: "2026-07-10T12:00:00Z" },
     );
     expect(ch).toEqual({
       spaceId: "spaces/BBBB", name: "Team Chat", snippet: "ping", time: "2026-07-10T12:00:00Z",
-      unread: true, url: "https://mail.google.com/chat/u/0/#chat/space/BBBB",
+      unread: true, url: "https://chat.google.com/room/BBBB?cls=11",
     });
   });
   it("falls back to the id when no displayName", () => {
@@ -227,23 +213,14 @@ import type {
   ChatDmsConfig, ChatDmsData, ChatChannelsConfig, ChatChannelsData, ChatDm, ChatChannel,
 } from "./manifest";
 
-// --- Raw gws Chat API shapes (only the fields we read) ---
-type Space = { name: string; displayName?: string; spaceType?: string; lastActiveTime?: string };
+// --- Raw gws Chat/People API shapes (only the fields we read; see Task 0 fixtures) ---
+type Space = { name: string; displayName?: string; spaceType?: string; spaceUri?: string; lastActiveTime?: string };
 type SpacesResp = { spaces?: Space[] };
 type ReadState = { name?: string; lastReadTime?: string };
-type ChatUser = { name?: string; displayName?: string; type?: string };
+type ChatUser = { name?: string; type?: string }; // NOTE: Chat's sender/member has NO displayName
 type Message = { name: string; text?: string; createTime?: string; sender?: ChatUser };
 type MessagesResp = { messages?: Message[] };
-
-/** "spaces/AAAA" -> "AAAA" (the id used in deep links). */
-export function spaceIdSegment(spaceName: string): string {
-  return spaceName.startsWith("spaces/") ? spaceName.slice("spaces/".length) : spaceName;
-}
-
-/** Google Chat web deep link. `kind` picks the DM vs space fragment (verified in Task 0). */
-export function chatUrl(spaceName: string, kind: "space" | "dm"): string {
-  return `https://mail.google.com/chat/u/0/#chat/${kind}/${spaceIdSegment(spaceName)}`;
-}
+type Person = { names?: { displayName?: string }[] };
 
 /** A space is unread when its last message is newer than the caller's last read time. */
 export function isUnread(lastActiveTime?: string, lastReadTime?: string): boolean {
@@ -258,13 +235,19 @@ export function callerUserId(readStateName?: string): string | null {
   return m ? m[1] : null;
 }
 
-export function normalizeDm(space: Space, msg: Message): ChatDm {
+/** Chat sender id "users/12345" -> People API resource "people/12345" (or null). */
+export function peopleResourceName(userName?: string): string | null {
+  const m = userName?.match(/^users\/(.+)$/);
+  return m ? `people/${m[1]}` : null;
+}
+
+export function normalizeDm(space: Space, msg: Message, partner: string | null): ChatDm {
   return {
     spaceId: space.name,
-    partner: msg.sender?.displayName?.trim() || "Direct message",
+    partner: partner?.trim() || "Direct message",
     snippet: msg.text?.trim() ?? "",
     time: msg.createTime ?? space.lastActiveTime ?? "",
-    url: chatUrl(space.name, "dm"),
+    url: space.spaceUri ?? "",
   };
 }
 
@@ -275,10 +258,12 @@ export function normalizeChannel(spaceId: string, space: Space, rs: ReadState, m
     snippet: msg?.text?.trim() ?? "",
     time: msg?.createTime ?? space.lastActiveTime ?? "",
     unread: isUnread(space.lastActiveTime, rs.lastReadTime),
-    url: chatUrl(spaceId, "space"),
+    url: space.spaceUri ?? "",
   };
 }
 ```
+
+The `Person` type is used by `fetchChatDms` (Task 3) for the People-API name lookup.
 
 - [ ] **Step 4: Run tests to verify they pass**
 
@@ -310,64 +295,73 @@ import { fetchChatDms } from "@/modules/gws/chat";
 const mockJson = gwsJson as unknown as ReturnType<typeof vi.fn>;
 beforeEach(() => mockJson.mockReset());
 
-// args shape: ["chat", <resource...>, <method>, "--params", <json>]
-function routeDms(spaces: unknown, readStateByParent: Record<string, unknown>, msgByParent: Record<string, unknown>) {
+// Routes a gws call by its sub-command. args shape: [<service>, <resource...>, <method>, "--params", <json>]
+function router(opts: {
+  spaces: unknown;
+  readStateByName: Record<string, unknown>;
+  msgByParent: Record<string, unknown>;
+  peopleByResource?: Record<string, unknown>;
+}) {
   return (args: string[]) => {
     const params = JSON.parse(args[args.indexOf("--params") + 1]);
-    if (args[1] === "spaces" && args[2] === "list") return Promise.resolve(spaces);
-    if (args.includes("getSpaceReadState")) return Promise.resolve(readStateByParent[params.name]);
-    if (args[2] === "messages" && args[3] === "list") return Promise.resolve(msgByParent[params.parent]);
+    if (args[0] === "chat" && args[1] === "spaces" && args[2] === "list") return Promise.resolve(opts.spaces);
+    if (args.includes("getSpaceReadState")) return Promise.resolve(opts.readStateByName[params.name]);
+    if (args[0] === "chat" && args[2] === "messages" && args[3] === "list") return Promise.resolve(opts.msgByParent[params.parent]);
+    if (args[0] === "people" && args[2] === "get") return Promise.resolve((opts.peopleByResource ?? {})[params.resourceName]);
     throw new Error(`unexpected args: ${args.join(" ")}`);
   };
 }
 
 describe("fetchChatDms", () => {
-  it("returns only unread DMs, sorted/capped, self-sent dropped", async () => {
+  it("returns only unread DMs (sorted/capped), drops self-sent, resolves name via People API, url from spaceUri", async () => {
     mockJson.mockImplementation(
-      routeDms(
-        {
+      router({
+        spaces: {
           spaces: [
-            { name: "spaces/UNREAD", lastActiveTime: "2026-07-10T10:00:00Z" },
-            { name: "spaces/READ", lastActiveTime: "2026-07-10T08:00:00Z" },
-            { name: "spaces/MINE", lastActiveTime: "2026-07-10T09:00:00Z" },
+            { name: "spaces/UNREAD", spaceUri: "https://chat.google.com/dm/UNREAD?cls=11", lastActiveTime: "2026-07-10T10:00:00Z" },
+            { name: "spaces/READ", spaceUri: "https://chat.google.com/dm/READ?cls=11", lastActiveTime: "2026-07-10T08:00:00Z" },
+            { name: "spaces/MINE", spaceUri: "https://chat.google.com/dm/MINE?cls=11", lastActiveTime: "2026-07-10T09:00:00Z" },
           ],
         },
-        {
+        readStateByName: {
           "users/me/spaces/UNREAD/spaceReadState": { name: "users/1/spaces/UNREAD/spaceReadState", lastReadTime: "2026-07-10T09:00:00Z" },
           "users/me/spaces/READ/spaceReadState": { name: "users/1/spaces/READ/spaceReadState", lastReadTime: "2026-07-10T09:00:00Z" },
           "users/me/spaces/MINE/spaceReadState": { name: "users/1/spaces/MINE/spaceReadState", lastReadTime: "2026-07-10T08:00:00Z" },
         },
-        {
-          "spaces/UNREAD": { messages: [{ name: "spaces/UNREAD/messages/m", text: "hey", createTime: "2026-07-10T10:00:00Z", sender: { name: "users/2", displayName: "Bob" } }] },
-          "spaces/MINE": { messages: [{ name: "spaces/MINE/messages/m", text: "mine", createTime: "2026-07-10T09:00:00Z", sender: { name: "users/1", displayName: "Me" } }] },
+        msgByParent: {
+          "spaces/UNREAD": { messages: [{ name: "spaces/UNREAD/messages/m", text: "hey", createTime: "2026-07-10T10:00:00Z", sender: { name: "users/2", type: "HUMAN" } }] },
+          "spaces/MINE": { messages: [{ name: "spaces/MINE/messages/m", text: "mine", createTime: "2026-07-10T09:00:00Z", sender: { name: "users/1", type: "HUMAN" } }] },
         },
-      ),
+        peopleByResource: { "people/2": { names: [{ displayName: "Bob" }] } },
+      }),
     );
     const { dms } = await fetchChatDms({ limit: 15 });
     expect(dms).toEqual([
-      { spaceId: "spaces/UNREAD", partner: "Bob", snippet: "hey", time: "2026-07-10T10:00:00Z", url: "https://mail.google.com/chat/u/0/#chat/dm/UNREAD" },
+      { spaceId: "spaces/UNREAD", partner: "Bob", snippet: "hey", time: "2026-07-10T10:00:00Z", url: "https://chat.google.com/dm/UNREAD?cls=11" },
     ]);
   });
 
   it("caps the read-state scan at `limit` (most-recent first)", async () => {
     const spaces = { spaces: Array.from({ length: 5 }, (_, i) => ({ name: `spaces/S${i}`, lastActiveTime: `2026-07-10T1${i}:00:00Z` })) };
-    const readState: Record<string, unknown> = {};
-    mockJson.mockImplementation(routeDms(spaces, readState, {}));
+    // All read (lastReadTime after lastActiveTime) so no message/People calls fire.
+    const readStateByName: Record<string, unknown> = {};
+    for (let i = 0; i < 5; i++)
+      readStateByName[`users/me/spaces/S${i}/spaceReadState`] = { name: `users/1/spaces/S${i}/spaceReadState`, lastReadTime: "2026-07-11T00:00:00Z" };
+    mockJson.mockImplementation(router({ spaces, readStateByName, msgByParent: {} }));
     await fetchChatDms({ limit: 2 });
     const readStateCalls = mockJson.mock.calls.filter((c) => c[0].includes("getSpaceReadState"));
     expect(readStateCalls).toHaveLength(2);
-    // The two most-recent (S4, S3) are the ones scanned.
     const scanned = readStateCalls.map((c) => JSON.parse(c[0][c[0].indexOf("--params") + 1]).name);
     expect(scanned).toEqual(["users/me/spaces/S4/spaceReadState", "users/me/spaces/S3/spaceReadState"]);
   });
 
   it("returns empty when nothing is unread", async () => {
     mockJson.mockImplementation(
-      routeDms(
-        { spaces: [{ name: "spaces/READ", lastActiveTime: "2026-07-10T08:00:00Z" }] },
-        { "users/me/spaces/READ/spaceReadState": { name: "users/1/spaces/READ/spaceReadState", lastReadTime: "2026-07-10T09:00:00Z" } },
-        {},
-      ),
+      router({
+        spaces: { spaces: [{ name: "spaces/READ", lastActiveTime: "2026-07-10T08:00:00Z" }] },
+        readStateByName: { "users/me/spaces/READ/spaceReadState": { name: "users/1/spaces/READ/spaceReadState", lastReadTime: "2026-07-10T09:00:00Z" } },
+        msgByParent: {},
+      }),
     );
     expect(await fetchChatDms({ limit: 15 })).toEqual({ dms: [] });
   });
@@ -406,22 +400,41 @@ export async function fetchChatDms(config: ChatDmsConfig): Promise<ChatDmsData> 
     .filter(({ space, rs }) => isUnread(space.lastActiveTime, rs.lastReadTime))
     .map(({ space, rs }) => ({ space, me: callerUserId(rs.name) }));
 
-  // Latest message per unread candidate: supplies snippet, time, and partner name.
-  const detailed = await Promise.allSettled(
-    unread.map(({ space, me }) =>
-      gwsJson<MessagesResp>([
+  // For each unread DM: latest message (snippet/time/partner id), then resolve the name via People API.
+  const settled = await Promise.allSettled(
+    unread.map(async ({ space, me }) => {
+      const resp = await gwsJson<MessagesResp>([
         "chat", "spaces", "messages", "list",
         "--params", JSON.stringify({ parent: space.name, orderBy: "createTime desc", pageSize: 1 }),
-      ]).then((resp) => ({ space, me, msg: resp.messages?.[0] })),
-    ),
+      ]);
+      const msg = resp.messages?.[0];
+      if (!msg) return null;
+      if (me && msg.sender?.name === me) return null; // self-sent — not an unread-from-partner
+      const partner = await resolvePartnerName(msg.sender?.name);
+      return normalizeDm(space, msg, partner);
+    }),
   );
-  const dms = detailed
-    .filter((r): r is PromiseFulfilledResult<{ space: Space; me: string | null; msg?: Message }> => r.status === "fulfilled")
-    .filter((r) => !!r.value.msg)
-    .filter(({ value: { msg, me } }) => !(me && msg!.sender?.name === me)) // drop self-sent
-    .map(({ value: { space, msg } }) => normalizeDm(space, msg!));
+  const dms = settled
+    .filter((r): r is PromiseFulfilledResult<ChatDm | null> => r.status === "fulfilled")
+    .map((r) => r.value)
+    .filter((d): d is ChatDm => d !== null);
 
   return { dms };
+}
+
+/** Resolve a Chat sender id ("users/<id>") to a display name via the People API, or null on failure. */
+async function resolvePartnerName(userName?: string): Promise<string | null> {
+  const resourceName = peopleResourceName(userName);
+  if (!resourceName) return null;
+  try {
+    const person = await gwsJson<Person>([
+      "people", "people", "get",
+      "--params", JSON.stringify({ resourceName, personFields: "names" }),
+    ]);
+    return person.names?.[0]?.displayName ?? null;
+  } catch {
+    return null; // name lookup failed — normalizeDm falls back to "Direct message"
+  }
 }
 ```
 
@@ -453,12 +466,12 @@ import { fetchChatChannels } from "@/modules/gws/chat";
 function routeChannels(getByName: Record<string, unknown>, readByName: Record<string, unknown>, msgByParent: Record<string, unknown>) {
   return (args: string[]) => {
     const params = JSON.parse(args[args.indexOf("--params") + 1]);
-    if (args[1] === "spaces" && args[2] === "get") {
+    if (args[0] === "chat" && args[1] === "spaces" && args[2] === "get") {
       const v = getByName[params.name];
       return v ? Promise.resolve(v) : Promise.reject(new Error("404"));
     }
     if (args.includes("getSpaceReadState")) return Promise.resolve(readByName[params.name]);
-    if (args[2] === "messages" && args[3] === "list") return Promise.resolve(msgByParent[params.parent]);
+    if (args[0] === "chat" && args[2] === "messages" && args[3] === "list") return Promise.resolve(msgByParent[params.parent]);
     throw new Error(`unexpected: ${args.join(" ")}`);
   };
 }
@@ -467,7 +480,7 @@ describe("fetchChatChannels", () => {
   it("enriches each configured space and flags unread; drops a 404 space", async () => {
     mockJson.mockImplementation(
       routeChannels(
-        { "spaces/OK": { name: "spaces/OK", displayName: "Ops", lastActiveTime: "2026-07-10T12:00:00Z" } },
+        { "spaces/OK": { name: "spaces/OK", displayName: "Ops", spaceUri: "https://chat.google.com/room/OK?cls=11", lastActiveTime: "2026-07-10T12:00:00Z" } },
         {
           "users/me/spaces/OK/spaceReadState": { lastReadTime: "2026-07-10T11:00:00Z" },
           "users/me/spaces/GONE/spaceReadState": { lastReadTime: "2026-07-10T00:00:00Z" },
@@ -477,7 +490,7 @@ describe("fetchChatChannels", () => {
     );
     const { channels } = await fetchChatChannels({ spaceIds: ["spaces/OK", "spaces/GONE"] });
     expect(channels).toEqual([
-      { spaceId: "spaces/OK", name: "Ops", snippet: "deploy done", time: "2026-07-10T12:00:00Z", unread: true, url: "https://mail.google.com/chat/u/0/#chat/space/OK" },
+      { spaceId: "spaces/OK", name: "Ops", snippet: "deploy done", time: "2026-07-10T12:00:00Z", unread: true, url: "https://chat.google.com/room/OK?cls=11" },
     ]);
   });
 
@@ -761,7 +774,7 @@ Expected: all green.
 Run: `npm run dev`, then in the browser:
 - Add an **Unread DMs** widget → shows current unread DMs (or the auth/error/empty state). Read a DM in Google Chat, refresh the widget → it drops off the list.
 - Add a **Chat Channels** widget → configure it via ⋯ Configure with a space ID from `gws chat spaces list` → shows that channel's latest message with a correct read/unread badge; config + title persist across reload; clicking a row opens the space in Google Chat.
-- Confirm the deep-link fragment matches what Task 0 Step 3 recorded; if not, fix `chatUrl` and re-run tests.
+- Confirm rows link through correctly (the `spaceUri` from the API) and DM partner names resolve (People API).
 
 - [ ] **Step 3: Final commit if anything changed during verification**
 
@@ -774,5 +787,5 @@ git add -A && git commit -m "fix(gws): finalize Chat module against live output"
 ## Self-Review notes
 
 - **Spec coverage:** Widget A funnel (Tasks 2–3), Widget B (Task 4), config schemas incl. `stringList` (Task 1), registrations (Tasks 5, 7), read/unread derivation + self-sent drop + caller-id parse (Tasks 2–3), error isolation via `Promise.allSettled` (Tasks 3–4), empty states (Task 6), fixtures + live verification (Tasks 0, 8). All spec sections map to a task.
-- **Provisional shapes** (`sender.displayName`, read-state `name` id, deep-link fragment) are gated by Task 0 and re-checked in Task 8 — mirrors the Jira module's post-auth correction.
-- **Type consistency:** `ChatDm`/`ChatChannel`/`*Config`/`*Data` and the `CHAT_DMS_TYPE`/`CHAT_CHANNELS_TYPE` ids are defined once in Task 1 and referenced verbatim thereafter; helper names (`isUnread`, `callerUserId`, `spaceIdSegment`, `chatUrl`, `normalizeDm`, `normalizeChannel`, `fetchChatDms`, `fetchChatChannels`) are consistent across tasks.
+- **Live-verified shapes:** Task 0 already corrected the pre-auth guesses — `sender` has no `displayName` (names via People API), links come from `spaceUri`, read-state `name` carries a numeric id. Folded into Tasks 2–3.
+- **Type consistency:** `ChatDm`/`ChatChannel`/`*Config`/`*Data` and the `CHAT_DMS_TYPE`/`CHAT_CHANNELS_TYPE` ids are defined once in Task 1 and referenced verbatim thereafter; helper names (`isUnread`, `callerUserId`, `peopleResourceName`, `normalizeDm`, `normalizeChannel`, `fetchChatDms`, `fetchChatChannels`, plus internal `resolvePartnerName`) are consistent across tasks.
