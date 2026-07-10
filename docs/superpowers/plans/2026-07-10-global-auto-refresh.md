@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add a global auto-refresh toggle + force-refresh-now button to the dashboard toolbar that refreshes every widget on a fixed 5-minute cadence, and remove the dead per-widget `refreshInterval` field.
+**Goal:** Add a global auto-refresh toggle + force-refresh-now button to the dashboard toolbar (fixed 5-minute cadence, refreshes every widget), spin each widget's refresh button while it updates, surface refresh/data failures as toast notifications, and remove the dead per-widget `refreshInterval` field.
 
-**Architecture:** A new `AutoRefreshProvider` context holds `enabled` (persisted to localStorage), a `nonce` counter, and the interval constant. `use-widget-data` consumes the context: it runs a 5-minute interval when enabled and calls `refresh()` whenever `nonce` bumps. The toolbar renders a toggle + `↻` button wired to the context. No backend/API changes.
+**Architecture:** A new `AutoRefreshProvider` context holds `enabled` (persisted to localStorage), a `nonce` counter, and the interval constant. A new `ToastProvider` context exposes `toast()` and renders a fixed toast stack. `use-widget-data` consumes both: it runs a 5-minute interval when enabled, calls `refresh()` when `nonce` bumps, exposes `isRefreshing`, and fires a toast on refresh/load failure. The toolbar renders a toggle + `↻` button. No backend/API changes.
 
 **Tech Stack:** Next.js (App Router) + React + TypeScript, TanStack Query, Tailwind v4, Drizzle ORM + better-sqlite3, Vitest + Testing Library (jsdom).
 
@@ -14,17 +14,20 @@
 
 ## File Structure
 
-- **Create** `src/components/auto-refresh-context.tsx` — `AutoRefreshProvider`, `useAutoRefresh`, `INTERVAL_MS`. Owns global toggle state + localStorage persistence + force-refresh nonce.
-- **Create** `tests/components/auto-refresh-context.test.tsx` — context behavior tests.
-- **Create** `tests/components/use-widget-data.test.tsx` — hook interval + nonce tests.
-- **Modify** `src/app/providers.tsx` — wrap children in `AutoRefreshProvider`.
-- **Modify** `src/components/use-widget-data.ts` — drop `refreshInterval` param; consume context.
-- **Modify** `src/components/widget-card.tsx:17` — drop 2nd arg.
+- **Create** `src/components/auto-refresh-context.tsx` — `AutoRefreshProvider`, `useAutoRefresh`, `INTERVAL_MS`.
+- **Create** `src/components/toast-context.tsx` — `ToastProvider`, `useToast`, toast stack UI.
+- **Create** `tests/components/auto-refresh-context.test.tsx`
+- **Create** `tests/components/toast-context.test.tsx`
+- **Create** `tests/components/use-widget-data.test.tsx`
+- **Modify** `src/app/providers.tsx` — wrap children in `AutoRefreshProvider` + `ToastProvider`.
+- **Modify** `src/components/widget-shell.tsx` — add `refreshing` prop; spin the `↻` icon.
+- **Modify** `src/components/use-widget-data.ts` — drop `refreshInterval` param; consume both contexts; add `isRefreshing`; toast on error.
+- **Modify** `src/components/widget-card.tsx:17,42` — drop 2nd arg; pass `refreshing`.
 - **Modify** `src/components/dashboard.tsx` — add `AutoRefreshControls` to `Toolbar`.
-- **Modify** `src/db/schema.ts:11` — remove `refreshInterval` column.
-- **Modify** `src/server/config-repo.ts:30` — remove `refreshInterval: null`.
-- **Modify** `tests/components/dashboard-logic.test.ts:6` — remove `refreshInterval: null` from the factory.
+- **Modify** `src/db/schema.ts:11`, `src/server/config-repo.ts:30`, `tests/components/dashboard-logic.test.ts:6` — remove `refreshInterval`.
 - **Generate** `drizzle/0002_*.sql` — drop `refresh_interval` column.
+
+**Follow-up (out of scope):** toasts here cover widget refresh/data errors only. Wiring the other failing call sites (add/remove widget, config save, drag persist — currently silent) into `useToast` is a separate, well-scoped plan.
 
 ---
 
@@ -159,12 +162,149 @@ git commit -m "feat: add global auto-refresh context"
 
 ---
 
-## Task 2: Wire provider into the app
+## Task 2: Toast context
+
+A lightweight, dependency-free toast system: context + hook + a fixed bottom-right stack with auto-dismiss. Tailwind tokens (`danger`, `card`, `border`) match existing usage in `widget-shell.tsx`.
+
+**Files:**
+- Create: `src/components/toast-context.tsx`
+- Test: `tests/components/toast-context.test.tsx`
+
+- [ ] **Step 1: Write the failing test**
+
+```tsx
+// tests/components/toast-context.test.tsx
+import { render, screen, act } from "@testing-library/react";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import { ToastProvider, useToast } from "@/components/toast-context";
+
+function Trigger() {
+  const { toast } = useToast();
+  return <button onClick={() => toast("boom")}>fire</button>;
+}
+
+function renderTrigger() {
+  return render(<ToastProvider><Trigger /></ToastProvider>);
+}
+
+beforeEach(() => vi.useFakeTimers());
+afterEach(() => vi.useRealTimers());
+
+test("shows a toast when fired", () => {
+  renderTrigger();
+  act(() => screen.getByText("fire").click());
+  expect(screen.getByRole("alert").textContent).toContain("boom");
+});
+
+test("auto-dismisses after the timeout", () => {
+  renderTrigger();
+  act(() => screen.getByText("fire").click());
+  expect(screen.queryByRole("alert")).not.toBeNull();
+  act(() => vi.advanceTimersByTime(6000));
+  expect(screen.queryByRole("alert")).toBeNull();
+});
+
+test("dismiss button removes the toast", () => {
+  renderTrigger();
+  act(() => screen.getByText("fire").click());
+  act(() => screen.getByLabelText("Dismiss").click());
+  expect(screen.queryByRole("alert")).toBeNull();
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `npx vitest run tests/components/toast-context.test.tsx`
+Expected: FAIL — cannot resolve `@/components/toast-context`.
+
+- [ ] **Step 3: Write the implementation**
+
+```tsx
+// src/components/toast-context.tsx
+"use client";
+import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
+
+type ToastVariant = "error" | "info";
+type Toast = { id: number; message: string; variant: ToastVariant };
+type ToastValue = { toast: (message: string, variant?: ToastVariant) => void };
+
+const ToastContext = createContext<ToastValue | null>(null);
+const DISMISS_MS = 6000;
+
+export function ToastProvider({ children }: { children: ReactNode }) {
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const nextId = useRef(0);
+
+  const dismiss = useCallback((id: number) => {
+    setToasts((ts) => ts.filter((t) => t.id !== id));
+  }, []);
+
+  const toast = useCallback(
+    (message: string, variant: ToastVariant = "error") => {
+      const id = nextId.current++;
+      setToasts((ts) => [...ts, { id, message, variant }]);
+      setTimeout(() => dismiss(id), DISMISS_MS);
+    },
+    [dismiss],
+  );
+
+  return (
+    <ToastContext.Provider value={{ toast }}>
+      {children}
+      <div className="pointer-events-none fixed bottom-4 right-4 z-50 flex w-full max-w-sm flex-col gap-2">
+        {toasts.map((t) => (
+          <div
+            key={t.id}
+            role="alert"
+            className={`pointer-events-auto flex items-start gap-2 rounded-lg px-3.5 py-2.5 text-sm shadow-lg ring-1 ${
+              t.variant === "error"
+                ? "bg-danger/10 text-danger ring-danger/30"
+                : "bg-card text-slate-700 ring-border dark:bg-card-dark dark:text-slate-200 dark:ring-border-dark"
+            }`}
+          >
+            <span aria-hidden className="mt-px select-none">{t.variant === "error" ? "⚠" : "ℹ"}</span>
+            <p className="min-w-0 flex-1 break-words">{t.message}</p>
+            <button
+              aria-label="Dismiss"
+              onClick={() => dismiss(t.id)}
+              className="shrink-0 text-slate-400 transition-colors hover:text-slate-600 dark:hover:text-slate-200"
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+      </div>
+    </ToastContext.Provider>
+  );
+}
+
+export function useToast(): ToastValue {
+  const ctx = useContext(ToastContext);
+  if (!ctx) throw new Error("useToast must be used within ToastProvider");
+  return ctx;
+}
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `npx vitest run tests/components/toast-context.test.tsx`
+Expected: PASS (3 tests).
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/components/toast-context.tsx tests/components/toast-context.test.tsx
+git commit -m "feat: add lightweight toast context"
+```
+
+---
+
+## Task 3: Wire providers into the app
 
 **Files:**
 - Modify: `src/app/providers.tsx`
 
-- [ ] **Step 1: Add the provider**
+- [ ] **Step 1: Add the providers**
 
 Replace the file contents with:
 
@@ -175,6 +315,7 @@ import "@/modules/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { AutoRefreshProvider } from "@/components/auto-refresh-context";
+import { ToastProvider } from "@/components/toast-context";
 
 export function Providers({ children }: { children: ReactNode }) {
   const [client] = useState(() => new QueryClient({
@@ -182,7 +323,9 @@ export function Providers({ children }: { children: ReactNode }) {
   }));
   return (
     <QueryClientProvider client={client}>
-      <AutoRefreshProvider>{children}</AutoRefreshProvider>
+      <AutoRefreshProvider>
+        <ToastProvider>{children}</ToastProvider>
+      </AutoRefreshProvider>
     </QueryClientProvider>
   );
 }
@@ -197,18 +340,97 @@ Expected: no errors from `providers.tsx`.
 
 ```bash
 git add src/app/providers.tsx
-git commit -m "feat: mount AutoRefreshProvider"
+git commit -m "feat: mount AutoRefresh and Toast providers"
 ```
 
 ---
 
-## Task 3: Consume the context in use-widget-data
+## Task 4: Spin the refresh button while refreshing
 
-Refactor the hook and its one caller together so the tree compiles at this commit. The hook now reads global `enabled`/`nonce` instead of a per-widget interval.
+Add an optional `refreshing` prop to `WidgetShell`; when true, the `↻` icon spins and the button is disabled. Existing callers pass nothing, so behavior is unchanged until Task 5 wires it.
+
+**Files:**
+- Modify: `src/components/widget-shell.tsx`
+- Test: `tests/components/widget-shell.test.tsx`
+
+- [ ] **Step 1: Write the failing test**
+
+Add this test to `tests/components/widget-shell.test.tsx` (keep existing tests):
+
+```tsx
+import { render } from "@testing-library/react";
+import { expect, test } from "vitest";
+import { WidgetShell } from "@/components/widget-shell";
+
+test("spins and disables the refresh button while refreshing", () => {
+  const { getByLabelText, container } = render(
+    <WidgetShell title="X" state="ok" fetchedAt={null} onRefresh={() => {}} refreshing>
+      <div>body</div>
+    </WidgetShell>,
+  );
+  expect(getByLabelText("Refresh")).toBeDisabled();
+  expect(container.querySelector(".animate-spin")).not.toBeNull();
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `npx vitest run tests/components/widget-shell.test.tsx`
+Expected: FAIL — `refreshing` is not a prop; button not disabled / no `.animate-spin`.
+
+- [ ] **Step 3: Add the prop**
+
+In `src/components/widget-shell.tsx`, add `refreshing` to the destructured props (line 31) and its type (in the props type block, e.g. after `onRefresh: () => void;`):
+
+```tsx
+  title, state, error, fetchedAt, onRefresh, refreshing, children, headerExtra, menu, dragHandle,
+```
+
+```tsx
+  onRefresh: () => void;
+  refreshing?: boolean;
+```
+
+Then replace the refresh button (lines 64-70) with:
+
+```tsx
+          <button
+            aria-label="Refresh"
+            onClick={onRefresh}
+            disabled={refreshing}
+            className="icon-btn hover:[&>span]:rotate-90 disabled:cursor-default"
+          >
+            <span
+              className={`inline-block text-[0.95rem] leading-none transition-transform duration-300 ease-out ${
+                refreshing ? "animate-spin" : ""
+              }`}
+            >
+              ↻
+            </span>
+          </button>
+```
+
+- [ ] **Step 4: Run tests to verify they pass**
+
+Run: `npx vitest run tests/components/widget-shell.test.tsx`
+Expected: PASS (existing tests + the new one).
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/components/widget-shell.tsx tests/components/widget-shell.test.tsx
+git commit -m "feat: spin widget refresh button while refreshing"
+```
+
+---
+
+## Task 5: Consume the contexts in use-widget-data
+
+Refactor the hook and its caller together so the tree compiles at this commit. The hook now reads global `enabled`/`nonce`, exposes `isRefreshing`, and toasts on refresh/load failure.
 
 **Files:**
 - Modify: `src/components/use-widget-data.ts`
-- Modify: `src/components/widget-card.tsx:17`
+- Modify: `src/components/widget-card.tsx:17,42`
 - Test: `tests/components/use-widget-data.test.tsx`
 
 - [ ] **Step 1: Write the failing test**
@@ -218,30 +440,17 @@ Refactor the hook and its one caller together so the tree compiles at this commi
 import { render, screen, act } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import { AutoRefreshProvider } from "@/components/auto-refresh-context";
+import { AutoRefreshProvider, useAutoRefresh } from "@/components/auto-refresh-context";
+import { ToastProvider } from "@/components/toast-context";
 import { useWidgetData } from "@/components/use-widget-data";
 
 function Probe() {
   const { refresh } = useWidgetData("w1");
-  // touch refresh so it isn't flagged unused; not otherwise needed here
   void refresh;
   return <span>ready</span>;
 }
 
-function renderProbe() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <AutoRefreshProvider>
-        <Probe />
-        <Controls />
-      </AutoRefreshProvider>
-    </QueryClientProvider>,
-  );
-}
-
-// Renders buttons to drive the global context from within the provider.
-import { useAutoRefresh } from "@/components/auto-refresh-context";
+// Buttons to drive the global context from within the provider.
 function Controls() {
   const { toggle, refreshAll } = useAutoRefresh();
   return (
@@ -252,22 +461,32 @@ function Controls() {
   );
 }
 
+function renderProbe() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={client}>
+      <AutoRefreshProvider>
+        <ToastProvider>
+          <Probe />
+          <Controls />
+        </ToastProvider>
+      </AutoRefreshProvider>
+    </QueryClientProvider>,
+  );
+}
+
 function refreshCallCount() {
   return (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls.filter(
     ([url]) => String(url).includes("refresh=1"),
   ).length;
 }
 
+const okRow = { widgetId: "w1", payload: {}, fetchedAt: 0, status: "ok", error: null };
+
 beforeEach(() => {
   localStorage.clear();
   vi.useFakeTimers();
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async () => ({
-      ok: true,
-      json: async () => ({ widgetId: "w1", payload: {}, fetchedAt: 0, status: "ok", error: null }),
-    })),
-  );
+  vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, json: async () => okRow })));
 });
 
 afterEach(() => {
@@ -290,17 +509,29 @@ test("auto-refreshes every 5 minutes while enabled", async () => {
 
 test("force-refresh (nonce bump) triggers a refresh, mount does not", async () => {
   renderProbe();
-  expect(refreshCallCount()).toBe(0); // mount alone does not force refresh
+  expect(refreshCallCount()).toBe(0);
   await act(async () => { screen.getByText("refreshAll").click(); });
   await act(async () => { await vi.advanceTimersByTimeAsync(0); });
   expect(refreshCallCount()).toBe(1);
+});
+
+test("fires a toast when a refresh fails", async () => {
+  (fetch as unknown as ReturnType<typeof vi.fn>).mockImplementation(async (url: string) =>
+    String(url).includes("refresh=1")
+      ? { ok: false, status: 500, json: async () => ({}) }
+      : { ok: true, json: async () => okRow },
+  );
+  renderProbe();
+  await act(async () => { screen.getByText("refreshAll").click(); });
+  await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+  expect(screen.getByRole("alert").textContent).toContain("Refresh failed");
 });
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run tests/components/use-widget-data.test.tsx`
-Expected: FAIL — `useWidgetData` still requires a second argument / does not consume the context.
+Expected: FAIL — `useWidgetData` still requires a second argument / does not consume the contexts.
 
 - [ ] **Step 3: Refactor the hook**
 
@@ -308,10 +539,11 @@ Replace `src/components/use-widget-data.ts` with:
 
 ```tsx
 "use client";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { CacheRow } from "@/server/cache-repo";
 import { useAutoRefresh, INTERVAL_MS } from "./auto-refresh-context";
+import { useToast } from "./toast-context";
 
 async function fetchData(id: string, refresh: boolean): Promise<CacheRow> {
   const res = await fetch(`/api/widgets/${id}/data${refresh ? "?refresh=1" : ""}`);
@@ -319,9 +551,13 @@ async function fetchData(id: string, refresh: boolean): Promise<CacheRow> {
   return res.json();
 }
 
+const msg = (err: unknown) => (err instanceof Error ? err.message : "unknown error");
+
 export function useWidgetData(id: string) {
   const qc = useQueryClient();
   const { enabled, nonce } = useAutoRefresh();
+  const { toast } = useToast();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Initial load is cache-first (instant); refresh() forces an upstream fetch.
   const query = useQuery({
@@ -330,14 +566,18 @@ export function useWidgetData(id: string) {
   });
 
   const refresh = useCallback(async () => {
+    setIsRefreshing(true);
     try {
       const fresh = await fetchData(id, true);
       qc.setQueryData(["widget", id], fresh);
     } catch (err) {
-      // Swallow — a failed manual/interval refresh keeps the last cached row visible.
+      // Keep the last cached row visible, but surface the failure to the user.
       console.error(`Widget ${id} refresh failed`, err);
+      toast(`Refresh failed: ${msg(err)}`);
+    } finally {
+      setIsRefreshing(false);
     }
-  }, [id, qc]);
+  }, [id, qc, toast]);
 
   // Auto-refresh must force refresh=1; a plain refetch would only re-read the cache.
   useEffect(() => {
@@ -353,7 +593,12 @@ export function useWidgetData(id: string) {
     void refresh();
   }, [nonce, refresh]);
 
-  return { ...query, refresh };
+  // Surface an initial cache-load failure too.
+  useEffect(() => {
+    if (query.isError) toast(`Failed to load widget: ${msg(query.error)}`);
+  }, [query.isError, query.error, toast]);
+
+  return { ...query, refresh, isRefreshing };
 }
 ```
 
@@ -368,33 +613,40 @@ In `src/components/widget-card.tsx`, change line 17 from:
 to:
 
 ```tsx
-  const { data, isLoading, refresh } = useWidgetData(widget.id);
+  const { data, isLoading, refresh, isRefreshing } = useWidgetData(widget.id);
+```
+
+And add `refreshing={isRefreshing}` to the `<WidgetShell>` props (alongside `onRefresh={refresh}` at line 40):
+
+```tsx
+      onRefresh={refresh}
+      refreshing={isRefreshing}
 ```
 
 - [ ] **Step 5: Run tests to verify they pass**
 
 Run: `npx vitest run tests/components/use-widget-data.test.tsx`
-Expected: PASS (3 tests).
+Expected: PASS (4 tests).
 
 - [ ] **Step 6: Commit**
 
 ```bash
 git add src/components/use-widget-data.ts src/components/widget-card.tsx tests/components/use-widget-data.test.tsx
-git commit -m "feat: drive widget refresh from global auto-refresh context"
+git commit -m "feat: drive widget refresh from context, toast on failure, expose isRefreshing"
 ```
 
 ---
 
-## Task 4: Toolbar controls
+## Task 6: Toolbar controls
 
-Add a toggle + force-refresh button to the sticky toolbar. `Toolbar` is already inside `AutoRefreshProvider`, so a small subcomponent can read the context directly.
+Add a toggle + force-refresh button to the sticky toolbar. `Toolbar` is already inside `AutoRefreshProvider`, so a small subcomponent reads the context directly.
 
 **Files:**
 - Modify: `src/components/dashboard.tsx`
 
 - [ ] **Step 1: Add the import**
 
-At the top of `src/components/dashboard.tsx`, alongside the other component imports (after line 14), add:
+At the top of `src/components/dashboard.tsx`, after line 14, add:
 
 ```tsx
 import { useAutoRefresh } from "./auto-refresh-context";
@@ -402,7 +654,7 @@ import { useAutoRefresh } from "./auto-refresh-context";
 
 - [ ] **Step 2: Add the controls component**
 
-Immediately above the `Toolbar` function (before line 66 `function Toolbar(...)`), add:
+Immediately above `function Toolbar(` (before line 66), add:
 
 ```tsx
 function AutoRefreshControls() {
@@ -437,7 +689,7 @@ function AutoRefreshControls() {
 
 - [ ] **Step 3: Render the controls in the toolbar**
 
-In `Toolbar`, replace the lone `<AddWidgetDrawer onAdd={onAdd} />` (line 79) with a grouped right side:
+In `Toolbar`, replace the lone `<AddWidgetDrawer onAdd={onAdd} />` (line 79) with:
 
 ```tsx
         <div className="flex items-center gap-3">
@@ -453,7 +705,7 @@ Expected: lint clean; full suite green.
 
 - [ ] **Step 5: Manually verify in the browser**
 
-Run: `npm run dev`, open the dashboard. Confirm: the toggle appears in the toolbar, defaults to "off", flips to "on" and survives a page reload; the `↻` button forces every widget to show a fresh "just now" timestamp. Stop the dev server when done.
+Run: `npm run dev`, open the dashboard. Confirm: the toggle appears, defaults to "off", flips to "on" and survives a page reload; clicking `↻` makes every card's refresh button spin and updates its "just now" timestamp; a forced refresh against a broken source shows an error toast bottom-right. Stop the dev server when done.
 
 - [ ] **Step 6: Commit**
 
@@ -464,9 +716,9 @@ git commit -m "feat: add auto-refresh toggle and force-refresh button to toolbar
 
 ---
 
-## Task 5: Remove the dead per-widget refreshInterval field
+## Task 7: Remove the dead per-widget refreshInterval field
 
-Now that nothing reads `widget.refreshInterval`, drop the column and its remaining references, and generate the migration.
+Nothing reads `widget.refreshInterval` anymore. Drop the column and its remaining references, and generate the migration.
 
 **Files:**
 - Modify: `src/db/schema.ts:11`
@@ -481,8 +733,6 @@ In `src/db/schema.ts`, delete line 11:
 ```tsx
   refreshInterval: integer("refresh_interval"), // seconds, null = manual only
 ```
-
-The `widgets` table's last field becomes `config`.
 
 - [ ] **Step 2: Remove the config-repo reference**
 
@@ -520,7 +770,7 @@ Expected: no output.
 - [ ] **Step 5: Generate the migration**
 
 Run: `npm run db:generate`
-Expected: a new `drizzle/0002_*.sql` is created dropping the `refresh_interval` column (`ALTER TABLE ... DROP COLUMN` / SQLite table-rebuild). Inspect the generated SQL to confirm it targets `refresh_interval` and nothing else.
+Expected: a new `drizzle/0002_*.sql` dropping the `refresh_interval` column. Inspect the SQL to confirm it targets `refresh_interval` and nothing else.
 
 - [ ] **Step 6: Apply the migration to the local DB**
 
@@ -543,6 +793,8 @@ git commit -m "refactor: drop dead per-widget refreshInterval field"
 
 ## Self-Review Notes
 
-- **Spec coverage:** toggle (Task 1/4); localStorage persistence + default-off (Task 1); force-refresh-now (Task 1 nonce → Task 3 hook → Task 4 button); 5-min fixed interval (`INTERVAL_MS`, Task 1/3); provider wiring (Task 2); dead-field removal + migration (Task 5); tests (Tasks 1, 3); no backend changes. All covered.
-- **Type consistency:** `useWidgetData(id)` single-arg used identically in Task 3 hook, caller, and test. `useAutoRefresh()` returns `{ enabled, toggle, refreshAll, nonce }` — same shape consumed in Tasks 3 and 4. `INTERVAL_MS` defined once (Task 1), imported in Task 3.
-- **Ordering:** hook + caller change together (Task 3) before the schema column is dropped (Task 5), so the tree compiles at every commit.
+- **Spec + new requests coverage:** toggle (Task 1/6); localStorage persistence + default-off (Task 1); force-refresh-now (Task 1 nonce → Task 5 hook → Task 6 button); 5-min fixed interval (`INTERVAL_MS`, Task 1/5); provider wiring (Task 3); refresh button spins while updating (Task 4 shell prop + Task 5 `isRefreshing`); errors surfaced as toasts (Task 2 system + Task 5 refresh/load wiring); dead-field removal + migration (Task 7); tests (Tasks 1, 2, 4, 5); no backend changes. All covered.
+- **Type consistency:** `useWidgetData(id)` single-arg, returning `{ ...query, refresh, isRefreshing }`, used identically in hook, caller, and test. `useAutoRefresh()` → `{ enabled, toggle, refreshAll, nonce }`. `useToast()` → `{ toast }` with `toast(message, variant?)`. `WidgetShell` gains optional `refreshing?: boolean`. `INTERVAL_MS` defined once (Task 1), imported in Task 5.
+- **Ordering:** `WidgetShell` gains the optional `refreshing` prop (Task 4) before `widget-card` passes it (Task 5); hook + caller change together (Task 5) before the schema column is dropped (Task 7) — so the tree compiles at every commit.
+- **Scope note:** toasts cover widget refresh/data errors only; extending to other call sites is a flagged follow-up, not in this plan.
+```
