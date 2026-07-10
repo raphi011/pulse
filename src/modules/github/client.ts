@@ -1,3 +1,4 @@
+import { SiGithub, SiGithubactions, SiDependabot } from "react-icons/si";
 import { registerClientWidget } from "@/modules/client-registry";
 import {
   PRS_TYPE, FAILING_ACTIONS_TYPE, DEPENDABOT_TYPE,
@@ -14,16 +15,19 @@ registerClientWidget({
   configSchema: prsConfigSchema, defaultConfig: prsDefaultConfig,
   count: (d) => d.prs.length,
   integration: "github",
+  icon: { Icon: SiGithub, className: "text-[#181717] dark:text-white" },
 });
 registerClientWidget({
   type: FAILING_ACTIONS_TYPE, title: "Failing Actions", Component: FailingActionsWidget,
   configSchema: failingActionsConfigSchema, defaultConfig: failingActionsDefaultConfig,
   count: (d) => d.runs.length,
   integration: "github",
+  icon: { Icon: SiGithubactions, className: "text-[#2088FF]" },
 });
 registerClientWidget({
   type: DEPENDABOT_TYPE, title: "Dependabot Alerts", Component: DependabotWidget,
   configSchema: dependabotConfigSchema, defaultConfig: dependabotDefaultConfig,
   count: (d) => d.alerts.length,
   integration: "github",
+  icon: { Icon: SiDependabot, className: "text-[#025E8C]" },
 });

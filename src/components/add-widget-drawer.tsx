@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { listClientWidgets } from "@/modules/client-registry";
 import type { IntegrationStatus } from "@/modules/integration-contracts";
+import { BrandIcon } from "./brand-icon";
 
 export function AddWidgetDrawer({ onAdd }: { onAdd: (type: string) => void }) {
   const [open, setOpen] = useState(false);
@@ -54,7 +55,10 @@ export function AddWidgetDrawer({ onAdd }: { onAdd: (type: string) => void }) {
                     onClick={() => { onAdd(t.type); setOpen(false); }}
                     className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm ring-1 ring-border transition-colors duration-150 ease-out hover:bg-slate-100 hover:ring-primary-500/40 dark:ring-border-dark dark:hover:bg-white/5"
                   >
-                    <span className="font-medium">{t.title}</span>
+                    <span className="flex min-w-0 items-center gap-2">
+                      <BrandIcon mark={t.icon} />
+                      <span className="truncate font-medium">{t.title}</span>
+                    </span>
                     <span aria-hidden className="text-slate-400">+</span>
                   </button>
                 </li>

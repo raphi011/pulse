@@ -1,5 +1,12 @@
 import type { ZodType } from "zod";
 import type { FC } from "react";
+import type { IconType } from "react-icons";
+
+/** A brand logo + the classes that carry its brand color (incl. any dark-mode override). */
+export interface BrandMark {
+  Icon: IconType;
+  className?: string;
+}
 
 export interface WidgetAction {
   id: string;
@@ -33,4 +40,6 @@ export interface ClientWidget<Data = unknown, Config = unknown> {
   count?(data: Data, config: Config): number | null;
   /** Id of the integration this widget belongs to; omit for always-available widgets (e.g. core). */
   integration?: string;
+  /** Brand logo shown beside the title; omit for widgets with no brand (e.g. core). */
+  icon?: BrandMark;
 }

@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/components/toast-context";
 import type { IntegrationStatus } from "@/modules/integration-contracts";
+import { BrandIcon } from "./brand-icon";
+import { integrationIcons } from "./integration-icons";
 
 function StatusDot({ ok, label }: { ok: boolean; label: string }) {
   return (
@@ -83,6 +85,7 @@ export function IntegrationsPanel({ initial }: { initial: IntegrationStatus[] })
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
+                    <BrandIcon mark={integrationIcons[s.id]} />
                     <span className="font-medium">{s.name}</span>
                     {!authUnknown && s.health.installed && !authed && (
                       <span aria-label="Has an issue" title={s.health.detail ?? "Not authenticated"} className="text-warn">⚠</span>

@@ -1,3 +1,6 @@
+import {
+  SiGmail, SiGooglecalendar, SiGooglechat, SiGoogledrive, SiGoogletasks,
+} from "react-icons/si";
 import { registerClientWidget } from "@/modules/client-registry";
 import {
   GMAIL_TYPE, CALENDAR_TYPE, CHAT_DMS_TYPE, CHAT_CHANNELS_TYPE, DRIVE_TYPE,
@@ -20,34 +23,40 @@ registerClientWidget({
   configSchema: gmailConfigSchema, defaultConfig: gmailDefaultConfig,
   count: (d) => d.emails.length,
   integration: "gws",
+  icon: { Icon: SiGmail, className: "text-[#EA4335]" },
 });
 registerClientWidget({
   type: CALENDAR_TYPE, title: "Calendar", Component: CalendarWidget,
   configSchema: calendarConfigSchema, defaultConfig: calendarDefaultConfig,
   count: (d) => d.events.length,
   integration: "gws",
+  icon: { Icon: SiGooglecalendar, className: "text-[#4285F4]" },
 });
 registerClientWidget({
   type: CHAT_DMS_TYPE, title: "Unread DMs", Component: ChatDmsWidget,
   configSchema: chatDmsConfigSchema, defaultConfig: chatDmsDefaultConfig,
   count: (d) => d.dms.length,
   integration: "gws",
+  icon: { Icon: SiGooglechat, className: "text-[#34A853]" },
 });
 registerClientWidget({
   type: CHAT_CHANNELS_TYPE, title: "Chat Channels", Component: ChatChannelsWidget,
   configSchema: chatChannelsConfigSchema, defaultConfig: chatChannelsDefaultConfig,
   count: (d) => d.channels.length,
   integration: "gws",
+  icon: { Icon: SiGooglechat, className: "text-[#34A853]" },
 });
 registerClientWidget({
   type: DRIVE_TYPE, title: "Starred files", Component: DriveWidget,
   configSchema: driveConfigSchema, defaultConfig: driveDefaultConfig,
   count: (d, c) => filterDriveFiles(d.files, c).length,
   integration: "gws",
+  icon: { Icon: SiGoogledrive, className: "text-[#4285F4]" },
 });
 registerClientWidget({
   type: TASKS_TYPE, title: "Tasks", Component: TasksWidget,
   configSchema: tasksConfigSchema, defaultConfig: tasksDefaultConfig,
   count: (d) => d.tasks.length,
   integration: "gws",
+  icon: { Icon: SiGoogletasks, className: "text-[#4285F4]" },
 });

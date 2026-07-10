@@ -37,9 +37,10 @@ function Skeleton() {
 }
 
 export function WidgetShell({
-  title, count, state, error, fetchedAt, onRefresh, refreshing, children, headerExtra, menu, dragHandle, issue,
+  title, icon, count, state, error, fetchedAt, onRefresh, refreshing, children, headerExtra, menu, dragHandle, issue,
 }: {
   title: string;
+  icon?: ReactNode;
   count?: number | null;
   state: WidgetState;
   error?: string | null;
@@ -57,6 +58,7 @@ export function WidgetShell({
     <section className="group/card flex h-full flex-col overflow-hidden rounded-xl bg-card shadow-sm ring-1 ring-border transition-shadow duration-150 hover:shadow-md dark:bg-card-dark dark:shadow-none dark:ring-border-dark dark:hover:ring-white/15">
       <header className="flex items-center justify-between gap-2 border-b border-border px-3.5 py-2.5 dark:border-border-dark">
         <div className="flex min-w-0 flex-1 items-center gap-1.5">
+          {icon}
           {dragHandle ? (
             <h3
               ref={setRef}

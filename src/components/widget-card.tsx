@@ -4,6 +4,7 @@ import type { Widget } from "@/server/config-repo";
 import { WidgetShell, type WidgetState, type DragHandle } from "./widget-shell";
 import { useWidgetData } from "./use-widget-data";
 import { CardMenu } from "./card-menu";
+import { BrandIcon } from "./brand-icon";
 
 export function WidgetCard({
   widget, onConfigure, onRemove, dragHandle,
@@ -35,6 +36,7 @@ export function WidgetCard({
   return (
     <WidgetShell
       title={widget.title ?? def.title}
+      icon={def.icon && <BrandIcon mark={def.icon} />}
       count={count}
       state={state}
       error={data?.error}
