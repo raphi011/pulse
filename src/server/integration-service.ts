@@ -1,8 +1,11 @@
 import "server-only";
+import { eq } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
 import { getDb } from "@/db/client";
+import { widgets, prefs } from "@/db/schema";
 import { listIntegrations, getIntegration } from "@/modules/integration-registry";
 import { listRenderWidgets } from "@/modules/render-registry";
-import { getWidgets, removeWidget, getIntegrationOverride, setIntegrationOverride } from "./config-repo";
+import { getWidgets, getIntegrationOverride, setIntegrationOverride } from "./config-repo";
 import type { IntegrationHealth, IntegrationStatus } from "@/modules/integration-contracts";
 
 export class ConfirmRequiredError extends Error {
@@ -36,16 +39,17 @@ function typesForIntegration(id: string): Set<string> {
   return new Set(listRenderWidgets().filter((w) => w.integration === id).map((w) => w.type));
 }
 
-function widgetCountForIntegration(id: string): number {
+async function widgetCountForIntegration(id: string): Promise<number> {
   const types = typesForIntegration(id);
-  return getWidgets().filter((w) => types.has(w.type)).length;
+  const all = await getWidgets();
+  return all.filter((w) => types.has(w.type)).length;
 }
 
 export async function getIntegrationStatuses(force = false): Promise<IntegrationStatus[]> {
   const out: IntegrationStatus[] = [];
   for (const integ of listIntegrations()) {
     const health = await healthFor(integ.id, force);
-    const override = getIntegrationOverride(integ.id);
+    const override = await getIntegrationOverride(integ.id);
     out.push({
       id: integ.id,
       name: integ.name,
@@ -53,24 +57,27 @@ export async function getIntegrationStatuses(force = false): Promise<Integration
       health,
       override,
       enabled: resolveEnabled(!!integ.tool, health.installed, override),
-      widgetCount: widgetCountForIntegration(integ.id),
+      widgetCount: await widgetCountForIntegration(integ.id),
     });
   }
   return out;
 }
 
-export function enableIntegration(id: string): void {
-  setIntegrationOverride(id, true);
+export async function enableIntegration(id: string): Promise<void> {
+  await setIntegrationOverride(id, true);
 }
 
 /** Disable an integration. Deletes its widgets; throws ConfirmRequiredError if any exist and !deleteWidgets. */
-export function disableIntegration(id: string, deleteWidgets: boolean): { deleted: number } {
+export async function disableIntegration(id: string, deleteWidgets: boolean): Promise<{ deleted: number }> {
   const types = typesForIntegration(id);
-  const victims = getWidgets().filter((w) => types.has(w.type));
+  const victims = (await getWidgets()).filter((w) => types.has(w.type));
   if (victims.length && !deleteWidgets) throw new ConfirmRequiredError(victims.length);
-  getDb().transaction(() => {
-    for (const w of victims) removeWidget(w.id);
-    setIntegrationOverride(id, false);
-  });
+  const db = getDb();
+  const key = `integration.${id}.enabled`;
+  const stmts: BatchItem<"sqlite">[] = [
+    ...victims.map((w) => db.delete(widgets).where(eq(widgets.id, w.id))),
+    db.insert(prefs).values({ key, value: "false" }).onConflictDoUpdate({ target: prefs.key, set: { value: "false" } }),
+  ];
+  await db.batch(stmts as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
   return { deleted: victims.length };
 }

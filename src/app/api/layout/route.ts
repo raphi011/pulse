@@ -4,10 +4,8 @@ import { getWidgets, setPositions, getPref } from "@/server/config-repo";
 export const runtime = "nodejs";
 
 export async function GET() {
-  return NextResponse.json({
-    widgets: getWidgets(),
-    prefs: { theme: getPref("theme", "dark") },
-  });
+  const [widgetRows, theme] = await Promise.all([getWidgets(), getPref("theme", "dark")]);
+  return NextResponse.json({ widgets: widgetRows, prefs: { theme } });
 }
 
 export async function PATCH(req: Request) {
@@ -21,7 +19,7 @@ export async function PATCH(req: Request) {
     if (!Array.isArray(body.positions)) {
       return NextResponse.json({ error: "positions must be an array" }, { status: 400 });
     }
-    setPositions(body.positions);
+    await setPositions(body.positions);
   }
   return NextResponse.json({ ok: true });
 }

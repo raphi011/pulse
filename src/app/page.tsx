@@ -6,11 +6,11 @@ import "@/modules/render";
 
 export const dynamic = "force-dynamic";
 
-export default function Page() {
-  let widgets = getWidgets();
+export default async function Page() {
+  let widgets = await getWidgets();
   if (widgets.length === 0) {
-    addWidget("core.status", statusDefaultConfig as Record<string, unknown>);
-    widgets = getWidgets();
+    await addWidget("core.status", statusDefaultConfig as Record<string, unknown>);
+    widgets = await getWidgets();
   }
   return <Dashboard initialWidgets={widgets} />;
 }

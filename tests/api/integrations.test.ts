@@ -19,14 +19,14 @@ describe("integrations API", () => {
   });
 
   it("disable with widgets returns 409 confirm-required", async () => {
-    addWidget("github.prs", { authors: [], limit: 20 });
+    await addWidget("github.prs", { authors: [], limit: 20 });
     const res = await toggle("github", { enabled: false });
     expect(res.status).toBe(409);
     expect((await res.json()).widgetCount).toBe(1);
   });
 
   it("confirmed disable deletes widgets and returns updated statuses", async () => {
-    addWidget("github.prs", { authors: [], limit: 20 });
+    await addWidget("github.prs", { authors: [], limit: 20 });
     const res = await toggle("github", { enabled: false, deleteWidgets: true });
     expect(res.status).toBe(200);
     const statuses = await res.json();

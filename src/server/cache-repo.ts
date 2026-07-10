@@ -12,11 +12,11 @@ export type CacheInput = {
   errorKind?: CliErrorKind | null;
 };
 
-export function get(widgetId: string): CacheRow | undefined {
+export async function get(widgetId: string): Promise<CacheRow | undefined> {
   return getDb().select().from(widgetCache).where(eq(widgetCache.widgetId, widgetId)).get();
 }
 
-export function set(widgetId: string, input: CacheInput): CacheRow {
+export async function set(widgetId: string, input: CacheInput): Promise<CacheRow> {
   const row: CacheRow = {
     widgetId,
     payload: input.payload,
@@ -25,10 +25,10 @@ export function set(widgetId: string, input: CacheInput): CacheRow {
     error: input.error,
     errorKind: input.errorKind ?? null,
   };
-  getDb().insert(widgetCache).values(row)
+  await getDb().insert(widgetCache).values(row)
     .onConflictDoUpdate({
       target: widgetCache.widgetId,
       set: { payload: row.payload, fetchedAt: row.fetchedAt, status: row.status, error: row.error, errorKind: row.errorKind },
-    }).run();
+    });
   return row;
 }

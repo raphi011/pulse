@@ -11,10 +11,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const { enabled, deleteWidgets = false } = (await req.json()) as { enabled: boolean; deleteWidgets?: boolean };
 
   if (enabled) {
-    enableIntegration(id);
+    await enableIntegration(id);
   } else {
     try {
-      disableIntegration(id, deleteWidgets);
+      await disableIntegration(id, deleteWidgets);
     } catch (err) {
       if (err instanceof ConfirmRequiredError) {
         return NextResponse.json({ error: "confirm-required", widgetCount: err.widgetCount }, { status: 409 });

@@ -13,7 +13,7 @@ describe("widget data API", () => {
   });
 
   it("returns cached data with status ok", async () => {
-    const w = addWidget("core.status", { label: "System" });
+    const w = await addWidget("core.status", { label: "System" });
     const res = await GET(new Request(`http://x/api/widgets/${w.id}/data`), { params: Promise.resolve({ id: w.id }) });
     expect(res.status).toBe(200);
     const body = await res.json();

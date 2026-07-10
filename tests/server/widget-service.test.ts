@@ -27,7 +27,7 @@ describe("widget-service", () => {
   });
 
   it("fetches and caches on first call, serves cache without refresh", async () => {
-    const w = repo.addWidget("test.count", {});
+    const w = await repo.addWidget("test.count", {});
     const first = await getWidgetData(w.id, false);
     expect(first.payload).toEqual({ n: 1 });
     const second = await getWidgetData(w.id, false); // cache hit, no fetch
@@ -36,18 +36,18 @@ describe("widget-service", () => {
   });
 
   it("refetches when refresh=true", async () => {
-    const w = repo.addWidget("test.count", {});
+    const w = await repo.addWidget("test.count", {});
     await getWidgetData(w.id, false);
     const refreshed = await getWidgetData(w.id, true);
     expect(refreshed.payload).toEqual({ n: 2 });
   });
 
   it("stores error status and keeps last good payload", async () => {
-    const w = repo.addWidget("test.count", {});
+    const w = await repo.addWidget("test.count", {});
     await getWidgetData(w.id, true); // ok, payload {n:1}
     // swap the type to the failing widget to simulate a later failure
-    repo.removeWidget(w.id);
-    const b = repo.addWidget("test.boom", {});
+    await repo.removeWidget(w.id);
+    const b = await repo.addWidget("test.boom", {});
     const errored = await getWidgetData(b.id, true);
     expect(errored.status).toBe("error");
     expect(errored.error).toContain("kaput");
@@ -61,7 +61,7 @@ describe("widget-service", () => {
       defaultConfig: {},
       fetch: async () => { throw new CliError("Not authenticated — run `gh auth login`", "auth"); },
     });
-    const w = repo.addWidget("fake.authfail", {});
+    const w = await repo.addWidget("fake.authfail", {});
     const row = await getWidgetData(w.id, true);
     expect(row.status).toBe("error");
     expect(row.errorKind).toBe("auth");

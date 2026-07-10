@@ -6,16 +6,16 @@ import { NotFoundError } from "./errors";
 import { CliError } from "./cli";
 
 export async function getWidgetData(widgetId: string, refresh: boolean): Promise<cache.CacheRow> {
-  const widget = getWidget(widgetId);
+  const widget = await getWidget(widgetId);
   if (!widget) throw new NotFoundError(`Widget not found: ${widgetId}`);
 
   if (!refresh) {
-    const cached = cache.get(widgetId);
+    const cached = await cache.get(widgetId);
     if (cached) return cached;
   }
 
   const def = getFetchWidget(widget.type);
-  const prev = cache.get(widgetId);
+  const prev = await cache.get(widgetId);
 
   if (!def) {
     return cache.set(widgetId, {

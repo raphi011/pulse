@@ -54,8 +54,8 @@ describe("resolveEnabled", () => {
 
 describe("getIntegrationStatuses", () => {
   it("computes enabled and counts widgets per integration", async () => {
-    addWidget("t.a", {});
-    addWidget("t.a", {});
+    await addWidget("t.a", {});
+    await addWidget("t.a", {});
     const statuses = await getIntegrationStatuses(true);
     const byId = Object.fromEntries(statuses.map((s) => [s.id, s]));
     expect(byId.toolful.enabled).toBe(true);
@@ -67,10 +67,10 @@ describe("getIntegrationStatuses", () => {
 
 describe("disable/enable", () => {
   it("refuses to disable with widgets unless deleteWidgets is set", async () => {
-    addWidget("t.a", {});
-    addWidget("t.a", {});
+    await addWidget("t.a", {});
+    await addWidget("t.a", {});
     try {
-      disableIntegration("toolful", false);
+      await disableIntegration("toolful", false);
       expect.fail("should have thrown");
     } catch (e) {
       expect(e).toBeInstanceOf(ConfirmRequiredError);
@@ -78,14 +78,14 @@ describe("disable/enable", () => {
     }
   });
   it("deletes the integration's widgets on confirmed disable", async () => {
-    addWidget("t.a", {});
-    const res = disableIntegration("toolful", true);
+    await addWidget("t.a", {});
+    const res = await disableIntegration("toolful", true);
     expect(res.deleted).toBe(1);
     const statuses = await getIntegrationStatuses(true);
     expect(statuses.find((s) => s.id === "toolful")!.enabled).toBe(false);
   });
   it("enable sets the override to true", async () => {
-    enableIntegration("missing");
+    await enableIntegration("missing");
     const statuses = await getIntegrationStatuses(true);
     expect(statuses.find((s) => s.id === "missing")!.enabled).toBe(true);
   });
