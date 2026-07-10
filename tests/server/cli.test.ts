@@ -100,9 +100,9 @@ describe("runJsonCli", () => {
 
   it("throws auth for an embedded 401 even when the process exits 0", async () => {
     whenExec(null, '{"error":{"code":401,"message":"bad token"}}', "");
-    const err = await runJsonCli("gws", ["x"], extractApiError, {
+    const err = (await runJsonCli("gws", ["x"], extractApiError, {
       notAuthenticatedMessage: "Not authenticated — run `gws auth login`",
-    }).catch((e) => e);
+    }).catch((e) => e)) as CliError;
     expect(err).toBeInstanceOf(CliError);
     expect(err.kind).toBe("auth");
     expect(err.message).toBe("Not authenticated — run `gws auth login`");
@@ -110,20 +110,20 @@ describe("runJsonCli", () => {
 
   it("reads the error body carried on a non-zero exit (e.g. 404)", async () => {
     whenExec(Object.assign(new Error("exit 1"), { code: 1 }), '{"error":{"code":404,"message":"not found"}}', "");
-    const err = await runJsonCli("gws", ["x"], extractApiError).catch((e) => e);
+    const err = (await runJsonCli("gws", ["x"], extractApiError).catch((e) => e)) as CliError;
     expect(err.kind).toBe("failed");
     expect(err.message).toBe("not found");
   });
 
   it("rethrows process failures with no JSON body (e.g. ENOENT)", async () => {
     whenExec(Object.assign(new Error("spawn ENOENT"), { code: "ENOENT" }));
-    const err = await runJsonCli("gws", ["x"], extractApiError).catch((e) => e);
+    const err = (await runJsonCli("gws", ["x"], extractApiError).catch((e) => e)) as CliError;
     expect(err.kind).toBe("not-found");
   });
 
   it("throws failed on non-JSON output", async () => {
     whenExec(null, "not json", "");
-    const err = await runJsonCli("gws", ["x"], extractApiError).catch((e) => e);
+    const err = (await runJsonCli("gws", ["x"], extractApiError).catch((e) => e)) as CliError;
     expect(err.kind).toBe("failed");
     expect(err.message).toMatch(/non-JSON/);
   });
