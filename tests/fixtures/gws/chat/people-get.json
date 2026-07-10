@@ -1,0 +1,15 @@
+{
+  "resourceName": "people/200000000000000000002",
+  "etag": "%EgsBAj0...",
+  "names": [
+    {
+      "metadata": { "primary": true, "source": { "type": "PROFILE", "id": "200000000000000000002" } },
+      "displayName": "Alex Rivera",
+      "givenName": "Alex",
+      "familyName": "Rivera"
+    }
+  ],
+  "emailAddresses": [
+    { "metadata": { "primary": true }, "value": "alex.rivera@example.com" }
+  ]
+}

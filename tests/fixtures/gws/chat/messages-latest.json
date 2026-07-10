@@ -1,0 +1,14 @@
+{
+  "messages": [
+    {
+      "name": "spaces/DM_AAA/messages/MSG1.MSG1",
+      "text": "hey, can you take a look at the PR when you get a chance?",
+      "argumentText": "hey, can you take a look at the PR when you get a chance?",
+      "formattedText": "hey, can you take a look at the PR when you get a chance?",
+      "createTime": "2026-07-10T10:00:00Z",
+      "sender": { "name": "users/200000000000000000002", "type": "HUMAN" },
+      "space": { "name": "spaces/DM_AAA" },
+      "thread": { "name": "spaces/DM_AAA/threads/MSG1" }
+    }
+  ]
+}

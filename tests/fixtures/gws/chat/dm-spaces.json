@@ -1,0 +1,25 @@
+{
+  "spaces": [
+    {
+      "name": "spaces/DM_AAA",
+      "spaceType": "DIRECT_MESSAGE",
+      "spaceHistoryState": "HISTORY_ON",
+      "spaceThreadingState": "THREADED_MESSAGES",
+      "spaceUri": "https://chat.google.com/dm/DM_AAA?cls=11",
+      "type": "ROOM",
+      "membershipCount": { "joinedDirectHumanUserCount": 2 },
+      "lastActiveTime": "2026-07-10T10:00:00Z"
+    },
+    {
+      "name": "spaces/DM_BBB",
+      "spaceType": "DIRECT_MESSAGE",
+      "spaceHistoryState": "HISTORY_ON",
+      "spaceThreadingState": "THREADED_MESSAGES",
+      "spaceUri": "https://chat.google.com/dm/DM_BBB?cls=11",
+      "type": "ROOM",
+      "membershipCount": { "joinedDirectHumanUserCount": 2 },
+      "lastActiveTime": "2026-07-09T08:00:00Z"
+    }
+  ],
+  "nextPageToken": ""
+}
