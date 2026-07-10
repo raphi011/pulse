@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
   DndContext, DragOverlay, closestCenter,
@@ -59,6 +60,14 @@ function Toolbar({ onAdd }: { onAdd: (type: string) => void }) {
         </div>
         <div className="flex items-center gap-3">
           <AutoRefreshControls />
+          <Link
+            href="/integrations"
+            aria-label="Integrations"
+            title="Integrations"
+            className="grid h-8 w-8 place-items-center rounded-lg text-slate-500 ring-1 ring-border transition-colors hover:bg-slate-50 hover:text-slate-700 dark:text-slate-400 dark:ring-border-dark dark:hover:bg-white/5"
+          >
+            🔌
+          </Link>
           <AddWidgetDrawer onAdd={onAdd} />
         </div>
       </div>
