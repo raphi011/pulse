@@ -21,11 +21,33 @@ describe("dashboard-data", () => {
     const res = await data.updateWidget(w.id, { title: "Hi" });
     expect(res.title).toBe("Hi");
 
+    // Snapshot the stored config before the invalid write so we can prove validate-before-write.
+    const before = (await data.fetchLayout()).widgets.find((x) => x.id === w.id)?.config;
+
     // core.status's `label` field is typed as a string — a non-string value fails the schema.
     await expect(data.updateWidget(w.id, { config: { label: 42 } })).rejects.toThrow("Invalid config");
 
+    // The rejected write must NOT have touched the stored config.
+    const after = (await data.fetchLayout()).widgets.find((x) => x.id === w.id)?.config;
+    expect(after).toEqual(before);
+
     const valid = await data.updateWidget(w.id, { config: { label: "Servers" } });
     expect(valid.config).toEqual({ label: "Servers" });
+  });
+
+  it("rejects a github repo that is not owner/name (repoSchema injection guard)", async () => {
+    // github.failingActions.repos uses repoSchema, which guards against path/command
+    // injection into `gh api` — a value with a `?`/`=` must fail regex validation.
+    const w = await data.createWidget("github.failingActions");
+    const before = (await data.fetchLayout()).widgets.find((x) => x.id === w.id)?.config;
+
+    await expect(
+      data.updateWidget(w.id, { config: { repos: ["owner/name?x=1"], limit: 5 } }),
+    ).rejects.toThrow("Invalid config");
+
+    // The malformed repo must never be persisted.
+    const after = (await data.fetchLayout()).widgets.find((x) => x.id === w.id)?.config;
+    expect(after).toEqual(before);
   });
 
   it("hides a widget", async () => {
