@@ -1,4 +1,6 @@
 "use client";
+import { useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { getClientWidget } from "@/modules/client-registry";
 import type { Widget } from "@/server/config-repo";
 import { WidgetShell, type WidgetState, type DragHandle } from "./widget-shell";
@@ -16,6 +18,20 @@ export function WidgetCard({
 }) {
   const def = getClientWidget(widget.type);
   const { data, isLoading, refresh, isRefreshing } = useWidgetData(widget.id);
+  const qc = useQueryClient();
+  const saveConfig = useCallback(
+    async (next: unknown) => {
+      const res = await fetch(`/api/widgets/${widget.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ config: next }),
+      });
+      if (!res.ok) throw new Error("Failed to save config");
+      const fresh = await fetch(`/api/widgets/${widget.id}/data?refresh=1`).then((r) => r.json());
+      qc.setQueryData(["widget", widget.id], fresh);
+    },
+    [widget.id, qc],
+  );
 
   if (!def) {
     return <WidgetShell title={widget.title ?? widget.type} state="error" error={`No renderer for ${widget.type}`} fetchedAt={null} onRefresh={() => {}} dragHandle={dragHandle} />;
@@ -32,6 +48,16 @@ export function WidgetCard({
     onConfigure && onRemove ? (
       <CardMenu onConfigure={() => onConfigure(widget)} onRemove={() => onRemove(widget.id)} />
     ) : undefined;
+  const HeaderControls = def.HeaderControls;
+  const headerAction =
+    HeaderControls && hasData ? (
+      <HeaderControls
+        data={data!.payload}
+        config={widget.config}
+        runAction={async () => {}}
+        saveConfig={saveConfig}
+      />
+    ) : undefined;
 
   return (
     <WidgetShell
@@ -44,11 +70,17 @@ export function WidgetCard({
       onRefresh={refresh}
       refreshing={isRefreshing}
       menu={menu}
+      headerAction={headerAction}
       dragHandle={dragHandle}
       issue={errored ? { message: data?.error ?? "Refresh failed", kind: data?.errorKind } : null}
     >
       {hasData && (
-        <Body data={data!.payload} config={widget.config} runAction={async () => {}} />
+        <Body
+          data={data!.payload}
+          config={widget.config}
+          runAction={async () => {}}
+          saveConfig={saveConfig}
+        />
       )}
     </WidgetShell>
   );
