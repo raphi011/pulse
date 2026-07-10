@@ -2,9 +2,13 @@
 import type { WidgetBodyProps } from "@/modules/contracts";
 import type { CalendarData, CalendarConfig, CalendarEventItem } from "../manifest";
 
+function hhmm(iso: string): string {
+  return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+
 function timeLabel(e: CalendarEventItem): string {
   if (e.allDay) return "all day";
-  return new Date(e.start).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  return e.end ? `${hhmm(e.start)}–${hhmm(e.end)}` : hhmm(e.start);
 }
 
 export function CalendarWidget({ data }: WidgetBodyProps<CalendarData, CalendarConfig>) {
@@ -14,7 +18,7 @@ export function CalendarWidget({ data }: WidgetBodyProps<CalendarData, CalendarC
     <ul className="divide-y divide-border dark:divide-border-dark">
       {data.events.map((e) => (
         <li key={e.id} className="flex items-center gap-2.5 py-2">
-          <span className="w-14 shrink-0 text-xs tabular-nums text-slate-500 dark:text-slate-400">{timeLabel(e)}</span>
+          <span className="w-24 shrink-0 text-xs tabular-nums text-slate-500 dark:text-slate-400">{timeLabel(e)}</span>
           <a href={e.url} target="_blank" rel="noreferrer" className="min-w-0 flex-1 truncate text-sm hover:underline">
             {e.title}
           </a>

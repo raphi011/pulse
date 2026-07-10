@@ -27,7 +27,7 @@ export function ChatChannelsWidget({ data }: WidgetBodyProps<ChatChannelsData, C
             className={`h-2 w-2 shrink-0 rounded-full ${c.unread ? "bg-primary-500" : "bg-transparent"}`}
           />
           <a href={c.url} target="_blank" rel="noreferrer" className="min-w-0 flex-1 hover:underline">
-            <span className={`block truncate text-sm ${c.unread ? "font-semibold" : ""}`}>{c.name}</span>
+            <span className={`block truncate text-sm ${c.unread ? "font-medium" : ""}`}>{c.name}</span>
             <span className="block truncate text-xs text-slate-500 dark:text-slate-400">{c.snippet}</span>
           </a>
           <span className="shrink-0 text-xs tabular-nums text-slate-500 dark:text-slate-400">{shortDate(c.time)}</span>
