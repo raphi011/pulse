@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/components/toast-context";
 import type { IntegrationStatus } from "@/modules/integration-contracts";
 
@@ -19,6 +20,14 @@ export function IntegrationsPanel({ initial }: { initial: IntegrationStatus[] })
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState<IntegrationStatus | null>(null);
   const { toast } = useToast();
+  const qc = useQueryClient();
+
+  // Keep the add-widget drawer's cached ["integrations"] query in sync so a toggle
+  // here is reflected there immediately (no waiting for its staleTime to elapse).
+  function syncStatuses(fresh: IntegrationStatus[]) {
+    setStatuses(fresh);
+    qc.setQueryData(["integrations"], fresh);
+  }
 
   useEffect(() => {
     if (!confirm) return;
@@ -35,7 +44,7 @@ export function IntegrationsPanel({ initial }: { initial: IntegrationStatus[] })
       });
       if (res.status === 409) { setConfirm(statuses.find((s) => s.id === id) ?? null); return; }
       if (!res.ok) { toast("Failed to update integration"); return; }
-      setStatuses(await res.json());
+      syncStatuses(await res.json());
     } catch { toast("Failed to update integration"); }
     finally { setBusy(false); }
   }
@@ -45,7 +54,7 @@ export function IntegrationsPanel({ initial }: { initial: IntegrationStatus[] })
     try {
       const res = await fetch("/api/integrations?recheck=1");
       if (!res.ok) { toast("Re-check failed"); return; }
-      setStatuses(await res.json());
+      syncStatuses(await res.json());
     } catch { toast("Re-check failed"); }
     finally { setBusy(false); }
   }

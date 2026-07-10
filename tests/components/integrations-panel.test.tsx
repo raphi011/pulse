@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { IntegrationsPanel } from "@/components/integrations-panel";
 import { ToastProvider } from "@/components/toast-context";
 import type { IntegrationStatus } from "@/modules/integration-contracts";
@@ -12,11 +13,15 @@ const base: IntegrationStatus[] = [
 ];
 
 function renderPanel(initial: IntegrationStatus[]) {
-  return render(
-    <ToastProvider>
-      <IntegrationsPanel initial={initial} />
-    </ToastProvider>,
+  const qc = new QueryClient();
+  render(
+    <QueryClientProvider client={qc}>
+      <ToastProvider>
+        <IntegrationsPanel initial={initial} />
+      </ToastProvider>
+    </QueryClientProvider>,
   );
+  return { qc };
 }
 
 beforeEach(() => {
@@ -45,5 +50,19 @@ describe("IntegrationsPanel", () => {
     renderPanel(base);
     fireEvent.click(screen.getByRole("button", { name: /disable github/i }));
     expect(await screen.findByText(/failed to update integration/i)).toBeInTheDocument();
+  });
+
+  it("writes fresh statuses into the shared ['integrations'] query cache after a toggle", async () => {
+    // Enabling gws (disabled, no widgets) → POST returns updated statuses with gws enabled.
+    const updated = [base[0], { ...base[1], enabled: true, override: true }];
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(updated))));
+    const { qc } = renderPanel(base);
+    // The add-widget drawer reads this cache key; nothing has populated it yet.
+    expect(qc.getQueryData(["integrations"])).toBeUndefined();
+    fireEvent.click(screen.getByRole("button", { name: /enable google workspace/i }));
+    await waitFor(() => {
+      const cached = qc.getQueryData<IntegrationStatus[]>(["integrations"]);
+      expect(cached?.find((s) => s.id === "gws")?.enabled).toBe(true);
+    });
   });
 });
