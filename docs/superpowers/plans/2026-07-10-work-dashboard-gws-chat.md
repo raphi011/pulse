@@ -293,7 +293,11 @@ Append to `tests/modules/gws-chat.test.ts`. The mock routes by the gws sub-comma
 import { gwsJson } from "@/modules/gws/gws";
 import { fetchChatDms } from "@/modules/gws/chat";
 const mockJson = gwsJson as unknown as ReturnType<typeof vi.fn>;
-beforeEach(() => mockJson.mockReset());
+// NOTE: block body is required — an arrow returning mockReset()'s value (a function) is
+// treated by vitest v4 as a teardown hook and invoked with no args, breaking the router.
+beforeEach(() => {
+  mockJson.mockReset();
+});
 
 // Routes a gws call by its sub-command. args shape: [<service>, <resource...>, <method>, "--params", <json>]
 function router(opts: {
@@ -397,6 +401,7 @@ export async function fetchChatDms(config: ChatDmsConfig): Promise<ChatDmsData> 
   );
   const unread = readStates
     .filter((r): r is PromiseFulfilledResult<{ space: Space; rs: ReadState }> => r.status === "fulfilled")
+    .map((r) => r.value) // unwrap the settled result before destructuring
     .filter(({ space, rs }) => isUnread(space.lastActiveTime, rs.lastReadTime))
     .map(({ space, rs }) => ({ space, me: callerUserId(rs.name) }));
 
