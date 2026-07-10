@@ -12,6 +12,7 @@ import { SortableCard } from "./sortable-card";
 import { WidgetCard } from "./widget-card";
 import { AddWidgetDrawer } from "./add-widget-drawer";
 import { ConfigureDialog } from "./configure-dialog";
+import { useAutoRefresh } from "./auto-refresh-context";
 
 const isColId = (id: string | number) => String(id).startsWith("col:");
 
@@ -63,6 +64,35 @@ function DroppableColumn({ index, isEmpty, children }: { index: number; isEmpty:
   );
 }
 
+function AutoRefreshControls() {
+  const { enabled, toggle, refreshAll } = useAutoRefresh();
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={toggle}
+        aria-pressed={enabled}
+        className={`rounded-lg px-2.5 py-1.5 text-xs font-medium ring-1 transition-colors ${
+          enabled
+            ? "bg-primary-600 text-white ring-primary-600"
+            : "text-slate-600 ring-border hover:bg-slate-50 dark:text-slate-300 dark:ring-border-dark dark:hover:bg-white/5"
+        }`}
+      >
+        Auto-refresh {enabled ? "on" : "off"}
+      </button>
+      <button
+        type="button"
+        onClick={refreshAll}
+        aria-label="Refresh all widgets"
+        title="Refresh all widgets"
+        className="grid h-8 w-8 place-items-center rounded-lg text-slate-500 ring-1 ring-border transition-colors hover:bg-slate-50 hover:text-slate-700 dark:text-slate-400 dark:ring-border-dark dark:hover:bg-white/5"
+      >
+        ↻
+      </button>
+    </div>
+  );
+}
+
 function Toolbar({ onAdd }: { onAdd: (type: string) => void }) {
   return (
     <div className="sticky top-0 z-30 border-b border-border/80 bg-surface/80 backdrop-blur dark:border-border-dark/80 dark:bg-surface-dark/70">
@@ -76,7 +106,10 @@ function Toolbar({ onAdd }: { onAdd: (type: string) => void }) {
           </span>
           <h1 className="text-[0.9375rem] font-semibold tracking-tight">Pulse</h1>
         </div>
-        <AddWidgetDrawer onAdd={onAdd} />
+        <div className="flex items-center gap-3">
+          <AutoRefreshControls />
+          <AddWidgetDrawer onAdd={onAdd} />
+        </div>
       </div>
     </div>
   );
