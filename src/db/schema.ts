@@ -8,7 +8,6 @@ export const widgets = sqliteTable("widgets", {
   order: integer("order").notNull().default(0),
   hidden: integer("hidden", { mode: "boolean" }).notNull().default(false),
   config: text("config", { mode: "json" }).notNull().$type<Record<string, unknown>>(),
-  refreshInterval: integer("refresh_interval"), // seconds, null = manual only
 });
 
 export const bookmarks = sqliteTable("bookmarks", {
