@@ -67,3 +67,14 @@ export function getPref(key: string, fallback: string): string {
 export function setPref(key: string, value: string): void {
   getDb().insert(prefs).values({ key, value }).onConflictDoUpdate({ target: prefs.key, set: { value } }).run();
 }
+
+/** Manual enable/disable override for an integration. null = follow computed default. */
+export function getIntegrationOverride(id: string): boolean | null {
+  const raw = getPref(`integration.${id}.enabled`, "");
+  if (raw === "") return null;
+  return raw === "true";
+}
+
+export function setIntegrationOverride(id: string, enabled: boolean): void {
+  setPref(`integration.${id}.enabled`, enabled ? "true" : "false");
+}

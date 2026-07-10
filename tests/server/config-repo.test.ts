@@ -35,4 +35,12 @@ describe("config-repo", () => {
     repo.setPref("theme", "light");
     expect(repo.getPref("theme", "dark")).toBe("light");
   });
+
+  it("integration override is null until set, then round-trips", () => {
+    expect(repo.getIntegrationOverride("github")).toBeNull();
+    repo.setIntegrationOverride("github", false);
+    expect(repo.getIntegrationOverride("github")).toBe(false);
+    repo.setIntegrationOverride("github", true);
+    expect(repo.getIntegrationOverride("github")).toBe(true);
+  });
 });
