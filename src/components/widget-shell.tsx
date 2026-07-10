@@ -92,7 +92,7 @@ export function WidgetShell({
             </span>
             );
           })()}
-          {fetchedAt && <span className="tabular-nums">{ago(fetchedAt)}</span>}
+          {!headerAction && fetchedAt && <span className="tabular-nums">{ago(fetchedAt)}</span>}
           {headerExtra}
           {menu}
           {headerAction ?? (
