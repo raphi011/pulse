@@ -1,5 +1,5 @@
 import "@/modules/server";
-import { getWidgets, addWidget, getPref } from "@/server/config-repo";
+import { getWidgets, addWidget } from "@/server/config-repo";
 import { statusDefaultConfig } from "@/modules/core/manifest";
 import { Dashboard } from "@/components/dashboard";
 import "@/modules/client";
@@ -12,6 +12,5 @@ export default function Page() {
     addWidget("core.status", statusDefaultConfig as Record<string, unknown>);
     widgets = getWidgets();
   }
-  const columnCount = Number(getPref("columnCount", "3"));
-  return <Dashboard initialWidgets={widgets} columnCount={columnCount} />;
+  return <Dashboard initialWidgets={widgets} />;
 }

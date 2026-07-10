@@ -85,24 +85,25 @@ export function Dashboard({ initialWidgets }: { initialWidgets: Widget[] }) {
   const [widgets, setWidgets] = useState(initialWidgets);
   const [configuring, setConfiguring] = useState<Widget | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [cols, setCols] = useState(1);
+  const [width, setWidth] = useState(0);
   const gridRef = useRef<HTMLDivElement | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   useEffect(() => {
     const el = gridRef.current;
     if (!el) return;
-    const update = () => setCols(columnCountForWidth(el.clientWidth));
+    const update = () => setWidth(el.clientWidth);
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
 
+  const cols = width > 0 ? columnCountForWidth(width) : 1;
+  const cellWidth = width > 0 ? width / cols : ROW_UNIT_PX;
   const visible = orderedWidgets(widgets);
   const isEmpty = visible.length === 0;
   const activeWidget = activeId ? widgets.find((w) => w.id === activeId) ?? null : null;
-  const cellWidth = gridRef.current ? gridRef.current.clientWidth / cols : ROW_UNIT_PX;
 
   async function onAdd(type: string) {
     const res = await fetch("/api/widgets", { method: "POST", body: JSON.stringify({ type }) });
