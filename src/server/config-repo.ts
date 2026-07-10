@@ -8,36 +8,36 @@ import { getServerWidget } from "@/modules/server-registry";
 export type Widget = typeof widgets.$inferSelect;
 
 export function getWidgets(): Widget[] {
-  return getDb().select().from(widgets).orderBy(asc(widgets.column), asc(widgets.order)).all();
+  return getDb().select().from(widgets).orderBy(asc(widgets.order)).all();
 }
 
 export function getWidget(id: string): Widget | undefined {
   return getDb().select().from(widgets).where(eq(widgets.id, id)).get();
 }
 
-const COLUMN_COUNT_DEFAULT = 3;
-
 export function addWidget(type: string, config: Record<string, unknown>): Widget {
   const def = getServerWidget(type);
   const validated = def ? (def.configSchema.parse(config) as Record<string, unknown>) : config;
-  const columnCount = Number(getPref("columnCount", String(COLUMN_COUNT_DEFAULT)));
   const existing = getWidgets();
-  const counts = Array.from({ length: columnCount }, () => 0);
-  for (const w of existing) if (w.column < columnCount) counts[w.column]++;
-  const column = counts.indexOf(Math.min(...counts));
-  const order = existing.filter((w) => w.column === column).length;
+  const order = existing.reduce((max, w) => Math.max(max, w.order + 1), 0);
   const row: Widget = {
-    id: randomUUID(), type, title: null, column, order, hidden: false, config: validated,
+    id: randomUUID(), type, title: null, order, colSpan: 1, rowSpan: 6,
+    hidden: false, config: validated,
   };
   getDb().insert(widgets).values(row).run();
   return row;
 }
 
-export function setPositions(positions: { id: string; column: number; order: number }[]): void {
+export function setPositions(
+  positions: { id: string; order: number; colSpan: number; rowSpan: number }[],
+): void {
   const db = getDb();
   db.transaction((tx) => {
     for (const p of positions) {
-      tx.update(widgets).set({ column: p.column, order: p.order }).where(eq(widgets.id, p.id)).run();
+      tx.update(widgets)
+        .set({ order: p.order, colSpan: p.colSpan, rowSpan: p.rowSpan })
+        .where(eq(widgets.id, p.id))
+        .run();
     }
   });
 }
