@@ -1,8 +1,31 @@
 "use client";
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useState, useSyncExternalStore, type ReactNode } from "react";
 
 export const INTERVAL_MS = 5 * 60 * 1000;
 const STORAGE_KEY = "pulse:auto-refresh";
+
+// Back the toggle with localStorage via an external store so it survives reloads
+// without a setState-in-effect hydration hack. The server snapshot is always
+// false; after hydration React re-reads the real client value.
+const listeners = new Set<() => void>();
+
+function subscribe(cb: () => void): () => void {
+  listeners.add(cb);
+  return () => { listeners.delete(cb); };
+}
+
+function getSnapshot(): boolean {
+  return localStorage.getItem(STORAGE_KEY) === "1";
+}
+
+function getServerSnapshot(): boolean {
+  return false;
+}
+
+function persistEnabled(value: boolean): void {
+  localStorage.setItem(STORAGE_KEY, value ? "1" : "0");
+  listeners.forEach((l) => l());
+}
 
 type AutoRefreshValue = {
   enabled: boolean;
@@ -14,20 +37,10 @@ type AutoRefreshValue = {
 const AutoRefreshContext = createContext<AutoRefreshValue | null>(null);
 
 export function AutoRefreshProvider({ children }: { children: ReactNode }) {
-  // Initialize false on both server and client render, then hydrate after mount
-  // so the stored value never diverges the SSR markup (no hydration mismatch).
-  const [enabled, setEnabled] = useState(false);
+  const enabled = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const [nonce, setNonce] = useState(0);
 
-  useEffect(() => {
-    if (localStorage.getItem(STORAGE_KEY) === "1") setEnabled(true);
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, enabled ? "1" : "0");
-  }, [enabled]);
-
-  const toggle = useCallback(() => setEnabled((e) => !e), []);
+  const toggle = useCallback(() => persistEnabled(!getSnapshot()), []);
   const refreshAll = useCallback(() => setNonce((n) => n + 1), []);
 
   return (
