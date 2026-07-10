@@ -40,3 +40,40 @@ export type CalendarEventItem = {
   url: string; // htmlLink
 };
 export type CalendarData = { events: CalendarEventItem[] };
+
+export const CHAT_DMS_TYPE = "gws.chatDms";
+export const CHAT_CHANNELS_TYPE = "gws.chatChannels";
+
+export const chatDmsConfigSchema = z.object({
+  limit: z.number().int().min(1).max(50).default(15).describe("Max recent DMs to scan"),
+});
+export type ChatDmsConfig = z.infer<typeof chatDmsConfigSchema>;
+export const chatDmsDefaultConfig: ChatDmsConfig = { limit: 15 };
+
+export const chatChannelsConfigSchema = z.object({
+  spaceIds: z
+    .array(z.string())
+    .default([])
+    .describe("Space IDs (spaces/…) — run `gws chat spaces list`"),
+});
+export type ChatChannelsConfig = z.infer<typeof chatChannelsConfigSchema>;
+export const chatChannelsDefaultConfig: ChatChannelsConfig = { spaceIds: [] };
+
+export type ChatDm = {
+  spaceId: string; // "spaces/AAAA"
+  partner: string; // People-API-resolved name (fallback "Direct message")
+  snippet: string; // latest message text, trimmed
+  time: string;    // ISO createTime of latest message
+  url: string;     // Space.spaceUri
+};
+export type ChatDmsData = { dms: ChatDm[] };
+
+export type ChatChannel = {
+  spaceId: string;
+  name: string;    // space displayName (fallback: the id)
+  snippet: string;
+  time: string;
+  unread: boolean;
+  url: string;     // Space.spaceUri
+};
+export type ChatChannelsData = { channels: ChatChannel[] };
