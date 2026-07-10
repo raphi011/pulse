@@ -37,7 +37,7 @@ function Skeleton() {
 }
 
 export function WidgetShell({
-  title, icon, count, state, error, fetchedAt, onRefresh, refreshing, children, headerExtra, menu, dragHandle, issue,
+  title, icon, count, state, error, fetchedAt, onRefresh, refreshing, children, headerExtra, headerAction, menu, dragHandle, issue,
 }: {
   title: string;
   icon?: ReactNode;
@@ -49,6 +49,7 @@ export function WidgetShell({
   refreshing?: boolean;
   children?: ReactNode;
   headerExtra?: ReactNode;
+  headerAction?: ReactNode;
   menu?: ReactNode;
   dragHandle?: DragHandle;
   issue?: { message: string; kind?: string | null } | null;
@@ -94,20 +95,22 @@ export function WidgetShell({
           {fetchedAt && <span className="tabular-nums">{ago(fetchedAt)}</span>}
           {headerExtra}
           {menu}
-          <button
-            aria-label="Refresh"
-            onClick={onRefresh}
-            disabled={refreshing}
-            className="icon-btn hover:[&>span]:rotate-90 disabled:cursor-default"
-          >
-            <span
-              className={`inline-block text-[0.95rem] leading-none transition-transform duration-300 ease-out ${
-                refreshing ? "animate-spin" : ""
-              }`}
+          {headerAction ?? (
+            <button
+              aria-label="Refresh"
+              onClick={onRefresh}
+              disabled={refreshing}
+              className="icon-btn hover:[&>span]:rotate-90 disabled:cursor-default"
             >
-              ↻
-            </span>
-          </button>
+              <span
+                className={`inline-block text-[0.95rem] leading-none transition-transform duration-300 ease-out ${
+                  refreshing ? "animate-spin" : ""
+                }`}
+              >
+                ↻
+              </span>
+            </button>
+          )}
         </div>
       </header>
       <div className="min-h-0 flex-1 overflow-y-auto px-3.5 py-3">
