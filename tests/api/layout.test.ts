@@ -19,7 +19,6 @@ describe("layout API", () => {
     expect(res.status).toBe(201);
     const layout = await (await getLayout()).json();
     expect(layout.widgets).toHaveLength(1);
-    expect(layout.prefs.columnCount).toBe("3");
   });
 
   it("rejects an unknown widget type", async () => {
@@ -34,11 +33,12 @@ describe("layout API", () => {
       method: "POST", body: JSON.stringify({ type: "core.status" }),
     }))).json();
     const res = await patchLayout(new Request("http://x/api/layout", {
-      method: "PATCH", body: JSON.stringify({ positions: [{ id: added.id, column: 2, order: 0 }] }),
+      method: "PATCH",
+      body: JSON.stringify({ positions: [{ id: added.id, order: 0, colSpan: 3, rowSpan: 8 }] }),
     }));
     expect(res.status).toBe(200);
     const layout = await (await getLayout()).json();
-    expect(layout.widgets[0].column).toBe(2);
+    expect(layout.widgets[0]).toMatchObject({ colSpan: 3, rowSpan: 8 });
   });
 
   it("hides then deletes a widget", async () => {
