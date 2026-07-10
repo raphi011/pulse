@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { WidgetBodyProps } from "@/modules/contracts";
 import {
   normalizeUrl,
@@ -19,16 +19,16 @@ function faviconUrl(url: string): string | null {
 
 /** Favicon from Google's service; on load error, fall back to a blank spacer (keeps row alignment). */
 function Favicon({ url }: { url: string }) {
-  const [failed, setFailed] = useState(false);
   const src = faviconUrl(url);
-  if (!src || failed) return <span className="h-4 w-4 shrink-0" aria-hidden />;
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  if (!src || failedSrc === src) return <span className="h-4 w-4 shrink-0" aria-hidden />;
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={src}
       alt=""
       className="h-4 w-4 shrink-0 rounded-sm"
-      onError={() => setFailed(true)}
+      onError={() => setFailedSrc(src)}
     />
   );
 }
@@ -46,7 +46,11 @@ export function BookmarksWidget({ data, saveConfig }: Props) {
   }
 
   async function remove(index: number) {
-    await saveConfig({ bookmarks: bookmarks.filter((_, i) => i !== index) });
+    try {
+      await saveConfig({ bookmarks: bookmarks.filter((_, i) => i !== index) });
+    } catch {
+      // Save failed; data is unchanged so the row remains. Swallow to avoid an unhandled rejection.
+    }
     setPendingRemove(null);
   }
 
@@ -93,9 +97,41 @@ export function BookmarksWidget({ data, saveConfig }: Props) {
 
 export function BookmarksHeaderControls({ data, saveConfig }: Props) {
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = () => setOpen(false);
+    const onDoc = (e: MouseEvent) => {
+      if (!popRef.current?.contains(e.target as Node) && !btnRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [open]);
+
+  function toggle() {
+    if (!open && btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      setPos({ top: r.bottom + 4, right: window.innerWidth - r.right });
+    }
+    setError(null);
+    setOpen((v) => !v);
+  }
 
   async function add() {
     const normalized = normalizeUrl(url);
@@ -103,10 +139,18 @@ export function BookmarksHeaderControls({ data, saveConfig }: Props) {
       setError("Enter a title and a valid URL.");
       return;
     }
-    await saveConfig({ bookmarks: [...data.bookmarks, { title: title.trim(), url: normalized }] });
+    setSaving(true);
+    try {
+      await saveConfig({ bookmarks: [...data.bookmarks, { title: title.trim(), url: normalized }] });
+    } catch {
+      setError("Couldn't save. Try again.");
+      setSaving(false);
+      return;
+    }
     setTitle("");
     setUrl("");
     setError(null);
+    setSaving(false);
     setOpen(false);
   }
 
@@ -114,19 +158,19 @@ export function BookmarksHeaderControls({ data, saveConfig }: Props) {
     "w-full rounded-lg bg-surface px-2.5 py-1.5 text-sm ring-1 ring-border focus:outline-none focus:ring-2 focus:ring-primary-500/50 dark:bg-surface-dark dark:ring-border-dark";
 
   return (
-    <div className="relative">
-      <button aria-label="Add bookmark" onClick={() => setOpen((o) => !o)} className="icon-btn">
+    <>
+      <button ref={btnRef} aria-label="Add bookmark" aria-expanded={open} onClick={toggle} className="icon-btn">
         <span className="text-[0.95rem] leading-none">＋</span>
       </button>
-      {open && (
-        <div className="absolute right-0 top-8 z-20 w-60 space-y-2 rounded-lg bg-panel p-3 text-left shadow-xl ring-1 ring-border dark:bg-panel-dark dark:ring-border-dark">
+      {open && pos && (
+        <div
+          ref={popRef}
+          style={{ position: "fixed", top: pos.top, right: pos.right }}
+          className="z-50 w-60 space-y-2 rounded-lg bg-panel p-3 text-left shadow-xl ring-1 ring-border [animation:wd-fade-in_.12s_ease-out] dark:bg-panel-dark dark:ring-border-dark"
+        >
+          <input aria-label="Title" className={inputCls} placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
           <input
-            className={inputCls}
-            placeholder="Title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
-          <input
+            aria-label="URL"
             className={inputCls}
             placeholder="example.com"
             value={url}
@@ -135,12 +179,12 @@ export function BookmarksHeaderControls({ data, saveConfig }: Props) {
           />
           {error && <p className="text-xs text-danger">{error}</p>}
           <div className="flex justify-end">
-            <button onClick={add} className="btn btn-primary">
-              Save
+            <button onClick={add} disabled={saving} className="btn btn-primary disabled:opacity-60">
+              {saving ? "Saving…" : "Save"}
             </button>
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
