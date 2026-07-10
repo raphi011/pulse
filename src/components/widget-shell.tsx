@@ -17,6 +17,15 @@ function ago(ts: number): string {
   return `${Math.floor(m / 60)}h ago`;
 }
 
+function issueStyle(kind?: string | null): { colorClass: string; label: string } {
+  switch (kind) {
+    case "auth": return { colorClass: "text-warn", label: "Authentication issue" };
+    case "not-found": return { colorClass: "text-warn", label: "Tool not installed" };
+    case "timeout": return { colorClass: "text-warn", label: "Timed out" };
+    default: return { colorClass: "text-danger", label: "Error" };
+  }
+}
+
 function Skeleton() {
   return (
     <div className="space-y-2.5" aria-hidden>
@@ -41,7 +50,7 @@ export function WidgetShell({
   headerExtra?: ReactNode;
   menu?: ReactNode;
   dragHandle?: DragHandle;
-  issue?: { message: string } | null;
+  issue?: { message: string; kind?: string | null } | null;
 }) {
   const { setRef, attributes, listeners } = dragHandle ?? {};
   return (
@@ -68,15 +77,18 @@ export function WidgetShell({
           )}
         </div>
         <div className="flex shrink-0 items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-          {issue && (
+          {issue && (() => {
+            const { colorClass, label } = issueStyle(issue.kind);
+            return (
             <span
-              aria-label="Has an issue"
+              aria-label={label}
               title={issue.message}
-              className="grid h-5 w-5 place-items-center rounded text-warn"
+              className={`grid h-5 w-5 place-items-center rounded ${colorClass}`}
             >
               <span aria-hidden className="text-[0.95rem] leading-none">⚠</span>
             </span>
-          )}
+            );
+          })()}
           {fetchedAt && <span className="tabular-nums">{ago(fetchedAt)}</span>}
           {headerExtra}
           {menu}

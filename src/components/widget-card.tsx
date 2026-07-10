@@ -43,7 +43,7 @@ export function WidgetCard({
       refreshing={isRefreshing}
       menu={menu}
       dragHandle={dragHandle}
-      issue={errored ? { message: data?.error ?? "Refresh failed" } : null}
+      issue={errored ? { message: data?.error ?? "Refresh failed", kind: data?.errorKind } : null}
     >
       {hasData && (
         <Body data={data!.payload} config={widget.config} runAction={async () => {}} />
