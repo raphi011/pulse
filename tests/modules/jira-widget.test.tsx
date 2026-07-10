@@ -15,7 +15,7 @@ const data: JqlData = {
 
 describe("JqlWidget", () => {
   it("renders each issue as a link to its browse URL", () => {
-    render(<JqlWidget data={data} config={config} runAction={noop} />);
+    render(<JqlWidget data={data} config={config} runAction={noop} saveConfig={noop} />);
     expect(screen.getByText("CORE-101")).toBeInTheDocument();
     expect(screen.getByText(/Fix seizure edge case/)).toBeInTheDocument();
     expect(screen.getByRole("link")).toHaveAttribute("href", "https://x.atlassian.net/browse/CORE-101");
@@ -29,14 +29,14 @@ describe("JqlWidget", () => {
           assignee: null, url: "https://x.atlassian.net/browse/CORE-102" },
       ],
     };
-    render(<JqlWidget data={two} config={config} runAction={noop} />);
+    render(<JqlWidget data={two} config={config} runAction={noop} saveConfig={noop} />);
     expect(screen.getByText("RG")).toBeInTheDocument();
     expect(screen.getByText("—")).toBeInTheDocument();
     expect(screen.getByText("In Progress")).toBeInTheDocument();
   });
 
   it("shows an empty message when there are no issues", () => {
-    render(<JqlWidget data={{ issues: [] }} config={config} runAction={noop} />);
+    render(<JqlWidget data={{ issues: [] }} config={config} runAction={noop} saveConfig={noop} />);
     expect(screen.getByText(/no matching issues/i)).toBeInTheDocument();
   });
 });
