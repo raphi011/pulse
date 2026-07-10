@@ -326,17 +326,19 @@ git commit -m "feat(gws): add starred-files drive widget body"
 
 - [ ] **Step 1: Extend the registration test (failing)**
 
-Edit `tests/modules/gws-registration.test.ts`. Change the import line to add `DRIVE_TYPE`:
+Edit `tests/modules/gws-registration.test.ts`. The file already imports and tests the gmail, calendar, and two chat types — leave all of that intact. Change the import line to add `DRIVE_TYPE` at the end:
 
 ```ts
-import { GMAIL_TYPE, CALENDAR_TYPE, DRIVE_TYPE } from "@/modules/gws/manifest";
+import { GMAIL_TYPE, CALENDAR_TYPE, CHAT_DMS_TYPE, CHAT_CHANNELS_TYPE, DRIVE_TYPE } from "@/modules/gws/manifest";
 ```
 
-Add `DRIVE_TYPE` to the loop array and add two assertions inside the `it(...)` body (after the existing calendar assertion):
+Add `DRIVE_TYPE` to the end of the loop array:
 
 ```ts
-    for (const t of [GMAIL_TYPE, CALENDAR_TYPE, DRIVE_TYPE]) {
+    for (const t of [GMAIL_TYPE, CALENDAR_TYPE, CHAT_DMS_TYPE, CHAT_CHANNELS_TYPE, DRIVE_TYPE]) {
 ```
+
+Add two assertions inside the `it(...)` body, after the existing `CHAT_CHANNELS_TYPE` defaultConfig assertion (the last line before the closing `});`):
 
 ```ts
     expect(getClientWidget(DRIVE_TYPE)!.title).toBe("Starred files");
@@ -352,21 +354,37 @@ Expected: FAIL — `getServerWidget(DRIVE_TYPE)` / `getClientWidget(DRIVE_TYPE)`
 
 - [ ] **Step 3: Register on the server side**
 
-Edit `src/modules/gws/server.ts`. Add to the manifest import list `DRIVE_TYPE, driveConfigSchema, driveDefaultConfig`; add `import { fetchDrive } from "./drive";`; and append a registration call:
+Edit `src/modules/gws/server.ts`. The file already registers gmail, calendar, and the two chat widgets — keep all of that. Make three additive changes: (a) add `DRIVE_TYPE` to the type-id line and `driveConfigSchema, driveDefaultConfig` to the manifest import; (b) add `import { fetchDrive } from "./drive";` after the existing chat import; (c) append one registration call at the end. The resulting file:
 
 ```ts
+import "server-only";
+import { registerServerWidget } from "@/modules/server-registry";
 import {
-  GMAIL_TYPE, CALENDAR_TYPE, DRIVE_TYPE,
+  GMAIL_TYPE, CALENDAR_TYPE,
+  CHAT_DMS_TYPE, CHAT_CHANNELS_TYPE, DRIVE_TYPE,
   gmailConfigSchema, gmailDefaultConfig,
   calendarConfigSchema, calendarDefaultConfig,
+  chatDmsConfigSchema, chatDmsDefaultConfig,
+  chatChannelsConfigSchema, chatChannelsDefaultConfig,
   driveConfigSchema, driveDefaultConfig,
 } from "./manifest";
 import { fetchGmail } from "./gmail";
 import { fetchCalendar } from "./calendar";
+import { fetchChatDms, fetchChatChannels } from "./chat";
 import { fetchDrive } from "./drive";
-```
 
-```ts
+registerServerWidget({
+  type: GMAIL_TYPE, configSchema: gmailConfigSchema, defaultConfig: gmailDefaultConfig, fetch: fetchGmail,
+});
+registerServerWidget({
+  type: CALENDAR_TYPE, configSchema: calendarConfigSchema, defaultConfig: calendarDefaultConfig, fetch: fetchCalendar,
+});
+registerServerWidget({
+  type: CHAT_DMS_TYPE, configSchema: chatDmsConfigSchema, defaultConfig: chatDmsDefaultConfig, fetch: fetchChatDms,
+});
+registerServerWidget({
+  type: CHAT_CHANNELS_TYPE, configSchema: chatChannelsConfigSchema, defaultConfig: chatChannelsDefaultConfig, fetch: fetchChatChannels,
+});
 registerServerWidget({
   type: DRIVE_TYPE, configSchema: driveConfigSchema, defaultConfig: driveDefaultConfig, fetch: fetchDrive,
 });
@@ -374,21 +392,40 @@ registerServerWidget({
 
 - [ ] **Step 4: Register on the client side**
 
-Edit `src/modules/gws/client.ts`. Add `DRIVE_TYPE, driveConfigSchema, driveDefaultConfig` to the manifest import; add `import { DriveWidget } from "./widgets/drive-widget";`; and append a registration call:
+Edit `src/modules/gws/client.ts`. The file already registers gmail, calendar, and the two chat widgets — keep all of that. Make three additive changes: (a) add `DRIVE_TYPE` to the type-id line and `driveConfigSchema, driveDefaultConfig` to the manifest import; (b) add `import { DriveWidget } from "./widgets/drive-widget";` after the existing chat widget imports; (c) append one registration call at the end. The resulting file:
 
 ```ts
+import { registerClientWidget } from "@/modules/client-registry";
 import {
-  GMAIL_TYPE, CALENDAR_TYPE, DRIVE_TYPE,
+  GMAIL_TYPE, CALENDAR_TYPE, CHAT_DMS_TYPE, CHAT_CHANNELS_TYPE, DRIVE_TYPE,
   gmailConfigSchema, gmailDefaultConfig,
   calendarConfigSchema, calendarDefaultConfig,
+  chatDmsConfigSchema, chatDmsDefaultConfig,
+  chatChannelsConfigSchema, chatChannelsDefaultConfig,
   driveConfigSchema, driveDefaultConfig,
 } from "./manifest";
 import { GmailWidget } from "./widgets/gmail-widget";
 import { CalendarWidget } from "./widgets/calendar-widget";
+import { ChatDmsWidget } from "./widgets/chat-dms-widget";
+import { ChatChannelsWidget } from "./widgets/chat-channels-widget";
 import { DriveWidget } from "./widgets/drive-widget";
-```
 
-```ts
+registerClientWidget({
+  type: GMAIL_TYPE, title: "Gmail", Component: GmailWidget,
+  configSchema: gmailConfigSchema, defaultConfig: gmailDefaultConfig,
+});
+registerClientWidget({
+  type: CALENDAR_TYPE, title: "Calendar", Component: CalendarWidget,
+  configSchema: calendarConfigSchema, defaultConfig: calendarDefaultConfig,
+});
+registerClientWidget({
+  type: CHAT_DMS_TYPE, title: "Unread DMs", Component: ChatDmsWidget,
+  configSchema: chatDmsConfigSchema, defaultConfig: chatDmsDefaultConfig,
+});
+registerClientWidget({
+  type: CHAT_CHANNELS_TYPE, title: "Chat Channels", Component: ChatChannelsWidget,
+  configSchema: chatChannelsConfigSchema, defaultConfig: chatChannelsDefaultConfig,
+});
 registerClientWidget({
   type: DRIVE_TYPE, title: "Starred files", Component: DriveWidget,
   configSchema: driveConfigSchema, defaultConfig: driveDefaultConfig,
