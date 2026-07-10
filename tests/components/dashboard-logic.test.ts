@@ -1,36 +1,35 @@
 import { describe, it, expect } from "vitest";
-import { buildColumns, reorderWidgets } from "@/components/dashboard-logic";
+import { orderedWidgets, applyReorder, applyResize } from "@/components/dashboard-logic";
 import type { Widget } from "@/server/config-repo";
 
-const mk = (id: string, column: number, order: number): Widget => ({
-  id, type: "core.status", title: null, column, order, hidden: false, config: {},
+const mk = (id: string, order: number, extra: Partial<Widget> = {}): Widget => ({
+  id, type: "core.status", title: null, order, colSpan: 1, rowSpan: 6,
+  hidden: false, config: {}, ...extra,
 });
 
 describe("dashboard-logic", () => {
-  it("builds columns sorted by order, skipping hidden", () => {
-    const ws = [mk("a", 0, 1), mk("b", 0, 0), { ...mk("c", 1, 0), hidden: true }];
-    const cols = buildColumns(ws, 3);
-    expect(cols[0].map((w) => w.id)).toEqual(["b", "a"]);
-    expect(cols[1]).toHaveLength(0);
+  it("orders visible widgets by order, skipping hidden", () => {
+    const ws = [mk("a", 1), mk("b", 0), mk("c", 2, { hidden: true })];
+    expect(orderedWidgets(ws).map((w) => w.id)).toEqual(["b", "a"]);
   });
 
-  it("reorders a widget onto another and reassigns column/order", () => {
-    const ws = [mk("a", 0, 0), mk("b", 0, 1), mk("c", 1, 0)];
-    const next = reorderWidgets(ws, 3, "c", "a"); // move c above a in column 0
-    const map = Object.fromEntries(next.map((w) => [w.id, w]));
-    expect(map.c.column).toBe(0);
-    expect(map.c.order).toBe(0);
-    expect(map.a.order).toBe(1);
-    expect(map.b.order).toBe(2);
+  it("reorders a widget before another and reassigns a 0..n order", () => {
+    const ws = [mk("a", 0), mk("b", 1), mk("c", 2)];
+    const next = applyReorder(ws, "c", "a"); // move c to a's slot
+    const map = Object.fromEntries(next.map((w) => [w.id, w.order]));
+    expect(map).toEqual({ c: 0, a: 1, b: 2 });
   });
 
-  it("moves a widget into an empty column via the col:N target", () => {
-    const ws = [mk("a", 0, 0), mk("b", 0, 1)]; // columns 1 and 2 are empty
-    const next = reorderWidgets(ws, 3, "b", "col:2"); // drop b into empty column 2
-    const map = Object.fromEntries(next.map((w) => [w.id, w]));
-    expect(map.b.column).toBe(2);
-    expect(map.b.order).toBe(0);
-    expect(map.a.column).toBe(0);
-    expect(map.a.order).toBe(0);
+  it("keeps hidden widgets in the returned set unchanged", () => {
+    const ws = [mk("a", 0), mk("b", 1), mk("h", 2, { hidden: true })];
+    const next = applyReorder(ws, "b", "a");
+    expect(next.find((w) => w.id === "h")).toMatchObject({ hidden: true });
+  });
+
+  it("applies a resize to one widget's spans", () => {
+    const ws = [mk("a", 0), mk("b", 1)];
+    const next = applyResize(ws, "a", 3, 8);
+    expect(next.find((w) => w.id === "a")).toMatchObject({ colSpan: 3, rowSpan: 8 });
+    expect(next.find((w) => w.id === "b")).toMatchObject({ colSpan: 1, rowSpan: 6 });
   });
 });

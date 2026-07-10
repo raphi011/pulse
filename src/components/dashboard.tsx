@@ -1,68 +1,19 @@
 "use client";
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  DndContext, DragOverlay, pointerWithin, closestCorners, useDroppable,
+  DndContext, DragOverlay, closestCenter,
   PointerSensor, useSensor, useSensors,
-  type DragEndEvent, type DragStartEvent, type CollisionDetection,
+  type DragEndEvent, type DragStartEvent,
 } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { SortableContext, rectSortingStrategy } from "@dnd-kit/sortable";
 import type { Widget } from "@/server/config-repo";
-import { buildColumns, applyDragEnd, persistPositions } from "@/components/dashboard-logic";
+import { orderedWidgets, applyDragEnd, applyResize, persistPositions } from "@/components/dashboard-logic";
+import { columnCountForWidth, ROW_UNIT_PX } from "@/lib/grid";
 import { SortableCard } from "./sortable-card";
 import { WidgetCard } from "./widget-card";
 import { AddWidgetDrawer } from "./add-widget-drawer";
 import { ConfigureDialog } from "./configure-dialog";
 import { useAutoRefresh } from "./auto-refresh-context";
-
-const isColId = (id: string | number) => String(id).startsWith("col:");
-
-/**
- * Prefer a card under the pointer (precise reorder); otherwise the closest card
- * within the hovered column, falling back to the column itself (`col:N`) when it
- * is empty; otherwise the globally closest card. Column droppables are what make
- * dropping into an empty column — and thus moving widgets back — possible.
- */
-const collisionDetection: CollisionDetection = (args) => {
-  const pointer = pointerWithin(args);
-  const pointerCard = pointer.find((c) => !isColId(c.id));
-  if (pointerCard) return [pointerCard];
-
-  const pointerCol = pointer.find((c) => isColId(c.id));
-  if (pointerCol) {
-    const colIndex = Number(String(pointerCol.id).slice(4));
-    const inColumn = closestCorners({
-      ...args,
-      droppableContainers: args.droppableContainers.filter(
-        (d) => !isColId(d.id) && d.data.current?.column === colIndex,
-      ),
-    });
-    return inColumn.length ? [inColumn[0]] : [pointerCol];
-  }
-
-  const corners = closestCorners(args).filter((c) => !isColId(c.id));
-  return corners.length ? [corners[0]] : [];
-};
-
-function DroppableColumn({ index, isEmpty, children }: { index: number; isEmpty: boolean; children: ReactNode }) {
-  const { setNodeRef, isOver } = useDroppable({ id: `col:${index}` });
-  return (
-    <div
-      ref={setNodeRef}
-      className={`flex flex-col gap-4 ${
-        isEmpty
-          ? `min-h-28 rounded-xl ring-1 ring-dashed transition-colors ${
-              isOver ? "ring-2 ring-primary-500/50 bg-primary-500/5" : "ring-border dark:ring-border-dark"
-            }`
-          : ""
-      }`}
-    >
-      {children}
-      {isEmpty && (
-        <div className="grid flex-1 place-items-center text-xs text-slate-400 dark:text-slate-500">Drop here</div>
-      )}
-    </div>
-  );
-}
 
 function AutoRefreshControls() {
   const { enabled, toggle, refreshAll } = useAutoRefresh();
@@ -96,7 +47,7 @@ function AutoRefreshControls() {
 function Toolbar({ onAdd }: { onAdd: (type: string) => void }) {
   return (
     <div className="sticky top-0 z-30 border-b border-border/80 bg-surface/80 backdrop-blur dark:border-border-dark/80 dark:bg-surface-dark/70">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
+      <div className="flex items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
         <div className="flex items-center gap-2.5">
           <span
             aria-hidden
@@ -117,7 +68,7 @@ function Toolbar({ onAdd }: { onAdd: (type: string) => void }) {
 
 function EmptyState() {
   return (
-    <div className="mt-16 flex flex-col items-center justify-center text-center">
+    <div className="mt-16 flex flex-col items-center justify-center text-center" style={{ gridColumn: "1 / -1" }}>
       <div className="grid h-12 w-12 place-items-center rounded-2xl bg-slate-100 text-xl text-slate-400 ring-1 ring-border dark:bg-white/5 dark:ring-border-dark">
         ▦
       </div>
@@ -130,13 +81,29 @@ function EmptyState() {
   );
 }
 
-export function Dashboard({ initialWidgets, columnCount }: { initialWidgets: Widget[]; columnCount: number }) {
+export function Dashboard({ initialWidgets }: { initialWidgets: Widget[] }) {
   const [widgets, setWidgets] = useState(initialWidgets);
   const [configuring, setConfiguring] = useState<Widget | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [width, setWidth] = useState(0);
+  const gridRef = useRef<HTMLDivElement | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
-  const columns = buildColumns(widgets, columnCount);
-  const isEmpty = columns.every((col) => col.length === 0);
+
+  useEffect(() => {
+    const el = gridRef.current;
+    if (!el) return;
+    const update = () => setWidth(el.clientWidth);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const cols = width > 0 ? columnCountForWidth(width) : 1;
+  // Track width minus the inter-column gaps (1rem) so resize snapping matches real cells.
+  const cellWidth = width > 0 ? (width - (cols - 1) * 16) / cols : ROW_UNIT_PX;
+  const visible = orderedWidgets(widgets);
+  const isEmpty = visible.length === 0;
   const activeWidget = activeId ? widgets.find((w) => w.id === activeId) ?? null : null;
 
   async function onAdd(type: string) {
@@ -152,8 +119,13 @@ export function Dashboard({ initialWidgets, columnCount }: { initialWidgets: Wid
   }
   function onDragEnd(e: DragEndEvent) {
     setActiveId(null);
-    const next = applyDragEnd(widgets, columnCount, e);
+    const next = applyDragEnd(widgets, e);
     if (next) { setWidgets(next); void persistPositions(next); }
+  }
+  function onResize(id: string, colSpan: number, rowSpan: number) {
+    const next = applyResize(widgets, id, colSpan, rowSpan);
+    setWidgets(next);
+    void persistPositions(next);
   }
   function onConfigSaved(id: string, config: Record<string, unknown>, title: string | null) {
     setWidgets((ws) => ws.map((w) => (w.id === id ? { ...w, config, title } : w)));
@@ -162,35 +134,41 @@ export function Dashboard({ initialWidgets, columnCount }: { initialWidgets: Wid
   return (
     <>
       <Toolbar onAdd={onAdd} />
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        {isEmpty ? (
-          <EmptyState />
-        ) : (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={collisionDetection}
-            onDragStart={(e: DragStartEvent) => setActiveId(String(e.active.id))}
-            onDragEnd={onDragEnd}
-            onDragCancel={() => setActiveId(null)}
-          >
-            <div className="wd-grid" style={{ ["--wd-cols" as string]: columnCount }}>
-              {columns.map((col, i) => (
-                <SortableContext key={i} items={col.map((w) => w.id)} strategy={verticalListSortingStrategy}>
-                  <DroppableColumn index={i} isEmpty={col.length === 0}>
-                    {col.map((w) => <SortableCard key={w.id} widget={w} onRemove={onRemove} onConfigure={setConfiguring} />)}
-                  </DroppableColumn>
-                </SortableContext>
-              ))}
-            </div>
-            <DragOverlay>
-              {activeWidget ? (
-                <div className="cursor-grabbing rounded-xl shadow-2xl ring-1 ring-black/5 dark:ring-white/10">
-                  <WidgetCard widget={activeWidget} />
-                </div>
-              ) : null}
-            </DragOverlay>
-          </DndContext>
-        )}
+      <main className="px-4 py-6 sm:px-6 lg:px-8">
+        <div ref={gridRef} className="wd-grid" style={{ ["--wd-cols" as string]: cols, ["--wd-row-unit" as string]: `${ROW_UNIT_PX}px` }}>
+          {isEmpty ? (
+            <EmptyState />
+          ) : (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={(e: DragStartEvent) => setActiveId(String(e.active.id))}
+              onDragEnd={onDragEnd}
+              onDragCancel={() => setActiveId(null)}
+            >
+              <SortableContext items={visible.map((w) => w.id)} strategy={rectSortingStrategy}>
+                {visible.map((w) => (
+                  <SortableCard
+                    key={w.id}
+                    widget={w}
+                    cols={cols}
+                    cellWidth={cellWidth}
+                    onRemove={onRemove}
+                    onConfigure={setConfiguring}
+                    onResize={onResize}
+                  />
+                ))}
+              </SortableContext>
+              <DragOverlay>
+                {activeWidget ? (
+                  <div className="cursor-grabbing rounded-xl shadow-2xl ring-1 ring-black/5 dark:ring-white/10">
+                    <WidgetCard widget={activeWidget} />
+                  </div>
+                ) : null}
+              </DragOverlay>
+            </DndContext>
+          )}
+        </div>
       </main>
       {configuring && (
         <ConfigureDialog

@@ -72,21 +72,13 @@
       dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-slate-200;
   }
 
-  /* Masonry columns: 1 on mobile, 2 on tablet, --wd-cols (pref) on desktop. */
+  /* Ordered-flow grid: JS sets --wd-cols from container width; rows are fixed units. */
   .wd-grid {
     display: grid;
     gap: 1rem;
-    grid-template-columns: repeat(1, minmax(0, 1fr));
-  }
-  @media (min-width: 640px) {
-    .wd-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-  @media (min-width: 1024px) {
-    .wd-grid {
-      grid-template-columns: repeat(var(--wd-cols, 3), minmax(0, 1fr));
-    }
+    grid-template-columns: repeat(var(--wd-cols, 1), minmax(0, 1fr));
+    grid-auto-rows: var(--wd-row-unit, 40px);
+    grid-auto-flow: row;
   }
 }
 

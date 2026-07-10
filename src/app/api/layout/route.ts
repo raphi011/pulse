@@ -6,12 +6,12 @@ export const runtime = "nodejs";
 export async function GET() {
   return NextResponse.json({
     widgets: getWidgets(),
-    prefs: { columnCount: getPref("columnCount", "3"), theme: getPref("theme", "dark") },
+    prefs: { theme: getPref("theme", "dark") },
   });
 }
 
 export async function PATCH(req: Request) {
-  let body: { positions?: { id: string; column: number; order: number }[] };
+  let body: { positions?: { id: string; order: number; colSpan: number; rowSpan: number }[] };
   try {
     body = await req.json();
   } catch {

@@ -1,50 +1,42 @@
 import type { Widget } from "@/server/config-repo";
 import type { DragEndEvent } from "@dnd-kit/core";
-import { findColumn, moveWidget, toPositions, type Columns } from "@/lib/layout";
 
-export function buildColumns(widgets: Widget[], columnCount: number): Widget[][] {
-  const n = Math.max(1, Number.isFinite(columnCount) ? Math.floor(columnCount) : 3);
-  const cols: Widget[][] = Array.from({ length: n }, () => []);
-  for (const w of widgets.filter((x) => !x.hidden)) {
-    cols[Math.max(0, Math.min(w.column, n - 1))].push(w);
-  }
-  cols.forEach((c) => c.sort((a, b) => a.order - b.order));
-  return cols;
+/** Visible widgets in global flow order. */
+export function orderedWidgets(widgets: Widget[]): Widget[] {
+  return widgets.filter((w) => !w.hidden).sort((a, b) => a.order - b.order);
 }
 
-function idColumns(widgets: Widget[], columnCount: number): Columns {
-  return buildColumns(widgets, columnCount).map((c) => c.map((w) => w.id));
+/** Move `activeId` to `overId`'s slot; reassign a dense 0..n order over visible widgets. */
+export function applyReorder(widgets: Widget[], activeId: string, overId: string): Widget[] {
+  const visible = orderedWidgets(widgets);
+  const from = visible.findIndex((w) => w.id === activeId);
+  const to = visible.findIndex((w) => w.id === overId);
+  if (from < 0 || to < 0) return widgets;
+  const reordered = [...visible];
+  const [moved] = reordered.splice(from, 1);
+  reordered.splice(to, 0, moved);
+  // Renumber visible first (0..k-1), then hidden after them, so `order` stays a
+  // collision-free global sequence even though hidden widgets aren't in the grid.
+  const hidden = widgets.filter((w) => w.hidden).sort((a, b) => a.order - b.order);
+  const orderById = new Map<string, number>();
+  reordered.forEach((w, i) => orderById.set(w.id, i));
+  hidden.forEach((w, i) => orderById.set(w.id, reordered.length + i));
+  return widgets.map((w) => (orderById.has(w.id) ? { ...w, order: orderById.get(w.id)! } : w));
 }
 
-/** Move `activeId` to the position of `overId` (or empty column key `col:N`). */
-export function reorderWidgets(widgets: Widget[], columnCount: number, activeId: string, overId: string): Widget[] {
-  const cols = idColumns(widgets, columnCount);
-  let toCol: number;
-  let toIndex: number;
-  if (overId.startsWith("col:")) {
-    toCol = Number(overId.slice(4));
-    toIndex = cols[toCol]?.length ?? 0;
-  } else {
-    toCol = findColumn(cols, overId);
-    toIndex = cols[toCol].indexOf(overId);
-  }
-  if (toCol < 0) return widgets;
-  const moved = moveWidget(cols, activeId, toCol, toIndex);
-  const positions = toPositions(moved);
-  const byId = Object.fromEntries(widgets.map((w) => [w.id, w]));
-  const visible = positions.map((p) => ({ ...byId[p.id], column: p.column, order: p.order }));
-  // buildColumns drops hidden widgets; re-append them unchanged so client state and
-  // the persisted PATCH keep every widget.
-  const hidden = widgets.filter((w) => w.hidden);
-  return [...visible, ...hidden];
+/** Set one widget's spans. */
+export function applyResize(widgets: Widget[], id: string, colSpan: number, rowSpan: number): Widget[] {
+  return widgets.map((w) => (w.id === id ? { ...w, colSpan, rowSpan } : w));
 }
 
-export function applyDragEnd(widgets: Widget[], columnCount: number, e: DragEndEvent): Widget[] | null {
+export function applyDragEnd(widgets: Widget[], e: DragEndEvent): Widget[] | null {
   if (!e.over || e.active.id === e.over.id) return null;
-  return reorderWidgets(widgets, columnCount, String(e.active.id), String(e.over.id));
+  return applyReorder(widgets, String(e.active.id), String(e.over.id));
 }
 
 export async function persistPositions(widgets: Widget[]): Promise<void> {
-  const positions = widgets.map((w) => ({ id: w.id, column: w.column, order: w.order }));
+  const positions = widgets.map((w) => ({
+    id: w.id, order: w.order, colSpan: w.colSpan, rowSpan: w.rowSpan,
+  }));
   await fetch("/api/layout", { method: "PATCH", body: JSON.stringify({ positions }) });
 }
