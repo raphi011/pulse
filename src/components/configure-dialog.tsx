@@ -77,7 +77,9 @@ export function ConfigureDialog({
           />
           <p className="text-xs text-slate-500 dark:text-slate-400">Blank uses the default ({def.title}).</p>
         </div>
-        <SchemaForm schema={def.configSchema} values={values} onChange={setValues} />
+        {def.formEditable !== false && (
+          <SchemaForm schema={def.configSchema} values={values} onChange={setValues} />
+        )}
         {error && <p className="mt-3 text-sm text-danger">{error}</p>}
         <div className="mt-5 flex justify-end gap-2">
           <button onClick={onClose} className="btn btn-ghost">Cancel</button>
