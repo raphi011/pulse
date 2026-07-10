@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+:root {
+  --font-geist-sans: "Geist Variable", system-ui, sans-serif;
+  --font-geist-mono: "Geist Mono Variable", ui-monospace, monospace;
+}
+
 @theme {
   /* Surfaces: page < panel/toolbar < card */
   --color-surface: #f6f7f9;

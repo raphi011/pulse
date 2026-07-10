@@ -1,10 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import Link from "next/link";
+import { AppLink as Link } from "@/components/app-link";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/components/toast-context";
 import type { IntegrationStatus } from "@/modules/integration-contracts";
+import { toggleIntegration, fetchIntegrations } from "@/lib/dashboard-data";
 import { BrandIcon } from "./brand-icon";
 import { integrationIcons } from "./integration-icons";
 
@@ -41,12 +42,11 @@ export function IntegrationsPanel({ initial }: { initial: IntegrationStatus[] })
   async function post(id: string, enabled: boolean, deleteWidgets = false) {
     setBusy(true);
     try {
-      const res = await fetch(`/api/integrations/${id}/toggle`, {
-        method: "POST", body: JSON.stringify({ enabled, deleteWidgets }),
-      });
-      if (res.status === 409) { setConfirm(statuses.find((s) => s.id === id) ?? null); return; }
-      if (!res.ok) { toast("Failed to update integration"); return; }
-      syncStatuses(await res.json());
+      const res = await toggleIntegration(id, enabled, deleteWidgets);
+      syncStatuses(res.statuses);
+      if (res.confirmRequired !== undefined) {
+        setConfirm(res.statuses.find((s) => s.id === id) ?? null);
+      }
     } catch { toast("Failed to update integration"); }
     finally { setBusy(false); }
   }
@@ -54,9 +54,7 @@ export function IntegrationsPanel({ initial }: { initial: IntegrationStatus[] })
   async function recheck() {
     setBusy(true);
     try {
-      const res = await fetch("/api/integrations?recheck=1");
-      if (!res.ok) { toast("Re-check failed"); return; }
-      syncStatuses(await res.json());
+      syncStatuses(await fetchIntegrations(true));
     } catch { toast("Re-check failed"); }
     finally { setBusy(false); }
   }

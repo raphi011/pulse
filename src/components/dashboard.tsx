@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import { AppLink as Link } from "@/components/app-link";
 import { useEffect, useRef, useState } from "react";
 import {
   DndContext, DragOverlay, closestCenter,
@@ -9,6 +9,7 @@ import {
 import { SortableContext, rectSortingStrategy } from "@dnd-kit/sortable";
 import type { Widget } from "@/server/config-repo";
 import { orderedWidgets, applyDragEnd, applyResize, persistPositions } from "@/components/dashboard-logic";
+import { createWidget, deleteWidget } from "@/lib/dashboard-data";
 import { columnCountForWidth, ROW_UNIT_PX } from "@/lib/grid";
 import { SortableCard } from "./sortable-card";
 import { WidgetCard } from "./widget-card";
@@ -116,14 +117,15 @@ export function Dashboard({ initialWidgets }: { initialWidgets: Widget[] }) {
   const activeWidget = activeId ? widgets.find((w) => w.id === activeId) ?? null : null;
 
   async function onAdd(type: string) {
-    const res = await fetch("/api/widgets", { method: "POST", body: JSON.stringify({ type }) });
-    if (res.ok) {
-      const added = await res.json();
+    try {
+      const added = await createWidget(type);
       setWidgets((w) => [...w, added]);
+    } catch (err) {
+      console.error("Failed to add widget", err);
     }
   }
   async function onRemove(id: string) {
-    await fetch(`/api/widgets/${id}`, { method: "DELETE" });
+    await deleteWidget(id);
     setWidgets((w) => w.filter((x) => x.id !== id));
   }
   function onDragEnd(e: DragEndEvent) {

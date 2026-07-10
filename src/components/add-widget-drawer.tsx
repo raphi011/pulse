@@ -3,14 +3,14 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { listRenderWidgets } from "@/modules/render-registry";
-import type { IntegrationStatus } from "@/modules/integration-contracts";
+import { fetchIntegrations } from "@/lib/dashboard-data";
 import { BrandIcon } from "./brand-icon";
 
 export function AddWidgetDrawer({ onAdd }: { onAdd: (type: string) => void }) {
   const [open, setOpen] = useState(false);
   const { data: statuses } = useQuery({
     queryKey: ["integrations"],
-    queryFn: async (): Promise<IntegrationStatus[]> => (await fetch("/api/integrations")).json(),
+    queryFn: () => fetchIntegrations(),
     enabled: open,
   });
   const enabledIds = new Set((statuses ?? []).filter((s) => s.enabled).map((s) => s.id));

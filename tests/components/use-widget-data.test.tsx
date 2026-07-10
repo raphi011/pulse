@@ -4,6 +4,13 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { AutoRefreshProvider, useAutoRefresh } from "@/components/auto-refresh-context";
 import { ToastProvider } from "@/components/toast-context";
 import { useWidgetData } from "@/components/use-widget-data";
+import { fetchWidgetData } from "@/lib/dashboard-data";
+
+vi.mock("@/lib/dashboard-data", () => ({
+  fetchWidgetData: vi.fn(),
+}));
+
+const mockFetchWidgetData = vi.mocked(fetchWidgetData);
 
 function Probe() {
   const { refresh } = useWidgetData("w1");
@@ -37,22 +44,20 @@ function renderProbe() {
 }
 
 function refreshCallCount() {
-  return (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls.filter(
-    ([url]) => String(url).includes("refresh=1"),
-  ).length;
+  return mockFetchWidgetData.mock.calls.filter(([, refresh]) => refresh === true).length;
 }
 
-const okRow = { widgetId: "w1", payload: {}, fetchedAt: 0, status: "ok", error: null };
+const okRow = { widgetId: "w1", payload: {}, fetchedAt: 0, status: "ok" as const, error: null, errorKind: null };
 
 beforeEach(() => {
   localStorage.clear();
   vi.useFakeTimers();
-  vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, json: async () => okRow })));
+  mockFetchWidgetData.mockReset();
+  mockFetchWidgetData.mockResolvedValue(okRow);
 });
 
 afterEach(() => {
   vi.useRealTimers();
-  vi.unstubAllGlobals();
 });
 
 test("does not auto-refresh while disabled", async () => {
@@ -77,10 +82,8 @@ test("force-refresh (nonce bump) triggers a refresh, mount does not", async () =
 });
 
 test("fires a toast when a refresh fails", async () => {
-  (fetch as unknown as ReturnType<typeof vi.fn>).mockImplementation(async (url: string) =>
-    String(url).includes("refresh=1")
-      ? { ok: false, status: 500, json: async () => ({}) }
-      : { ok: true, json: async () => okRow },
+  mockFetchWidgetData.mockImplementation(async (_id, refresh) =>
+    refresh ? Promise.reject(new Error("boom")) : Promise.resolve(okRow),
   );
   renderProbe();
   await act(async () => { screen.getByText("refreshAll").click(); });
@@ -89,11 +92,7 @@ test("fires a toast when a refresh fails", async () => {
 });
 
 test("fires a toast when the initial load fails", async () => {
-  (fetch as unknown as ReturnType<typeof vi.fn>).mockImplementation(async () => ({
-    ok: false,
-    status: 500,
-    json: async () => ({}),
-  }));
+  mockFetchWidgetData.mockRejectedValue(new Error("boom"));
   renderProbe();
   await act(async () => { await vi.advanceTimersByTimeAsync(0); });
   expect(screen.getByRole("alert").textContent).toContain("Failed to load widget");

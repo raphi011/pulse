@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Widget } from "@/server/config-repo";
 import { getRenderWidget } from "@/modules/render-registry";
+import { updateWidget, fetchWidgetData } from "@/lib/dashboard-data";
 import { SchemaForm } from "./schema-form";
 
 export function ConfigureDialog({
@@ -31,23 +32,18 @@ export function ConfigureDialog({
     setSaving(true);
     setError(null);
     const nextTitle = title.trim() || null;
-    const res = await fetch(`/api/widgets/${widget.id}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ config: values, title: nextTitle }),
-    });
-    if (!res.ok) {
+    let stored: unknown;
+    let storedTitle: string | null | undefined;
+    try {
+      ({ config: stored, title: storedTitle } = await updateWidget(widget.id, { config: values, title: nextTitle }));
+    } catch {
       setError("Invalid configuration");
       setSaving(false);
       return;
     }
-    const { config: stored, title: storedTitle } = (await res.json()) as {
-      config?: Record<string, unknown>;
-      title?: string | null;
-    };
-    const fresh = await fetch(`/api/widgets/${widget.id}/data?refresh=1`).then((r) => r.json());
+    const fresh = await fetchWidgetData(widget.id, true);
     qc.setQueryData(["widget", widget.id], fresh);
-    onSaved(widget.id, stored ?? values, storedTitle ?? nextTitle);
+    onSaved(widget.id, (stored ?? values) as Record<string, unknown>, storedTitle ?? nextTitle);
     setSaving(false);
     onClose();
   }

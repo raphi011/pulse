@@ -2,13 +2,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { CacheRow } from "@/server/cache-repo";
+import { fetchWidgetData } from "@/lib/dashboard-data";
 import { useAutoRefresh, INTERVAL_MS } from "./auto-refresh-context";
 import { useToast } from "./toast-context";
 
 async function fetchData(id: string, refresh: boolean): Promise<CacheRow> {
-  const res = await fetch(`/api/widgets/${id}/data${refresh ? "?refresh=1" : ""}`);
-  if (!res.ok) throw new Error(`Data request failed: ${res.status}`);
-  return res.json();
+  return fetchWidgetData(id, refresh);
 }
 
 const msg = (err: unknown) => (err instanceof Error ? err.message : "unknown error");

@@ -67,4 +67,39 @@ describe("dashboard-data", () => {
     expect(confirmed.confirmRequired).toBeUndefined();
     expect(confirmed.statuses.find((s) => s.id === "github")?.enabled).toBe(false);
   });
+
+  it("fetchIntegrations lists a status per registered integration", async () => {
+    const statuses = await data.fetchIntegrations();
+    expect(statuses.map((s) => s.id).sort()).toEqual(["github", "gws", "jira"]);
+  });
+
+  it("createWidget rejects an unknown widget type", async () => {
+    await expect(data.createWidget("does.not.exist")).rejects.toThrow("Unknown widget type");
+  });
+
+  it("updateWidget echoes schema defaults applied to an omitted config field", async () => {
+    // github.failingActions' `limit` defaults to 10 — omitting it should echo the default back.
+    const w = await data.createWidget("github.failingActions");
+    const res = await data.updateWidget(w.id, { config: { repos: ["o/r"] } });
+    expect(res.config).toEqual({ repos: ["o/r"], limit: 10 });
+  });
+
+  it("updateWidget clears the title back to null when set blank", async () => {
+    const w = await data.createWidget("core.status");
+    await data.updateWidget(w.id, { title: "Renamed" });
+    const res = await data.updateWidget(w.id, { title: "" });
+    expect(res.title).toBeNull();
+  });
+
+  it("fetchWidgetData rejects for an unknown widget id", async () => {
+    await expect(data.fetchWidgetData("nope", false)).rejects.toThrow("Widget not found");
+  });
+
+  it("fetchWidgetData returns cached data with status ok", async () => {
+    const w = await data.createWidget("core.status");
+    const row = await data.fetchWidgetData(w.id, false);
+    expect(row.status).toBe("ok");
+    expect((row.payload as { node: string }).node).toBe(process.version);
+    expect(row.fetchedAt).toBeGreaterThan(0);
+  });
 });

@@ -3,6 +3,7 @@ import { useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getRenderWidget } from "@/modules/render-registry";
 import type { Widget } from "@/server/config-repo";
+import { updateWidget, fetchWidgetData } from "@/lib/dashboard-data";
 import { WidgetShell, type WidgetState, type DragHandle } from "./widget-shell";
 import { useWidgetData } from "./use-widget-data";
 import { CardMenu } from "./card-menu";
@@ -22,14 +23,8 @@ export function WidgetCard({
   const qc = useQueryClient();
   const saveConfig = useCallback(
     async (next: unknown) => {
-      const res = await fetch(`/api/widgets/${widget.id}`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ config: next }),
-      });
-      if (!res.ok) throw new Error("Failed to save config");
-      const { config: stored } = (await res.json()) as { config?: Record<string, unknown> };
-      const fresh = await fetch(`/api/widgets/${widget.id}/data?refresh=1`).then((r) => r.json());
+      const { config: stored } = await updateWidget(widget.id, { config: next as Record<string, unknown> });
+      const fresh = await fetchWidgetData(widget.id, true);
       qc.setQueryData(["widget", widget.id], fresh);
       onConfigChange?.(widget.id, (stored ?? next) as Record<string, unknown>);
     },

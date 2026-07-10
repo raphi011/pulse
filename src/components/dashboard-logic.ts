@@ -1,5 +1,6 @@
 import type { Widget } from "@/server/config-repo";
 import type { DragEndEvent } from "@dnd-kit/core";
+import { savePositions } from "@/lib/dashboard-data";
 
 /** Visible widgets in global flow order. */
 export function orderedWidgets(widgets: Widget[]): Widget[] {
@@ -38,5 +39,5 @@ export async function persistPositions(widgets: Widget[]): Promise<void> {
   const positions = widgets.map((w) => ({
     id: w.id, order: w.order, colSpan: w.colSpan, rowSpan: w.rowSpan,
   }));
-  await fetch("/api/layout", { method: "PATCH", body: JSON.stringify({ positions }) });
+  await savePositions(positions);
 }

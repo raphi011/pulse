@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AddWidgetDrawer } from "@/components/add-widget-drawer";
+import { fetchIntegrations } from "@/lib/dashboard-data";
+import type { IntegrationStatus } from "@/modules/integration-contracts";
 
 vi.mock("@/modules/render-registry", () => ({
   listRenderWidgets: () => [
@@ -11,10 +13,20 @@ vi.mock("@/modules/render-registry", () => ({
   ],
 }));
 
+vi.mock("@/lib/dashboard-data", () => ({
+  fetchIntegrations: vi.fn(),
+}));
+
+const mockFetchIntegrations = vi.mocked(fetchIntegrations);
+
+const statuses: IntegrationStatus[] = [
+  { id: "github", name: "GitHub", tool: null, health: { installed: true, authed: true }, enabled: true, override: null, widgetCount: 0 },
+  { id: "jira", name: "Jira", tool: null, health: { installed: true, authed: true }, enabled: false, override: null, widgetCount: 0 },
+];
+
 beforeEach(() => {
-  vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify([
-    { id: "github", enabled: true }, { id: "jira", enabled: false },
-  ]))));
+  mockFetchIntegrations.mockReset();
+  mockFetchIntegrations.mockResolvedValue(statuses);
 });
 
 function open() {
