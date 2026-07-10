@@ -23,7 +23,7 @@ export function GmailWidget({ data }: WidgetBodyProps<GmailData, GmailConfig>) {
             className={`h-2 w-2 shrink-0 rounded-full ${m.unread ? "bg-primary-500" : "bg-transparent"}`}
           />
           <a href={m.url} target="_blank" rel="noreferrer" className="min-w-0 flex-1 hover:underline">
-            <span className={`block truncate text-sm ${m.unread ? "font-medium" : ""}`}>{m.subject}</span>
+            <span className="block truncate text-sm">{m.subject}</span>
             <span className="block truncate text-xs text-slate-500 dark:text-slate-400">{m.from}</span>
           </a>
           <span className="shrink-0 text-xs tabular-nums text-slate-500 dark:text-slate-400">{shortDate(m.date)}</span>
