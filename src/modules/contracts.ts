@@ -29,4 +29,6 @@ export interface ClientWidget<Data = unknown, Config = unknown> {
   Component: FC<WidgetBodyProps<Data, Config>>;
   configSchema: ZodType<Config>;
   defaultConfig: Config;
+  /** Item count shown next to the title (total fetched, pre-limit). Omit to show no count. */
+  count?(data: Data, config: Config): number | null;
 }

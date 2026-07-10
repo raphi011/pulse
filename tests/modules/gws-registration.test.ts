@@ -3,11 +3,11 @@ import "@/modules/server";
 import "@/modules/client";
 import { getServerWidget } from "@/modules/server-registry";
 import { getClientWidget } from "@/modules/client-registry";
-import { GMAIL_TYPE, CALENDAR_TYPE, CHAT_DMS_TYPE, CHAT_CHANNELS_TYPE, DRIVE_TYPE } from "@/modules/gws/manifest";
+import { GMAIL_TYPE, CALENDAR_TYPE, CHAT_DMS_TYPE, CHAT_CHANNELS_TYPE, DRIVE_TYPE, TASKS_TYPE } from "@/modules/gws/manifest";
 
 describe("gws registration barrels", () => {
   it("registers all gws widgets on both sides with defaults", () => {
-    for (const t of [GMAIL_TYPE, CALENDAR_TYPE, CHAT_DMS_TYPE, CHAT_CHANNELS_TYPE, DRIVE_TYPE]) {
+    for (const t of [GMAIL_TYPE, CALENDAR_TYPE, CHAT_DMS_TYPE, CHAT_CHANNELS_TYPE, DRIVE_TYPE, TASKS_TYPE]) {
       expect(getServerWidget(t), `server ${t}`).toBeDefined();
       expect(getClientWidget(t), `client ${t}`).toBeDefined();
     }
@@ -22,6 +22,10 @@ describe("gws registration barrels", () => {
     expect(getClientWidget(DRIVE_TYPE)!.title).toBe("Starred files");
     expect(getServerWidget(DRIVE_TYPE)!.defaultConfig).toMatchObject({
       showDocs: true, showSheets: true, showSlides: true, showOther: true, limit: 25,
+    });
+    expect(getClientWidget(TASKS_TYPE)!.title).toBe("Tasks");
+    expect(getServerWidget(TASKS_TYPE)!.defaultConfig).toMatchObject({
+      tasklist: "@default", showCompleted: false, limit: 25,
     });
   });
 });

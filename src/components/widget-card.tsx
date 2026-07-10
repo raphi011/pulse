@@ -25,6 +25,7 @@ export function WidgetCard({
   // Keep showing last-good data on error (per spec); only blank to an error state
   // when there's nothing cached to fall back to.
   const state: WidgetState = isLoading ? "loading" : hasData ? "ok" : errored ? "error" : "empty";
+  const count = def.count && hasData ? def.count(data!.payload, widget.config) : null;
   const Body = def.Component;
   const menu =
     onConfigure && onRemove ? (
@@ -34,6 +35,7 @@ export function WidgetCard({
   return (
     <WidgetShell
       title={widget.title ?? def.title}
+      count={count}
       state={state}
       error={data?.error}
       fetchedAt={data?.fetchedAt ?? null}

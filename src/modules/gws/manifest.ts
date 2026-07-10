@@ -119,3 +119,24 @@ export function filterDriveFiles(files: DriveFileItem[], config: DriveConfig): D
   };
   return files.filter((f) => enabled[f.category]);
 }
+
+// --- Tasks (a single task list) ---
+export const TASKS_TYPE = "gws.tasks";
+
+export const tasksConfigSchema = z.object({
+  tasklist: z.string().default("@default").describe("Task list ID (@default = primary list)"),
+  showCompleted: z.boolean().default(false).describe("Show completed tasks"),
+  limit: z.number().int().min(1).max(100).default(25).describe("Max tasks"),
+});
+export type TasksConfig = z.infer<typeof tasksConfigSchema>;
+export const tasksDefaultConfig: TasksConfig = { tasklist: "@default", showCompleted: false, limit: 25 };
+
+export type TaskItem = {
+  id: string;
+  title: string;
+  notes?: string; // free-text note (often a Jira/GitHub URL)
+  due: string; // ISO date ("" if none)
+  completed: boolean;
+  url: string; // webViewLink into Google Tasks
+};
+export type TasksData = { tasks: TaskItem[] };

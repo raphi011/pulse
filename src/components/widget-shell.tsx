@@ -28,9 +28,10 @@ function Skeleton() {
 }
 
 export function WidgetShell({
-  title, state, error, fetchedAt, onRefresh, refreshing, children, headerExtra, menu, dragHandle,
+  title, count, state, error, fetchedAt, onRefresh, refreshing, children, headerExtra, menu, dragHandle,
 }: {
   title: string;
+  count?: number | null;
   state: WidgetState;
   error?: string | null;
   fetchedAt: number | null;
@@ -57,6 +58,11 @@ export function WidgetShell({
           </h3>
         ) : (
           <h3 className="min-w-0 flex-1 truncate text-[0.8125rem] font-semibold tracking-tight">{title}</h3>
+        )}
+        {count != null && (
+          <span className="shrink-0 text-[0.8125rem] font-semibold tabular-nums text-slate-400 dark:text-slate-500">
+            ({count})
+          </span>
         )}
         <div className="flex shrink-0 items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
           {fetchedAt && <span className="tabular-nums">{ago(fetchedAt)}</span>}

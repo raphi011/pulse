@@ -5,4 +5,5 @@ import { JqlWidget } from "./widgets/jql-widget";
 registerClientWidget({
   type: JQL_TYPE, title: "Jira Query", Component: JqlWidget,
   configSchema: jqlConfigSchema, defaultConfig: jqlDefaultConfig,
+  count: (d) => d.issues.length,
 });

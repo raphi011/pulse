@@ -8,11 +8,13 @@ import {
   chatDmsConfigSchema, chatDmsDefaultConfig,
   chatChannelsConfigSchema, chatChannelsDefaultConfig,
   driveConfigSchema, driveDefaultConfig,
+  TASKS_TYPE, tasksConfigSchema, tasksDefaultConfig,
 } from "./manifest";
 import { fetchGmail } from "./gmail";
 import { fetchCalendar } from "./calendar";
 import { fetchChatDms, fetchChatChannels } from "./chat";
 import { fetchDrive } from "./drive";
+import { fetchTasks } from "./tasks";
 
 registerServerWidget({
   type: GMAIL_TYPE, configSchema: gmailConfigSchema, defaultConfig: gmailDefaultConfig, fetch: fetchGmail,
@@ -28,4 +30,7 @@ registerServerWidget({
 });
 registerServerWidget({
   type: DRIVE_TYPE, configSchema: driveConfigSchema, defaultConfig: driveDefaultConfig, fetch: fetchDrive,
+});
+registerServerWidget({
+  type: TASKS_TYPE, configSchema: tasksConfigSchema, defaultConfig: tasksDefaultConfig, fetch: fetchTasks,
 });
