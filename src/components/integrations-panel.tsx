@@ -1,6 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
+import { useToast } from "@/components/toast-context";
 import type { IntegrationStatus } from "@/modules/integration-contracts";
 
 function StatusDot({ ok, label }: { ok: boolean; label: string }) {
@@ -16,6 +18,14 @@ export function IntegrationsPanel({ initial }: { initial: IntegrationStatus[] })
   const [statuses, setStatuses] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState<IntegrationStatus | null>(null);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (!confirm) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setConfirm(null);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [confirm]);
 
   async function post(id: string, enabled: boolean, deleteWidgets = false) {
     setBusy(true);
@@ -24,16 +34,20 @@ export function IntegrationsPanel({ initial }: { initial: IntegrationStatus[] })
         method: "POST", body: JSON.stringify({ enabled, deleteWidgets }),
       });
       if (res.status === 409) { setConfirm(statuses.find((s) => s.id === id) ?? null); return; }
-      if (res.ok) setStatuses(await res.json());
-    } finally { setBusy(false); }
+      if (!res.ok) { toast("Failed to update integration"); return; }
+      setStatuses(await res.json());
+    } catch { toast("Failed to update integration"); }
+    finally { setBusy(false); }
   }
 
   async function recheck() {
     setBusy(true);
     try {
       const res = await fetch("/api/integrations?recheck=1");
-      if (res.ok) setStatuses(await res.json());
-    } finally { setBusy(false); }
+      if (!res.ok) { toast("Re-check failed"); return; }
+      setStatuses(await res.json());
+    } catch { toast("Re-check failed"); }
+    finally { setBusy(false); }
   }
 
   function onToggle(s: IntegrationStatus) {
@@ -95,7 +109,7 @@ export function IntegrationsPanel({ initial }: { initial: IntegrationStatus[] })
         })}
       </ul>
 
-      {confirm && (
+      {confirm && createPortal(
         <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 grid place-items-center bg-slate-950/40 dark:bg-black/60" onClick={() => setConfirm(null)}>
           <div className="w-80 rounded-xl bg-panel p-5 shadow-xl dark:bg-panel-dark" onClick={(e) => e.stopPropagation()}>
             <h2 className="text-sm font-semibold">Disable {confirm.name}?</h2>
@@ -107,7 +121,8 @@ export function IntegrationsPanel({ initial }: { initial: IntegrationStatus[] })
               <button className="btn bg-danger text-white shadow-sm hover:bg-danger/90" onClick={() => { const c = confirm; setConfirm(null); void post(c.id, false, true); }}>Delete & disable</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </main>
   );
