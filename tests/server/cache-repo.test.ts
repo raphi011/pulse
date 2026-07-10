@@ -24,4 +24,14 @@ describe("cache-repo", () => {
     expect(row.status).toBe("error");
     expect(row.error).toBe("boom");
   });
+
+  it("persists and reads back errorKind on failure", () => {
+    cache.set("w1", { status: "error", payload: null, error: "boom", errorKind: "auth" });
+    expect(cache.get("w1")!.errorKind).toBe("auth");
+  });
+
+  it("defaults errorKind to null when omitted", () => {
+    cache.set("w2", { status: "ok", payload: { n: 1 }, error: null });
+    expect(cache.get("w2")!.errorKind).toBeNull();
+  });
 });

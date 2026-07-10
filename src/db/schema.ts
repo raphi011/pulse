@@ -30,4 +30,5 @@ export const widgetCache = sqliteTable("widget_cache", {
   fetchedAt: integer("fetched_at").notNull(),
   status: text("status", { enum: ["ok", "error"] }).notNull(),
   error: text("error"),
+  errorKind: text("error_kind"), // CliErrorKind on failure, null otherwise
 });
