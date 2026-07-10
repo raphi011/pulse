@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, test, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { WidgetShell } from "@/components/widget-shell";
@@ -25,4 +25,14 @@ describe("WidgetShell", () => {
     await userEvent.click(screen.getByRole("button", { name: /refresh/i }));
     expect(onRefresh).toHaveBeenCalledOnce();
   });
+});
+
+test("spins and disables the refresh button while refreshing", () => {
+  const { getByLabelText, container } = render(
+    <WidgetShell title="X" state="ok" fetchedAt={null} onRefresh={() => {}} refreshing>
+      <div>body</div>
+    </WidgetShell>,
+  );
+  expect(getByLabelText("Refresh")).toBeDisabled();
+  expect(container.querySelector(".animate-spin")).not.toBeNull();
 });

@@ -14,7 +14,7 @@ export function WidgetCard({
   dragHandle?: DragHandle;
 }) {
   const def = getClientWidget(widget.type);
-  const { data, isLoading, refresh } = useWidgetData(widget.id, widget.refreshInterval);
+  const { data, isLoading, refresh, isRefreshing } = useWidgetData(widget.id);
 
   if (!def) {
     return <WidgetShell title={widget.title ?? widget.type} state="error" error={`No renderer for ${widget.type}`} fetchedAt={null} onRefresh={() => {}} dragHandle={dragHandle} />;
@@ -38,6 +38,7 @@ export function WidgetCard({
       error={data?.error}
       fetchedAt={data?.fetchedAt ?? null}
       onRefresh={refresh}
+      refreshing={isRefreshing}
       menu={menu}
       dragHandle={dragHandle}
       headerExtra={

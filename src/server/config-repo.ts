@@ -27,7 +27,7 @@ export function addWidget(type: string, config: Record<string, unknown>): Widget
   const column = counts.indexOf(Math.min(...counts));
   const order = existing.filter((w) => w.column === column).length;
   const row: Widget = {
-    id: randomUUID(), type, title: null, column, order, hidden: false, config: validated, refreshInterval: null,
+    id: randomUUID(), type, title: null, column, order, hidden: false, config: validated,
   };
   getDb().insert(widgets).values(row).run();
   return row;

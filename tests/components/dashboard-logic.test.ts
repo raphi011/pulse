@@ -3,7 +3,7 @@ import { buildColumns, reorderWidgets } from "@/components/dashboard-logic";
 import type { Widget } from "@/server/config-repo";
 
 const mk = (id: string, column: number, order: number): Widget => ({
-  id, type: "core.status", title: null, column, order, hidden: false, config: {}, refreshInterval: null,
+  id, type: "core.status", title: null, column, order, hidden: false, config: {},
 });
 
 describe("dashboard-logic", () => {

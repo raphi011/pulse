@@ -28,13 +28,14 @@ function Skeleton() {
 }
 
 export function WidgetShell({
-  title, state, error, fetchedAt, onRefresh, children, headerExtra, menu, dragHandle,
+  title, state, error, fetchedAt, onRefresh, refreshing, children, headerExtra, menu, dragHandle,
 }: {
   title: string;
   state: WidgetState;
   error?: string | null;
   fetchedAt: number | null;
   onRefresh: () => void;
+  refreshing?: boolean;
   children?: ReactNode;
   headerExtra?: ReactNode;
   menu?: ReactNode;
@@ -64,9 +65,16 @@ export function WidgetShell({
           <button
             aria-label="Refresh"
             onClick={onRefresh}
-            className="icon-btn hover:[&>span]:rotate-90"
+            disabled={refreshing}
+            className="icon-btn hover:[&>span]:rotate-90 disabled:cursor-default"
           >
-            <span className="inline-block text-[0.95rem] leading-none transition-transform duration-300 ease-out">↻</span>
+            <span
+              className={`inline-block text-[0.95rem] leading-none transition-transform duration-300 ease-out ${
+                refreshing ? "animate-spin" : ""
+              }`}
+            >
+              ↻
+            </span>
           </button>
         </div>
       </header>
