@@ -1,5 +1,6 @@
 "use client";
 import type { WidgetBodyProps } from "@/modules/contracts";
+import { Avatar } from "@/components/avatar";
 import type { PrsData, PrsConfig, CiStatus } from "../manifest";
 
 const ciDot: Record<CiStatus, string> = {
@@ -21,8 +22,7 @@ export function PrListWidget({ data, config }: WidgetBodyProps<PrsData, PrsConfi
         return (
           <li key={pr.url} className="flex items-center gap-2.5 py-2">
             <span aria-label={`CI ${pr.ci}`} title={`CI ${pr.ci}`} className={`h-2 w-2 shrink-0 rounded-full ${ciDot[pr.ci]}`} />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={`https://github.com/${pr.author}.png?size=40`} alt={pr.author} title={pr.author} loading="lazy" className="h-4 w-4 shrink-0 rounded-full bg-slate-200 dark:bg-white/10" />
+            <Avatar src={`https://github.com/${pr.author}.png?size=40`} name={pr.author} />
             <a href={pr.url} target="_blank" rel="noreferrer" className="min-w-0 flex-1 truncate text-sm hover:underline">
               {pr.title}
             </a>

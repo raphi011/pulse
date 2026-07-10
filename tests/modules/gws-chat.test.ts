@@ -33,15 +33,17 @@ describe("normalizeDm", () => {
       { name: "spaces/AAAA", spaceUri: "https://chat.google.com/dm/AAAA?cls=11", lastActiveTime: "2026-07-10T10:00:00Z" },
       { name: "spaces/AAAA/messages/m1", text: "  hi  ", createTime: "2026-07-10T10:00:00Z", sender: { name: "users/9" } },
       "Jane Doe",
+      "https://lh3.googleusercontent.com/a/jane=s100",
     );
     expect(dm).toEqual({
-      spaceId: "spaces/AAAA", partner: "Jane Doe", snippet: "hi",
-      time: "2026-07-10T10:00:00Z", url: "https://chat.google.com/dm/AAAA?cls=11",
+      spaceId: "spaces/AAAA", partner: "Jane Doe", avatarUrl: "https://lh3.googleusercontent.com/a/jane=s100",
+      snippet: "hi", time: "2026-07-10T10:00:00Z", url: "https://chat.google.com/dm/AAAA?cls=11",
     });
   });
-  it("falls back to 'Direct message' when no name resolved", () => {
-    const dm = normalizeDm({ name: "spaces/AAAA" }, { name: "spaces/AAAA/messages/m1", sender: { name: "users/9" } }, null);
+  it("falls back to 'Direct message' and empty avatar when nothing resolved", () => {
+    const dm = normalizeDm({ name: "spaces/AAAA" }, { name: "spaces/AAAA/messages/m1", sender: { name: "users/9" } }, null, null);
     expect(dm.partner).toBe("Direct message");
+    expect(dm.avatarUrl).toBe("");
     expect(dm.snippet).toBe("");
     expect(dm.url).toBe("");
   });
@@ -111,12 +113,15 @@ describe("fetchChatDms", () => {
           "spaces/UNREAD": { messages: [{ name: "spaces/UNREAD/messages/m", text: "hey", createTime: "2026-07-10T10:00:00Z", sender: { name: "users/2", type: "HUMAN" } }] },
           "spaces/MINE": { messages: [{ name: "spaces/MINE/messages/m", text: "mine", createTime: "2026-07-10T09:00:00Z", sender: { name: "users/1", type: "HUMAN" } }] },
         },
-        peopleByResource: { "people/2": { names: [{ displayName: "Bob" }] } },
+        peopleByResource: {
+          "people/2": { names: [{ displayName: "Bob" }], photos: [{ url: "https://silhouette", default: true }, { url: "https://bob=s100" }] },
+        },
       }),
     );
     const { dms } = await fetchChatDms({ limit: 15 });
     expect(dms).toEqual([
-      { spaceId: "spaces/UNREAD", partner: "Bob", snippet: "hey", time: "2026-07-10T10:00:00Z", url: "https://chat.google.com/dm/UNREAD?cls=11" },
+      // avatarUrl skips the `default: true` silhouette in favour of the real photo
+      { spaceId: "spaces/UNREAD", partner: "Bob", avatarUrl: "https://bob=s100", snippet: "hey", time: "2026-07-10T10:00:00Z", url: "https://chat.google.com/dm/UNREAD?cls=11" },
     ]);
   });
 
@@ -207,6 +212,7 @@ describe("fetchChatDms — against recorded fixtures (shape-drift guard)", () =>
       {
         spaceId: "spaces/DM_AAA",
         partner: "Alex Rivera",
+        avatarUrl: "https://lh3.googleusercontent.com/a/alex=s100",
         snippet: "hey, can you take a look at the PR when you get a chance?",
         time: "2026-07-10T10:00:00Z",
         url: "https://chat.google.com/dm/DM_AAA?cls=11",

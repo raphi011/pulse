@@ -4,7 +4,13 @@
     "fields": {
       "summary": "Fix seizure edge case",
       "status": { "name": "In Progress" },
-      "assignee": { "displayName": "Raphael Gruber" },
+      "assignee": {
+        "displayName": "Raphael Gruber",
+        "avatarUrls": {
+          "48x48": "https://x.atlassian.net/rest/api/2/universal_avatar/view/type/user/avatar/1?size=48",
+          "24x24": "https://x.atlassian.net/rest/api/2/universal_avatar/view/type/user/avatar/1?size=24"
+        }
+      },
       "updated": "2026-07-09T10:00:00.000+0200"
     }
   },

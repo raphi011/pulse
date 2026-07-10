@@ -18,16 +18,21 @@ describe("normalizeIssue", () => {
       summary: "Fix seizure edge case",
       status: "In Progress",
       assignee: "Raphael Gruber",
+      avatarUrl: "https://x.atlassian.net/rest/api/2/universal_avatar/view/type/user/avatar/1?size=48",
       url: "https://x.atlassian.net/browse/CORE-101",
     });
   });
 
-  it("normalizes an empty-string assignee to null", () => {
-    expect(normalizeIssue(fixture[1] as JiraRawIssue, "https://x.atlassian.net").assignee).toBeNull();
+  it("normalizes an empty-string assignee to null (and no avatar)", () => {
+    const issue = normalizeIssue(fixture[1] as JiraRawIssue, "https://x.atlassian.net");
+    expect(issue.assignee).toBeNull();
+    expect(issue.avatarUrl).toBeNull();
   });
 
-  it("normalizes a null assignee to null", () => {
-    expect(normalizeIssue(fixture[2] as JiraRawIssue, "https://x.atlassian.net").assignee).toBeNull();
+  it("normalizes a null assignee to null (and no avatar)", () => {
+    const issue = normalizeIssue(fixture[2] as JiraRawIssue, "https://x.atlassian.net");
+    expect(issue.assignee).toBeNull();
+    expect(issue.avatarUrl).toBeNull();
   });
 });
 

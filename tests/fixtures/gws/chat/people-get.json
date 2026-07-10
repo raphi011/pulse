@@ -11,5 +11,8 @@
   ],
   "emailAddresses": [
     { "metadata": { "primary": true }, "value": "alex.rivera@example.com" }
+  ],
+  "photos": [
+    { "metadata": { "primary": true, "source": { "type": "PROFILE" } }, "url": "https://lh3.googleusercontent.com/a/alex=s100" }
   ]
 }

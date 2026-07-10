@@ -1,10 +1,7 @@
 "use client";
 import type { WidgetBodyProps } from "@/modules/contracts";
+import { Avatar } from "@/components/avatar";
 import type { JqlData, JqlConfig } from "../manifest";
-
-function initials(name: string): string {
-  return name.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
-}
 
 export function JqlWidget({ data }: WidgetBodyProps<JqlData, JqlConfig>) {
   if (data.issues.length === 0) {
@@ -26,12 +23,11 @@ export function JqlWidget({ data }: WidgetBodyProps<JqlData, JqlConfig>) {
           <span className="shrink-0 rounded-full bg-slate-500/15 px-1.5 py-0.5 text-[0.6875rem] font-medium text-slate-500 dark:text-slate-400">
             {issue.status}
           </span>
-          <span
-            className="shrink-0 text-xs text-slate-500 dark:text-slate-400"
-            title={issue.assignee ?? "Unassigned"}
-          >
-            {issue.assignee ? initials(issue.assignee) : "—"}
-          </span>
+          {issue.assignee ? (
+            <Avatar src={issue.avatarUrl} name={issue.assignee} />
+          ) : (
+            <span className="shrink-0 text-xs text-slate-500 dark:text-slate-400" title="Unassigned">—</span>
+          )}
         </li>
       ))}
     </ul>

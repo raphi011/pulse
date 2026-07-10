@@ -62,6 +62,7 @@ export const chatChannelsDefaultConfig: ChatChannelsConfig = { spaceIds: [] };
 export type ChatDm = {
   spaceId: string; // "spaces/AAAA"
   partner: string; // People-API-resolved name (fallback "Direct message")
+  avatarUrl: string; // People API photo url ("" when missing or a default silhouette)
   snippet: string; // latest message text, trimmed
   time: string;    // ISO createTime of latest message
   url: string;     // Space.spaceUri

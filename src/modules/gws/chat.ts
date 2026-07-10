@@ -11,7 +11,10 @@ type ReadState = { name?: string; lastReadTime?: string };
 type ChatUser = { name?: string; type?: string }; // NOTE: Chat's sender/member has NO displayName
 type Message = { name: string; text?: string; createTime?: string; sender?: ChatUser };
 type MessagesResp = { messages?: Message[] };
-type Person = { names?: { displayName?: string }[] };
+type Person = {
+  names?: { displayName?: string }[];
+  photos?: { url?: string; default?: boolean }[];
+};
 
 /** A space is unread when its last message is newer than the caller's last read time. */
 export function isUnread(lastActiveTime?: string, lastReadTime?: string): boolean {
@@ -32,10 +35,11 @@ export function peopleResourceName(userName?: string): string | null {
   return m ? `people/${m[1]}` : null;
 }
 
-export function normalizeDm(space: Space, msg: Message, partner: string | null): ChatDm {
+export function normalizeDm(space: Space, msg: Message, partner: string | null, avatarUrl: string | null): ChatDm {
   return {
     spaceId: space.name,
     partner: partner?.trim() || "Direct message",
+    avatarUrl: avatarUrl ?? "",
     snippet: msg.text?.trim() ?? "",
     time: msg.createTime ?? space.lastActiveTime ?? "",
     url: space.spaceUri ?? "",
@@ -88,8 +92,8 @@ export async function fetchChatDms(config: ChatDmsConfig): Promise<ChatDmsData> 
       const msg = resp.messages?.[0];
       if (!msg) return null;
       if (me && msg.sender?.name === me) return null; // self-sent — best-effort (skipped if read-state name lacked a user id); real API always provides it
-      const partner = await resolvePartnerName(msg.sender?.name);
-      return normalizeDm(space, msg, partner);
+      const partner = await resolvePartner(msg.sender?.name);
+      return normalizeDm(space, msg, partner.name, partner.photo);
     }),
   );
   const dms = settled
@@ -124,17 +128,19 @@ export async function fetchChatChannels(config: ChatChannelsConfig): Promise<Cha
   return { channels };
 }
 
-/** Resolve a Chat sender id ("users/<id>") to a display name via the People API, or null on failure. */
-async function resolvePartnerName(userName?: string): Promise<string | null> {
+/** Resolve a Chat sender id ("users/<id>") to a display name + avatar via the People API. */
+async function resolvePartner(userName?: string): Promise<{ name: string | null; photo: string | null }> {
   const resourceName = peopleResourceName(userName);
-  if (!resourceName) return null;
+  if (!resourceName) return { name: null, photo: null };
   try {
     const person = await gwsJson<Person>([
       "people", "people", "get",
-      "--params", JSON.stringify({ resourceName, personFields: "names" }),
+      "--params", JSON.stringify({ resourceName, personFields: "names,photos" }),
     ]);
-    return person.names?.[0]?.displayName ?? null;
+    // Skip Google's generic silhouette (`default: true`) so the widget falls back to initials.
+    const photo = person.photos?.find((p) => p.url && !p.default)?.url ?? null;
+    return { name: person.names?.[0]?.displayName ?? null, photo };
   } catch {
-    return null; // name lookup failed — normalizeDm falls back to "Direct message"
+    return { name: null, photo: null }; // lookup failed — normalizeDm falls back to "Direct message"
   }
 }
