@@ -8,19 +8,17 @@ export type JiraRawIssue = {
   fields: {
     summary: string;
     status?: { name?: string };
-    assignee?: { displayName?: string; avatarUrls?: { "48x48"?: string } } | null;
+    assignee?: { displayName?: string } | null;
   };
 };
 
 export function normalizeIssue(raw: JiraRawIssue, serverUrl: string): JiraIssue {
   const displayName = raw.fields.assignee?.displayName?.trim();
-  const assignee = displayName ? displayName : null;
   return {
     key: raw.key,
     summary: raw.fields.summary,
     status: raw.fields.status?.name ?? "Unknown",
-    assignee,
-    avatarUrl: assignee ? raw.fields.assignee?.avatarUrls?.["48x48"] ?? null : null,
+    assignee: displayName ? displayName : null,
     url: `${serverUrl}/browse/${raw.key}`,
   };
 }

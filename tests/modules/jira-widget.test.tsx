@@ -9,7 +9,7 @@ const noop = async () => {};
 const data: JqlData = {
   issues: [
     { key: "CORE-101", summary: "Fix seizure edge case", status: "In Progress",
-      assignee: "Raphael Gruber", avatarUrl: null, url: "https://x.atlassian.net/browse/CORE-101" },
+      assignee: "Raphael Gruber", url: "https://x.atlassian.net/browse/CORE-101" },
   ],
 };
 
@@ -26,7 +26,7 @@ describe("JqlWidget", () => {
       issues: [
         data.issues[0],
         { key: "CORE-102", summary: "Investigate flaky test", status: "To Do",
-          assignee: null, avatarUrl: null, url: "https://x.atlassian.net/browse/CORE-102" },
+          assignee: null, url: "https://x.atlassian.net/browse/CORE-102" },
       ],
     };
     render(<JqlWidget data={two} config={config} runAction={noop} />);

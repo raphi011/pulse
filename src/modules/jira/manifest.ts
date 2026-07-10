@@ -18,7 +18,6 @@ export type JiraIssue = {
   summary: string;
   status: string;           // status display name (no category available from `issue list --raw`)
   assignee: string | null;  // displayName, null if unassigned (empty string normalized to null)
-  avatarUrl: string | null; // assignee avatar ("48x48"), null when unassigned or unavailable
   url: string;              // <server>/browse/<KEY>
 };
 export type JqlData = { issues: JiraIssue[] };
