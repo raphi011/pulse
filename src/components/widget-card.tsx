@@ -9,12 +9,13 @@ import { CardMenu } from "./card-menu";
 import { BrandIcon } from "./brand-icon";
 
 export function WidgetCard({
-  widget, onConfigure, onRemove, dragHandle,
+  widget, onConfigure, onRemove, dragHandle, onConfigChange,
 }: {
   widget: Widget;
   onConfigure?: (w: Widget) => void;
   onRemove?: (id: string) => void;
   dragHandle?: DragHandle;
+  onConfigChange?: (id: string, config: Record<string, unknown>) => void;
 }) {
   const def = getClientWidget(widget.type);
   const { data, isLoading, refresh, isRefreshing } = useWidgetData(widget.id);
@@ -27,10 +28,12 @@ export function WidgetCard({
         body: JSON.stringify({ config: next }),
       });
       if (!res.ok) throw new Error("Failed to save config");
+      const { config: stored } = (await res.json()) as { config?: Record<string, unknown> };
       const fresh = await fetch(`/api/widgets/${widget.id}/data?refresh=1`).then((r) => r.json());
       qc.setQueryData(["widget", widget.id], fresh);
+      onConfigChange?.(widget.id, (stored ?? next) as Record<string, unknown>);
     },
-    [widget.id, qc],
+    [widget.id, qc, onConfigChange],
   );
 
   if (!def) {

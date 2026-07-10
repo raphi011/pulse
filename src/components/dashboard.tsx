@@ -139,6 +139,9 @@ export function Dashboard({ initialWidgets }: { initialWidgets: Widget[] }) {
   function onConfigSaved(id: string, config: Record<string, unknown>, title: string | null) {
     setWidgets((ws) => ws.map((w) => (w.id === id ? { ...w, config, title } : w)));
   }
+  function onConfigChange(id: string, config: Record<string, unknown>) {
+    setWidgets((ws) => ws.map((w) => (w.id === id ? { ...w, config } : w)));
+  }
 
   return (
     <>
@@ -165,6 +168,7 @@ export function Dashboard({ initialWidgets }: { initialWidgets: Widget[] }) {
                     onRemove={onRemove}
                     onConfigure={setConfiguring}
                     onResize={onResize}
+                    onConfigChange={onConfigChange}
                   />
                 ))}
               </SortableContext>
