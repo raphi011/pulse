@@ -22,12 +22,14 @@ import * as reg from "@/modules/integration-registry";
 import { addWidget } from "@/server/config-repo";
 import {
   resolveEnabled, getIntegrationStatuses, disableIntegration, enableIntegration,
+  ConfirmRequiredError, __resetHealthCache,
 } from "@/server/integration-service";
 
 const seed = (reg as unknown as { __seed: (a: unknown[]) => void }).__seed;
 
 beforeEach(() => {
   useTempDb();
+  __resetHealthCache();
   seed([
     { id: "toolful", name: "Toolful", tool: { bin: "x", installHint: "i", authHint: "a" },
       checkHealth: async () => ({ installed: true, authed: true }) },
@@ -66,7 +68,14 @@ describe("getIntegrationStatuses", () => {
 describe("disable/enable", () => {
   it("refuses to disable with widgets unless deleteWidgets is set", async () => {
     addWidget("t.a", {});
-    expect(() => disableIntegration("toolful", false)).toThrow(/confirm/);
+    addWidget("t.a", {});
+    try {
+      disableIntegration("toolful", false);
+      expect.fail("should have thrown");
+    } catch (e) {
+      expect(e).toBeInstanceOf(ConfirmRequiredError);
+      expect((e as ConfirmRequiredError).widgetCount).toBe(2);
+    }
   });
   it("deletes the integration's widgets on confirmed disable", async () => {
     addWidget("t.a", {});
@@ -79,5 +88,17 @@ describe("disable/enable", () => {
     enableIntegration("missing");
     const statuses = await getIntegrationStatuses(true);
     expect(statuses.find((s) => s.id === "missing")!.enabled).toBe(true);
+  });
+});
+
+describe("health cache", () => {
+  it("caches health and re-probes only when forced", async () => {
+    let calls = 0;
+    seed([{ id: "spy", name: "Spy", tool: { bin: "x", installHint: "i", authHint: "a" },
+      checkHealth: async () => { calls++; return { installed: true, authed: true }; } }]);
+    await getIntegrationStatuses();      // miss -> 1
+    await getIntegrationStatuses();      // hit  -> still 1
+    await getIntegrationStatuses(true);  // forced -> 2
+    expect(calls).toBe(2);
   });
 });
