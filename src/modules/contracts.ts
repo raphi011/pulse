@@ -31,4 +31,6 @@ export interface ClientWidget<Data = unknown, Config = unknown> {
   defaultConfig: Config;
   /** Item count shown next to the title (total fetched, pre-limit). Omit to show no count. */
   count?(data: Data, config: Config): number | null;
+  /** Id of the integration this widget belongs to; omit for always-available widgets (e.g. core). */
+  integration?: string;
 }

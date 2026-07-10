@@ -19,29 +19,35 @@ registerClientWidget({
   type: GMAIL_TYPE, title: "Gmail", Component: GmailWidget,
   configSchema: gmailConfigSchema, defaultConfig: gmailDefaultConfig,
   count: (d) => d.emails.length,
+  integration: "gws",
 });
 registerClientWidget({
   type: CALENDAR_TYPE, title: "Calendar", Component: CalendarWidget,
   configSchema: calendarConfigSchema, defaultConfig: calendarDefaultConfig,
   count: (d) => d.events.length,
+  integration: "gws",
 });
 registerClientWidget({
   type: CHAT_DMS_TYPE, title: "Unread DMs", Component: ChatDmsWidget,
   configSchema: chatDmsConfigSchema, defaultConfig: chatDmsDefaultConfig,
   count: (d) => d.dms.length,
+  integration: "gws",
 });
 registerClientWidget({
   type: CHAT_CHANNELS_TYPE, title: "Chat Channels", Component: ChatChannelsWidget,
   configSchema: chatChannelsConfigSchema, defaultConfig: chatChannelsDefaultConfig,
   count: (d) => d.channels.length,
+  integration: "gws",
 });
 registerClientWidget({
   type: DRIVE_TYPE, title: "Starred files", Component: DriveWidget,
   configSchema: driveConfigSchema, defaultConfig: driveDefaultConfig,
   count: (d, c) => filterDriveFiles(d.files, c).length,
+  integration: "gws",
 });
 registerClientWidget({
   type: TASKS_TYPE, title: "Tasks", Component: TasksWidget,
   configSchema: tasksConfigSchema, defaultConfig: tasksDefaultConfig,
   count: (d) => d.tasks.length,
+  integration: "gws",
 });

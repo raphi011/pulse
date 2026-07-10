@@ -13,14 +13,17 @@ registerClientWidget({
   type: PRS_TYPE, title: "Pull Requests", Component: PrListWidget,
   configSchema: prsConfigSchema, defaultConfig: prsDefaultConfig,
   count: (d) => d.prs.length,
+  integration: "github",
 });
 registerClientWidget({
   type: FAILING_ACTIONS_TYPE, title: "Failing Actions", Component: FailingActionsWidget,
   configSchema: failingActionsConfigSchema, defaultConfig: failingActionsDefaultConfig,
   count: (d) => d.runs.length,
+  integration: "github",
 });
 registerClientWidget({
   type: DEPENDABOT_TYPE, title: "Dependabot Alerts", Component: DependabotWidget,
   configSchema: dependabotConfigSchema, defaultConfig: dependabotDefaultConfig,
   count: (d) => d.alerts.length,
+  integration: "github",
 });

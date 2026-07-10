@@ -11,8 +11,8 @@ export function getClientWidget(type: string): ClientWidget | undefined {
   return registry.get(type);
 }
 
-export function listClientWidgets(): { type: string; title: string }[] {
-  return [...registry.values()].map((d) => ({ type: d.type, title: d.title }));
+export function listClientWidgets(): { type: string; title: string; integration?: string }[] {
+  return [...registry.values()].map((d) => ({ type: d.type, title: d.title, integration: d.integration }));
 }
 
 export function __clearClientRegistry(): void {

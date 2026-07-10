@@ -36,4 +36,14 @@ describe("registries", () => {
     expect(getClientWidget("t.a")?.title).toBe("A");
     expect(listClientWidgets()).toEqual([{ type: "t.a", title: "A" }]);
   });
+
+  it("client widgets carry an integration id where applicable", async () => {
+    await import("@/modules/client");
+    const { listClientWidgets } = await import("@/modules/client-registry");
+    const byType = Object.fromEntries(listClientWidgets().map((w) => [w.type, w.integration]));
+    expect(byType["github.prs"]).toBe("github");
+    expect(byType["jira.jql"]).toBe("jira");
+    expect(byType["gws.gmail"]).toBe("gws");
+    expect(byType["core.status"]).toBeUndefined();
+  });
 });
