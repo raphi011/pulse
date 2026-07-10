@@ -106,7 +106,10 @@ export function Dashboard({ initialWidgets }: { initialWidgets: Widget[] }) {
 
   async function onAdd(type: string) {
     const res = await fetch("/api/widgets", { method: "POST", body: JSON.stringify({ type }) });
-    if (res.ok) setWidgets((w) => [...w, await res.json()]);
+    if (res.ok) {
+      const added = await res.json();
+      setWidgets((w) => [...w, added]);
+    }
   }
   async function onRemove(id: string) {
     await fetch(`/api/widgets/${id}`, { method: "DELETE" });
