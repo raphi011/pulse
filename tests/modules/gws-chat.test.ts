@@ -144,3 +144,41 @@ describe("fetchChatDms", () => {
     expect(await fetchChatDms({ limit: 15 })).toEqual({ dms: [] });
   });
 });
+
+import { fetchChatChannels } from "@/modules/gws/chat";
+
+function routeChannels(getByName: Record<string, unknown>, readByName: Record<string, unknown>, msgByParent: Record<string, unknown>) {
+  return (args: string[]) => {
+    const params = JSON.parse(args[args.indexOf("--params") + 1]);
+    if (args[0] === "chat" && args[1] === "spaces" && args[2] === "get") {
+      const v = getByName[params.name];
+      return v ? Promise.resolve(v) : Promise.reject(new Error("404"));
+    }
+    if (args.includes("getSpaceReadState")) return Promise.resolve(readByName[params.name]);
+    if (args[0] === "chat" && args[2] === "messages" && args[3] === "list") return Promise.resolve(msgByParent[params.parent]);
+    throw new Error(`unexpected: ${args.join(" ")}`);
+  };
+}
+
+describe("fetchChatChannels", () => {
+  it("enriches each configured space and flags unread; drops a 404 space", async () => {
+    mockJson.mockImplementation(
+      routeChannels(
+        { "spaces/OK": { name: "spaces/OK", displayName: "Ops", spaceUri: "https://chat.google.com/room/OK?cls=11", lastActiveTime: "2026-07-10T12:00:00Z" } },
+        {
+          "users/me/spaces/OK/spaceReadState": { lastReadTime: "2026-07-10T11:00:00Z" },
+          "users/me/spaces/GONE/spaceReadState": { lastReadTime: "2026-07-10T00:00:00Z" },
+        },
+        { "spaces/OK": { messages: [{ name: "spaces/OK/messages/m", text: "deploy done", createTime: "2026-07-10T12:00:00Z" }] } },
+      ),
+    );
+    const { channels } = await fetchChatChannels({ spaceIds: ["spaces/OK", "spaces/GONE"] });
+    expect(channels).toEqual([
+      { spaceId: "spaces/OK", name: "Ops", snippet: "deploy done", time: "2026-07-10T12:00:00Z", unread: true, url: "https://chat.google.com/room/OK?cls=11" },
+    ]);
+  });
+
+  it("returns empty for empty config", async () => {
+    expect(await fetchChatChannels({ spaceIds: [] })).toEqual({ channels: [] });
+  });
+});

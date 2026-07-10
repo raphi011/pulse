@@ -100,6 +100,30 @@ export async function fetchChatDms(config: ChatDmsConfig): Promise<ChatDmsData> 
   return { dms };
 }
 
+export async function fetchChatChannels(config: ChatChannelsConfig): Promise<ChatChannelsData> {
+  const results = await Promise.allSettled(
+    config.spaceIds.map(async (spaceId) => {
+      // Any one of these rejecting (e.g. a stale/404 id) drops just this space.
+      const [space, rs, msgs] = await Promise.all([
+        gwsJson<Space>(["chat", "spaces", "get", "--params", JSON.stringify({ name: spaceId })]),
+        gwsJson<ReadState>([
+          "chat", "users", "spaces", "getSpaceReadState",
+          "--params", JSON.stringify({ name: `users/me/${spaceId}/spaceReadState` }),
+        ]),
+        gwsJson<MessagesResp>([
+          "chat", "spaces", "messages", "list",
+          "--params", JSON.stringify({ parent: spaceId, orderBy: "createTime desc", pageSize: 1 }),
+        ]),
+      ]);
+      return normalizeChannel(spaceId, space, rs, msgs.messages?.[0]);
+    }),
+  );
+  const channels = results
+    .filter((r): r is PromiseFulfilledResult<ChatChannel> => r.status === "fulfilled")
+    .map((r) => r.value);
+  return { channels };
+}
+
 /** Resolve a Chat sender id ("users/<id>") to a display name via the People API, or null on failure. */
 async function resolvePartnerName(userName?: string): Promise<string | null> {
   const resourceName = peopleResourceName(userName);
