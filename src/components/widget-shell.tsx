@@ -43,7 +43,7 @@ export function WidgetShell({
 }) {
   const { setRef, attributes, listeners } = dragHandle ?? {};
   return (
-    <section className="group/card overflow-hidden rounded-xl bg-card shadow-sm ring-1 ring-border transition-shadow duration-150 hover:shadow-md dark:bg-card-dark dark:shadow-none dark:ring-border-dark dark:hover:ring-white/15">
+    <section className="group/card flex h-full flex-col overflow-hidden rounded-xl bg-card shadow-sm ring-1 ring-border transition-shadow duration-150 hover:shadow-md dark:bg-card-dark dark:shadow-none dark:ring-border-dark dark:hover:ring-white/15">
       <header className="flex items-center justify-between gap-2 border-b border-border px-3.5 py-2.5 dark:border-border-dark">
         {dragHandle ? (
           <h3
@@ -78,7 +78,7 @@ export function WidgetShell({
           </button>
         </div>
       </header>
-      <div className="px-3.5 py-3">
+      <div className="min-h-0 flex-1 overflow-y-auto px-3.5 py-3">
         {state === "loading" && (
           <>
             <span className="sr-only">Loading…</span>
