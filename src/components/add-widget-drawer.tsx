@@ -1,11 +1,19 @@
 "use client";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { useQuery } from "@tanstack/react-query";
 import { listClientWidgets } from "@/modules/client-registry";
+import type { IntegrationStatus } from "@/modules/integration-contracts";
 
 export function AddWidgetDrawer({ onAdd }: { onAdd: (type: string) => void }) {
   const [open, setOpen] = useState(false);
-  const types = listClientWidgets();
+  const { data: statuses } = useQuery({
+    queryKey: ["integrations"],
+    queryFn: async (): Promise<IntegrationStatus[]> => (await fetch("/api/integrations")).json(),
+    enabled: open,
+  });
+  const enabledIds = new Set((statuses ?? []).filter((s) => s.enabled).map((s) => s.id));
+  const types = listClientWidgets().filter((t) => !t.integration || enabledIds.has(t.integration));
 
   useEffect(() => {
     if (!open) return;
