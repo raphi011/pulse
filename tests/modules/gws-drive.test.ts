@@ -1,6 +1,10 @@
-import { describe, it, expect } from "vitest";
-import { categorize, normalizeFile } from "@/modules/gws/drive";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+vi.mock("@/modules/gws/gws", () => ({ gwsJson: vi.fn() }));
+import { categorize, normalizeFile, fetchDrive } from "@/modules/gws/drive";
+import { gwsJson } from "@/modules/gws/gws";
 import { filterDriveFiles, type DriveFileItem, type DriveConfig } from "@/modules/gws/manifest";
+
+const mockJson = gwsJson as unknown as ReturnType<typeof vi.fn>;
 
 describe("categorize", () => {
   it("maps Google editor mime types to their buckets", () => {
@@ -69,5 +73,58 @@ describe("filterDriveFiles", () => {
   });
   it("returns nothing when all toggles are off", () => {
     expect(filterDriveFiles(files, cfg({ showDocs: false, showSheets: false, showSlides: false, showOther: false }))).toHaveLength(0);
+  });
+});
+
+describe("fetchDrive", () => {
+  beforeEach(() => mockJson.mockReset());
+
+  it("queries starred files, sorted+bounded, and maps results through normalizeFile", async () => {
+    mockJson.mockResolvedValue({
+      files: [
+        {
+          id: "1abc",
+          name: "Doc",
+          mimeType: "application/vnd.google-apps.document",
+          modifiedTime: "2026-07-10T08:10:57.082Z",
+          webViewLink: "https://docs.google.com/document/d/1abc/edit",
+          iconLink: "https://drive-thirdparty.googleusercontent.com/16/type/application/vnd.google-apps.document",
+        },
+      ],
+    });
+
+    const result = await fetchDrive({
+      showDocs: true, showSheets: true, showSlides: true, showOther: true, limit: 7,
+    });
+
+    // Assert the exact CLI query contract.
+    const [args] = mockJson.mock.calls[0];
+    expect(args.slice(0, 3)).toEqual(["drive", "files", "list"]);
+    expect(args[3]).toBe("--params");
+    expect(JSON.parse(args[4])).toEqual({
+      q: "starred=true",
+      orderBy: "modifiedTime desc",
+      pageSize: 7,
+      fields: "files(id,name,mimeType,modifiedTime,webViewLink,iconLink)",
+    });
+
+    // Results are normalized (category bucketed, webViewLink → url).
+    expect(result).toEqual({
+      files: [
+        {
+          id: "1abc",
+          name: "Doc",
+          category: "docs",
+          modifiedTime: "2026-07-10T08:10:57.082Z",
+          url: "https://docs.google.com/document/d/1abc/edit",
+          iconLink: "https://drive-thirdparty.googleusercontent.com/16/type/application/vnd.google-apps.document",
+        },
+      ],
+    });
+  });
+
+  it("returns no files when the response has none", async () => {
+    mockJson.mockResolvedValue({});
+    expect(await fetchDrive({ showDocs: true, showSheets: true, showSlides: true, showOther: true, limit: 25 })).toEqual({ files: [] });
   });
 });
