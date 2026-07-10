@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import { z, type ZodType } from "zod";
 
 export type FieldKind = "string" | "number" | "boolean" | "stringList" | "enum";
@@ -38,15 +39,21 @@ const inputCls =
   "w-full rounded-lg bg-surface px-2.5 py-1.5 text-sm ring-1 ring-border focus:outline-none focus:ring-2 focus:ring-primary-500/50 dark:bg-surface-dark dark:ring-border-dark";
 
 function StringListEditor({ id, value, onChange }: { id: string; value: string[]; onChange: (v: string[]) => void }) {
+  // Keep the raw typed text local so blank/intermediate lines survive editing;
+  // only the cleaned array is propagated to the parent.
+  const [text, setText] = useState(() => value.join("\n"));
   return (
     <>
       <textarea
         id={id}
         className={inputCls}
         rows={4}
-        value={value.join("\n")}
+        value={text}
         placeholder="one per line"
-        onChange={(e) => onChange(e.target.value.split("\n").map((s) => s.trim()).filter(Boolean))}
+        onChange={(e) => {
+          setText(e.target.value);
+          onChange(e.target.value.split("\n").map((s) => s.trim()).filter(Boolean));
+        }}
       />
       <p className="text-xs text-slate-500 dark:text-slate-400">One per line — press Enter for each.</p>
     </>
