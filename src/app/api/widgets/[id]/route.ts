@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import "@/modules/server";
+import "@/modules/fetch";
 import { setHidden, setConfig, setTitle, removeWidget, getWidget } from "@/server/config-repo";
-import { getServerWidget } from "@/modules/server-registry";
+import { getFetchWidget } from "@/modules/fetch-registry";
 
 export const runtime = "nodejs";
 
@@ -16,7 +16,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (body.title !== undefined) setTitle(id, body.title);
 
   if (body.config !== undefined) {
-    const def = getServerWidget(widget.type);
+    const def = getFetchWidget(widget.type);
     const parsed = def?.configSchema.safeParse(body.config);
     if (def && parsed && !parsed.success) {
       return NextResponse.json({ error: "Invalid config" }, { status: 400 });

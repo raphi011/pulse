@@ -1,5 +1,5 @@
 import "server-only";
-import { registerServerWidget } from "@/modules/server-registry";
+import { registerFetchWidget } from "@/modules/fetch-registry";
 import {
   PRS_TYPE, FAILING_ACTIONS_TYPE, DEPENDABOT_TYPE,
   prsConfigSchema, prsDefaultConfig,
@@ -10,12 +10,12 @@ import { fetchPrs } from "./prs";
 import { fetchFailingActions } from "./runs";
 import { fetchDependabot } from "./dependabot";
 
-registerServerWidget({
+registerFetchWidget({
   type: PRS_TYPE, configSchema: prsConfigSchema, defaultConfig: prsDefaultConfig, fetch: fetchPrs,
 });
-registerServerWidget({
+registerFetchWidget({
   type: FAILING_ACTIONS_TYPE, configSchema: failingActionsConfigSchema, defaultConfig: failingActionsDefaultConfig, fetch: fetchFailingActions,
 });
-registerServerWidget({
+registerFetchWidget({
   type: DEPENDABOT_TYPE, configSchema: dependabotConfigSchema, defaultConfig: dependabotDefaultConfig, fetch: fetchDependabot,
 });

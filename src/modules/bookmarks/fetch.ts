@@ -1,5 +1,5 @@
 import "server-only";
-import { registerServerWidget } from "@/modules/server-registry";
+import { registerFetchWidget } from "@/modules/fetch-registry";
 import {
   BOOKMARKS_TYPE,
   bookmarksConfigSchema,
@@ -12,7 +12,7 @@ export async function fetchBookmarks(config: BookmarksConfig): Promise<Bookmarks
   return { bookmarks: config.bookmarks };
 }
 
-registerServerWidget({
+registerFetchWidget({
   type: BOOKMARKS_TYPE,
   configSchema: bookmarksConfigSchema,
   defaultConfig: bookmarksDefaultConfig,

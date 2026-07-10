@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { useTempDb } from "../helpers/db";
-import "@/modules/server";
+import "@/modules/fetch";
 import { GET as getLayout, PATCH as patchLayout } from "@/app/api/layout/route";
 import { POST as addWidget } from "@/app/api/widgets/route";
 import { PATCH as patchWidget, DELETE as delWidget } from "@/app/api/widgets/[id]/route";

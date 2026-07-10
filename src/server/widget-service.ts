@@ -1,7 +1,7 @@
 import "server-only";
 import { getWidget } from "./config-repo";
 import * as cache from "./cache-repo";
-import { getServerWidget } from "@/modules/server-registry";
+import { getFetchWidget } from "@/modules/fetch-registry";
 import { NotFoundError } from "./errors";
 import { CliError } from "./cli";
 
@@ -14,7 +14,7 @@ export async function getWidgetData(widgetId: string, refresh: boolean): Promise
     if (cached) return cached;
   }
 
-  const def = getServerWidget(widget.type);
+  const def = getFetchWidget(widget.type);
   const prev = cache.get(widgetId);
 
   if (!def) {

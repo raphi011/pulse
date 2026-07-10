@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import "@/modules/server";
+import "@/modules/fetch";
 import { getWidgetData } from "@/server/widget-service";
 import { NotFoundError } from "@/server/errors";
 

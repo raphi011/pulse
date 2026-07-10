@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { eq, asc } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { widgets, prefs } from "@/db/schema";
-import { getServerWidget } from "@/modules/server-registry";
+import { getFetchWidget } from "@/modules/fetch-registry";
 import { DEFAULT_ROW_SPAN } from "@/lib/grid";
 
 export type Widget = typeof widgets.$inferSelect;
@@ -17,7 +17,7 @@ export function getWidget(id: string): Widget | undefined {
 }
 
 export function addWidget(type: string, config: Record<string, unknown>): Widget {
-  const def = getServerWidget(type);
+  const def = getFetchWidget(type);
   const validated = def ? (def.configSchema.parse(config) as Record<string, unknown>) : config;
   const existing = getWidgets();
   const order = existing.reduce((max, w) => Math.max(max, w.order + 1), 0);

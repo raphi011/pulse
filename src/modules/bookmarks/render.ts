@@ -1,5 +1,5 @@
 import { FaRegBookmark } from "react-icons/fa6";
-import { registerClientWidget } from "@/modules/client-registry";
+import { registerRenderWidget } from "@/modules/render-registry";
 import {
   BOOKMARKS_TYPE,
   bookmarksConfigSchema,
@@ -7,7 +7,7 @@ import {
 } from "./manifest";
 import { BookmarksWidget, BookmarksHeaderControls } from "./widgets/bookmarks-widget";
 
-registerClientWidget({
+registerRenderWidget({
   type: BOOKMARKS_TYPE,
   title: "Bookmarks",
   Component: BookmarksWidget,

@@ -2,20 +2,20 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { z } from "zod";
 import { useTempDb } from "../helpers/db";
 import * as repo from "@/server/config-repo";
-import { registerServerWidget, __clearServerRegistry } from "@/modules/server-registry";
+import { registerFetchWidget, __clearFetchRegistry } from "@/modules/fetch-registry";
 import { getWidgetData } from "@/server/widget-service";
 import { NotFoundError } from "@/server/errors";
 
 let calls = 0;
 beforeEach(() => {
   useTempDb();
-  __clearServerRegistry();
+  __clearFetchRegistry();
   calls = 0;
-  registerServerWidget({
+  registerFetchWidget({
     type: "test.count", configSchema: z.object({}), defaultConfig: {},
     fetch: async () => ({ n: ++calls }),
   });
-  registerServerWidget({
+  registerFetchWidget({
     type: "test.boom", configSchema: z.object({}), defaultConfig: {},
     fetch: async () => { throw new Error("kaput"); },
   });
@@ -55,7 +55,7 @@ describe("widget-service", () => {
 
   it("stores CliError.kind in the cache on failure", async () => {
     const { CliError } = await import("@/server/cli");
-    registerServerWidget({
+    registerFetchWidget({
       type: "fake.authfail",
       configSchema: z.object({}),
       defaultConfig: {},

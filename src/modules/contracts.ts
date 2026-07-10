@@ -15,7 +15,7 @@ export interface WidgetAction {
 }
 
 /** Server-only: how a widget gets its data. Never imported by client code. */
-export interface ServerWidget<Data = unknown, Config = unknown> {
+export interface FetchWidget<Data = unknown, Config = unknown> {
   type: string;
   configSchema: ZodType<Config>;
   defaultConfig: Config;
@@ -36,7 +36,7 @@ export interface WidgetBodyProps<Data = unknown, Config = unknown> {
 }
 
 /** Client-only: how a widget renders. */
-export interface ClientWidget<Data = unknown, Config = unknown> {
+export interface RenderWidget<Data = unknown, Config = unknown> {
   type: string;
   title: string;
   Component: FC<WidgetBodyProps<Data, Config>>;

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { useTempDb } from "../helpers/db";
 
-// Control which integrations & client widgets exist.
+// Control which integrations & render widgets exist.
 vi.mock("@/modules/integration-registry", () => {
   const map = new Map<string, unknown>();
   return {
@@ -10,12 +10,12 @@ vi.mock("@/modules/integration-registry", () => {
     __seed: (arr: unknown[]) => { map.clear(); for (const i of arr) map.set((i as { id: string }).id, i); },
   };
 });
-vi.mock("@/modules/client-registry", () => ({
-  listClientWidgets: () => [
+vi.mock("@/modules/render-registry", () => ({
+  listRenderWidgets: () => [
     { type: "t.a", title: "A", integration: "toolful" },
     { type: "t.none", title: "None" },
   ],
-  getClientWidget: () => undefined,
+  getRenderWidget: () => undefined,
 }));
 
 import * as reg from "@/modules/integration-registry";

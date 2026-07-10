@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import "@/modules/server";
-import "@/modules/client";
+import "@/modules/fetch";
+import "@/modules/render";
 import "@/modules/integrations";
 import { getIntegrationStatuses } from "@/server/integration-service";
 

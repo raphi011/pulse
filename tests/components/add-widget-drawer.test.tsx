@@ -3,8 +3,8 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AddWidgetDrawer } from "@/components/add-widget-drawer";
 
-vi.mock("@/modules/client-registry", () => ({
-  listClientWidgets: () => [
+vi.mock("@/modules/render-registry", () => ({
+  listRenderWidgets: () => [
     { type: "github.prs", title: "Pull Requests", integration: "github" },
     { type: "jira.jql", title: "Jira Query", integration: "jira" },
     { type: "core.status", title: "System Status" },

@@ -1,7 +1,7 @@
 "use client";
 import { useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { getClientWidget } from "@/modules/client-registry";
+import { getRenderWidget } from "@/modules/render-registry";
 import type { Widget } from "@/server/config-repo";
 import { WidgetShell, type WidgetState, type DragHandle } from "./widget-shell";
 import { useWidgetData } from "./use-widget-data";
@@ -17,7 +17,7 @@ export function WidgetCard({
   dragHandle?: DragHandle;
   onConfigChange?: (id: string, config: Record<string, unknown>) => void;
 }) {
-  const def = getClientWidget(widget.type);
+  const def = getRenderWidget(widget.type);
   const { data, isLoading, refresh, isRefreshing } = useWidgetData(widget.id);
   const qc = useQueryClient();
   const saveConfig = useCallback(

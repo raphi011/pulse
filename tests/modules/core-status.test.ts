@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { fetchStatus } from "@/modules/core/server";
+import { fetchStatus } from "@/modules/core/fetch";
 
 describe("core.status fetch", () => {
   it("returns a timestamp, node version, and platform", async () => {

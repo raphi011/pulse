@@ -1,5 +1,5 @@
 "use client";
-import "@/modules/client";
+import "@/modules/render";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { AutoRefreshProvider } from "@/components/auto-refresh-context";

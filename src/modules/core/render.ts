@@ -1,8 +1,8 @@
-import { registerClientWidget } from "@/modules/client-registry";
+import { registerRenderWidget } from "@/modules/render-registry";
 import { STATUS_TYPE, statusConfigSchema, statusDefaultConfig } from "./manifest";
 import { StatusWidget } from "./widgets/status-widget";
 
-registerClientWidget({
+registerRenderWidget({
   type: STATUS_TYPE,
   title: "System Status",
   Component: StatusWidget,

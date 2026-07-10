@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { useTempDb } from "../helpers/db";
-import "@/modules/server";
+import "@/modules/fetch";
 import { addWidget } from "@/server/config-repo";
 import { GET } from "@/app/api/widgets/[id]/data/route";
 

@@ -1,7 +1,7 @@
 import "server-only";
 import { getDb } from "@/db/client";
 import { listIntegrations, getIntegration } from "@/modules/integration-registry";
-import { listClientWidgets } from "@/modules/client-registry";
+import { listRenderWidgets } from "@/modules/render-registry";
 import { getWidgets, removeWidget, getIntegrationOverride, setIntegrationOverride } from "./config-repo";
 import type { IntegrationHealth, IntegrationStatus } from "@/modules/integration-contracts";
 
@@ -33,7 +33,7 @@ export function resolveEnabled(hasTool: boolean, installed: boolean, override: b
 }
 
 function typesForIntegration(id: string): Set<string> {
-  return new Set(listClientWidgets().filter((w) => w.integration === id).map((w) => w.type));
+  return new Set(listRenderWidgets().filter((w) => w.integration === id).map((w) => w.type));
 }
 
 function widgetCountForIntegration(id: string): number {

@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
-import { listClientWidgets } from "@/modules/client-registry";
+import { listRenderWidgets } from "@/modules/render-registry";
 import type { IntegrationStatus } from "@/modules/integration-contracts";
 import { BrandIcon } from "./brand-icon";
 
@@ -14,7 +14,7 @@ export function AddWidgetDrawer({ onAdd }: { onAdd: (type: string) => void }) {
     enabled: open,
   });
   const enabledIds = new Set((statuses ?? []).filter((s) => s.enabled).map((s) => s.id));
-  const types = listClientWidgets().filter((t) => !t.integration || enabledIds.has(t.integration));
+  const types = listRenderWidgets().filter((t) => !t.integration || enabledIds.has(t.integration));
 
   useEffect(() => {
     if (!open) return;

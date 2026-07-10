@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Widget } from "@/server/config-repo";
-import { getClientWidget } from "@/modules/client-registry";
+import { getRenderWidget } from "@/modules/render-registry";
 import { SchemaForm } from "./schema-form";
 
 export function ConfigureDialog({
@@ -12,7 +12,7 @@ export function ConfigureDialog({
   onClose: () => void;
   onSaved: (id: string, config: Record<string, unknown>, title: string | null) => void;
 }) {
-  const def = getClientWidget(widget.type);
+  const def = getRenderWidget(widget.type);
   const qc = useQueryClient();
   const [values, setValues] = useState<Record<string, unknown>>(widget.config);
   const [title, setTitle] = useState(widget.title ?? "");

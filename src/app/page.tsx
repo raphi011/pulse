@@ -1,8 +1,8 @@
-import "@/modules/server";
+import "@/modules/fetch";
 import { getWidgets, addWidget } from "@/server/config-repo";
 import { statusDefaultConfig } from "@/modules/core/manifest";
 import { Dashboard } from "@/components/dashboard";
-import "@/modules/client";
+import "@/modules/render";
 
 export const dynamic = "force-dynamic";
 

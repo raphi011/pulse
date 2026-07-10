@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { fetchBookmarks } from "@/modules/bookmarks/server";
+import { fetchBookmarks } from "@/modules/bookmarks/fetch";
 import { normalizeUrl } from "@/modules/bookmarks/manifest";
 
 describe("bookmarks fetch (identity)", () => {
