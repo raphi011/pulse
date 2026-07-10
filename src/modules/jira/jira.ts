@@ -27,6 +27,6 @@ export function jiraServerUrl(): string {
   const text = readFileSync(path, "utf8");
   const match = text.match(/^server:\s*(\S+)/m);
   if (!match) throw new Error("Could not find `server:` in jira-cli config — run `jira init`");
-  cachedServer = match[1].replace(/\/$/, "");
+  cachedServer = match[1].replace(/^["']|["']$/g, "").replace(/\/$/, "");
   return cachedServer;
 }
