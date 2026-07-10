@@ -38,22 +38,22 @@ _Avoid_: options, settings, preferences.
 
 **Manifest**:
 A module's dependency-free shared surface: its widget-type ids, config schemas,
-defaults, and data shapes. Importable by both server and client.
+defaults, and data shapes. Importable by both fetch and render.
 _Avoid_: types file, index.
 
-**Server** (the module's server side):
+**Fetch** (the module's fetch side):
 The module's server-only surface: how each widget type gets its data, plus any
-actions. Registers into the server registry.
+actions. Registers into the fetch registry.
 _Avoid_: backend, api.
 
-**Client** (the module's client side):
+**Render** (the module's render side):
 The module's browser surface: the React body that renders a widget type.
-Registers into the client registry.
+Registers into the render registry.
 _Avoid_: frontend, ui, view.
 
 **Registry**:
 The lookup a module registers itself into so the shell can find it by widget
-type. There are two — one server-only, one client — kept strictly apart.
+type. There are two — one fetch, one render — kept strictly apart.
 _Avoid_: catalog, store, map.
 
 **Shell**:

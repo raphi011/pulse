@@ -27,10 +27,10 @@ Local, single-user, pluggable Next.js dashboard for organizing daily work. Perso
 
 Integrations are self-contained **modules** under `src/modules/<name>/`, split into:
 - `manifest.ts` — shared types, Zod config schema, defaults (no runtime deps)
-- `server.ts` — `fetch()` + actions; registers into the **server-only** registry (CLI-first, but API is fine)
-- `widgets/*.tsx` + `client.ts` — React body; registers into the **client** registry
+- `fetch.ts` — `fetch()` + actions; registers into the **fetch** registry (CLI-first, but API is fine)
+- `widgets/*.tsx` + `render.ts` — React body; registers into the **render** registry
 
-The shell knows only the widget contract, never a specific integration. Add a module = drop a folder + add its import to `src/modules/server.ts` and `src/modules/client.ts`.
+The shell knows only the widget contract, never a specific integration. Add a module = drop a folder + add its import to `src/modules/fetch.ts` and `src/modules/render.ts`.
 
 Data flow is **cache-first**: widgets read cached rows from `widget_cache` instantly; refresh (manual or interval) re-runs `fetch()` and re-caches. Layout *is* the `widgets` table (`column`/`order`/`hidden`).
 

@@ -1,6 +1,6 @@
 ---
 name: create-module
-description: Use when adding a new integration to the work-dashboard (a new data source or widget — e.g. GitHub, Jira, Google Workspace), scaffolding a module under src/modules/, or registering a new widget type. Covers the manifest/server/client split, registry wiring, config-form constraints, CLI-backed fetching, and the registration test.
+description: Use when adding a new integration to the work-dashboard (a new data source or widget — e.g. GitHub, Jira, Google Workspace), scaffolding a module under src/modules/, or registering a new widget type. Covers the manifest/fetch/render split, registry wiring, config-form constraints, CLI-backed fetching, and the registration test.
 ---
 
 # Create a Dashboard Module
@@ -19,12 +19,12 @@ src/modules/<name>/
   manifest.ts          # type id, Zod config schema + default, data shapes. NO runtime deps.
   <cli>.ts             # (CLI-backed only) runCli wrapper + auth regex
   <feature>.ts         # server-only fetch(config): Promise<Data>
-  server.ts            # registerServerWidget({ type, configSchema, defaultConfig, fetch })
-  client.ts            # registerClientWidget({ type, title, Component, configSchema, defaultConfig })
+  fetch.ts             # registerFetchWidget({ type, configSchema, defaultConfig, fetch })
+  render.ts            # registerRenderWidget({ type, title, Component, configSchema, defaultConfig })
   widgets/<name>-widget.tsx   # "use client" body: (props: WidgetBodyProps<Data, Config>)
 ```
 
-Multiple widget types? One `manifest.ts`, one `server.ts`, one `client.ts`; add a
+Multiple widget types? One `manifest.ts`, one `fetch.ts`, one `render.ts`; add a
 `<feature>.ts` + `widgets/*.tsx` per type (see `github`).
 
 ## Steps
@@ -35,10 +35,10 @@ Multiple widget types? One `manifest.ts`, one `server.ts`, one `client.ts`; add 
    CLI-backed: call your wrapper. Errors thrown here surface as the widget's error state.
 3. **widget** — `"use client"`, render from `data`/`config`. Match existing widgets'
    Tailwind (list rows, `text-ok/warn/danger`, dark variants). Handle the empty case.
-4. **server.ts + client.ts** — register into each registry.
-5. **Wire the barrels** — add `import "./<name>/server";` to `src/modules/server.ts` and
-   `import "./<name>/client";` to `src/modules/client.ts`. **Both, or it won't appear.**
-   Registering in the client registry auto-adds it to the "Add widget" drawer — no DB seeding.
+4. **fetch.ts + render.ts** — register into each registry.
+5. **Wire the barrels** — add `import "./<name>/fetch";` to `src/modules/fetch.ts` and
+   `import "./<name>/render";` to `src/modules/render.ts`. **Both, or it won't appear.**
+   Registering in the render registry auto-adds it to the "Add widget" drawer — no DB seeding.
 6. **Test** — add `tests/modules/<name>-registration.test.ts` (copy jira's) asserting both
    registries resolve the type with the expected title/defaults.
 
