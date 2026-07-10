@@ -34,6 +34,15 @@ The shell knows only the widget contract, never a specific integration. Add a mo
 
 Data flow is **cache-first**: widgets read cached rows from `widget_cache` instantly; refresh (manual or interval) re-runs `fetch()` and re-caches. Layout *is* the `widgets` table (`column`/`order`/`hidden`).
 
+**Authoring a module:** vocabulary is pinned in `CONTEXT.md` (glossary); use the **`create-module`** skill (`.claude/skills/create-module/`) to scaffold one.
+
+**Gotchas / patterns (code-verified):**
+- Config forms auto-generate from the Zod schema; only these field kinds render (`src/components/schema-form.tsx`): `string`, `number`, `boolean`, `stringList` (`z.array(z.string())`), `enum`. `.describe()` sets the label. Other shapes throw.
+- CLI-backed modules wrap `runCli` (`src/server/cli.ts`, spawns via `execFile` — no shell). Two error models: process-model CLIs (stderr + non-zero exit, e.g. `gh`/`jira`) use `runCli` + an auth regex; payload-model CLIs (errors as JSON on stdout, maybe exit 0, e.g. `gws`) use `runJsonCli` + an error extractor. Errors classify as `not-found`/`auth`/`timeout`/`failed`.
+- N+1 enrichment (list → per-item detail) uses `Promise.allSettled` so one failure doesn't sink the widget (`github/prs.ts`).
+- Reference modules: `github` (3 widgets, N+1 enrichment) and `jira` (single widget, custom-query config) — both fully wired; copy their shape.
+- Registration test per module asserts both registries resolve each widget type (`tests/modules/*-registration.test.ts`).
+
 ## Design & docs
 
 - UI work: use the **impeccable** skill; styling: **tailwind** (v4) skill.
