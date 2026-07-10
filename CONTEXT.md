@@ -77,3 +77,10 @@ _Avoid_: data store, snapshot.
 Where each widget sits and whether it shows — its column, order, and hidden
 flag. Layout *is* the set of widgets, not a separate structure.
 _Avoid_: grid, arrangement, positions.
+
+**Repo**:
+The persistence layer for the widget cache and config (`cache-repo`,
+`config-repo`). Its functions are async — `await` them. They reach the DB via
+`getDb()` (`src/db/client.ts`), a `sqlite-proxy` async seam over better-sqlite3;
+atomic multi-statement writes use `db.batch()`, not `db.transaction()`.
+_Avoid_: dao, store, model.

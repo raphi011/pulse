@@ -42,6 +42,7 @@ Data flow is **cache-first**: widgets read cached rows from `widget_cache` insta
 - N+1 enrichment (list → per-item detail) uses `Promise.allSettled` so one failure doesn't sink the widget (`github/prs.ts`).
 - Reference modules: `github` (3 widgets, N+1 enrichment) and `jira` (single widget, custom-query config) — both fully wired; copy their shape.
 - Registration test per module asserts both registries resolve each widget type (`tests/modules/*-registration.test.ts`).
+- DB access goes through `getDb()` (`src/db/client.ts`), which uses Drizzle's `sqlite-proxy` async driver over a `better-sqlite3` transport. **All repo functions (`cache-repo`, `config-repo`) are async** — `await` them. Multi-statement atomic writes use `db.batch([...])`, not `db.transaction()` (the async proxy driver does not support interactive transactions). This proxy callback is the seam the Tauri build swaps to `tauri-plugin-sql`.
 
 ## Design & docs
 
