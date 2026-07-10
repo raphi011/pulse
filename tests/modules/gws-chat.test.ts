@@ -182,3 +182,58 @@ describe("fetchChatChannels", () => {
     expect(await fetchChatChannels({ spaceIds: [] })).toEqual({ channels: [] });
   });
 });
+
+import dmSpaces from "../fixtures/gws/chat/dm-spaces.json";
+import readStateFixture from "../fixtures/gws/chat/space-read-state.json";
+import messagesLatest from "../fixtures/gws/chat/messages-latest.json";
+import peopleGet from "../fixtures/gws/chat/people-get.json";
+import spaceGet from "../fixtures/gws/chat/space-get.json";
+
+describe("fetchChatDms — against recorded fixtures (shape-drift guard)", () => {
+  it("normalizes a real unread DM end-to-end", async () => {
+    mockJson.mockImplementation(
+      router({
+        spaces: dmSpaces, // DM_AAA active 10:00 (unread below); DM_BBB active 2026-07-09 08:00 (read below)
+        readStateByName: {
+          "users/me/spaces/DM_AAA/spaceReadState": readStateFixture, // lastReadTime 2026-07-09T09:00 < 10:00 -> unread
+          "users/me/spaces/DM_BBB/spaceReadState": { name: "users/100000000000000000001/spaces/DM_BBB/spaceReadState", lastReadTime: "2026-07-10T00:00:00Z" }, // read
+        },
+        msgByParent: { "spaces/DM_AAA": messagesLatest },
+        peopleByResource: { "people/200000000000000000002": peopleGet },
+      }),
+    );
+    const { dms } = await fetchChatDms({ limit: 15 });
+    expect(dms).toEqual([
+      {
+        spaceId: "spaces/DM_AAA",
+        partner: "Alex Rivera",
+        snippet: "hey, can you take a look at the PR when you get a chance?",
+        time: "2026-07-10T10:00:00Z",
+        url: "https://chat.google.com/dm/DM_AAA?cls=11",
+      },
+    ]);
+  });
+});
+
+describe("fetchChatChannels — against recorded fixtures (shape-drift guard)", () => {
+  it("normalizes a real configured space end-to-end", async () => {
+    mockJson.mockImplementation(
+      routeChannels(
+        { "spaces/ROOM_CCC": spaceGet },
+        { "users/me/spaces/ROOM_CCC/spaceReadState": readStateFixture }, // lastReadTime 2026-07-09T09:00 < space active 2026-07-10T12:00 -> unread
+        { "spaces/ROOM_CCC": messagesLatest },
+      ),
+    );
+    const { channels } = await fetchChatChannels({ spaceIds: ["spaces/ROOM_CCC"] });
+    expect(channels).toEqual([
+      {
+        spaceId: "spaces/ROOM_CCC",
+        name: "Team Ops",
+        snippet: "hey, can you take a look at the PR when you get a chance?",
+        time: "2026-07-10T10:00:00Z",
+        unread: true,
+        url: "https://chat.google.com/room/ROOM_CCC?cls=11",
+      },
+    ]);
+  });
+});

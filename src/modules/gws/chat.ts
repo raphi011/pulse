@@ -87,7 +87,7 @@ export async function fetchChatDms(config: ChatDmsConfig): Promise<ChatDmsData> 
       ]);
       const msg = resp.messages?.[0];
       if (!msg) return null;
-      if (me && msg.sender?.name === me) return null; // self-sent — not an unread-from-partner
+      if (me && msg.sender?.name === me) return null; // self-sent — best-effort (skipped if read-state name lacked a user id); real API always provides it
       const partner = await resolvePartnerName(msg.sender?.name);
       return normalizeDm(space, msg, partner);
     }),
