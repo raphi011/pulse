@@ -27,7 +27,11 @@ export interface WidgetBodyProps<Data = unknown, Config = unknown> {
   data: Data;
   config: Config;
   runAction: (actionId: string, params?: Record<string, unknown>) => Promise<void>;
-  /** Persist a new config for this widget (PATCH + re-fetch + cache update). */
+  /**
+   * Persist a new config for this widget (PATCH + re-fetch + cache update).
+   * Only `data` is refreshed, not the `config` prop — derive the next config
+   * from `data`, not from the (now stale) `config` prop.
+   */
   saveConfig: (next: Config) => Promise<void>;
 }
 
