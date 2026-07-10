@@ -1,0 +1,41 @@
+"use client";
+import type { WidgetBodyProps } from "@/modules/contracts";
+import type { CalendarData, CalendarConfig, CalendarEventItem } from "../manifest";
+
+function timeLabel(e: CalendarEventItem): string {
+  if (e.allDay) return "all day";
+  return new Date(e.start).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+
+export function CalendarWidget({ data }: WidgetBodyProps<CalendarData, CalendarConfig>) {
+  if (data.events.length === 0)
+    return <p className="text-sm text-slate-500 dark:text-slate-400">Nothing today.</p>;
+  return (
+    <ul className="divide-y divide-border dark:divide-border-dark">
+      {data.events.map((e) => (
+        <li key={e.id} className="flex items-center gap-2.5 py-2">
+          <span className="w-14 shrink-0 text-xs tabular-nums text-slate-500 dark:text-slate-400">{timeLabel(e)}</span>
+          <a href={e.url} target="_blank" rel="noreferrer" className="min-w-0 flex-1 truncate text-sm hover:underline">
+            {e.title}
+          </a>
+          {e.meetUrl ? (
+            <a
+              href={e.meetUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="shrink-0 text-[0.6875rem] font-medium text-primary-600 hover:underline dark:text-primary-400"
+            >
+              Meet
+            </a>
+          ) : (
+            e.location && (
+              <span className="max-w-[8rem] shrink-0 truncate text-[0.6875rem] text-slate-500 dark:text-slate-400">
+                {e.location}
+              </span>
+            )
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
