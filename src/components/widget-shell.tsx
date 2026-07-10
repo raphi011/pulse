@@ -46,24 +46,26 @@ export function WidgetShell({
   return (
     <section className="group/card flex h-full flex-col overflow-hidden rounded-xl bg-card shadow-sm ring-1 ring-border transition-shadow duration-150 hover:shadow-md dark:bg-card-dark dark:shadow-none dark:ring-border-dark dark:hover:ring-white/15">
       <header className="flex items-center justify-between gap-2 border-b border-border px-3.5 py-2.5 dark:border-border-dark">
-        {dragHandle ? (
-          <h3
-            ref={setRef}
-            {...attributes}
-            {...listeners}
-            title="Drag to move"
-            className="min-w-0 flex-1 cursor-grab touch-none select-none truncate text-[0.8125rem] font-semibold tracking-tight text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 active:cursor-grabbing dark:text-slate-100"
-          >
-            {title}
-          </h3>
-        ) : (
-          <h3 className="min-w-0 flex-1 truncate text-[0.8125rem] font-semibold tracking-tight">{title}</h3>
-        )}
-        {count != null && (
-          <span className="shrink-0 text-[0.8125rem] font-semibold tabular-nums text-slate-400 dark:text-slate-500">
-            ({count})
-          </span>
-        )}
+        <div className="flex min-w-0 flex-1 items-center gap-1.5">
+          {dragHandle ? (
+            <h3
+              ref={setRef}
+              {...attributes}
+              {...listeners}
+              title="Drag to move"
+              className="min-w-0 cursor-grab touch-none select-none truncate text-[0.8125rem] font-semibold tracking-tight text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 active:cursor-grabbing dark:text-slate-100"
+            >
+              {title}
+            </h3>
+          ) : (
+            <h3 className="min-w-0 truncate text-[0.8125rem] font-semibold tracking-tight">{title}</h3>
+          )}
+          {count != null && (
+            <span className="shrink-0 text-[0.8125rem] font-semibold tabular-nums text-slate-400 dark:text-slate-500">
+              ({count})
+            </span>
+          )}
+        </div>
         <div className="flex shrink-0 items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
           {fetchedAt && <span className="tabular-nums">{ago(fetchedAt)}</span>}
           {headerExtra}
