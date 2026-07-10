@@ -4,6 +4,7 @@ import { eq, asc } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { widgets, prefs } from "@/db/schema";
 import { getServerWidget } from "@/modules/server-registry";
+import { DEFAULT_ROW_SPAN } from "@/lib/grid";
 
 export type Widget = typeof widgets.$inferSelect;
 
@@ -21,7 +22,7 @@ export function addWidget(type: string, config: Record<string, unknown>): Widget
   const existing = getWidgets();
   const order = existing.reduce((max, w) => Math.max(max, w.order + 1), 0);
   const row: Widget = {
-    id: randomUUID(), type, title: null, order, colSpan: 1, rowSpan: 6,
+    id: randomUUID(), type, title: null, order, colSpan: 1, rowSpan: DEFAULT_ROW_SPAN,
     hidden: false, config: validated,
   };
   getDb().insert(widgets).values(row).run();

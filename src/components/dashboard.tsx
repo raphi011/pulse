@@ -47,7 +47,7 @@ function AutoRefreshControls() {
 function Toolbar({ onAdd }: { onAdd: (type: string) => void }) {
   return (
     <div className="sticky top-0 z-30 border-b border-border/80 bg-surface/80 backdrop-blur dark:border-border-dark/80 dark:bg-surface-dark/70">
-      <div className="mx-auto flex max-w-[110rem] items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
+      <div className="flex items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
         <div className="flex items-center gap-2.5">
           <span
             aria-hidden
@@ -100,7 +100,8 @@ export function Dashboard({ initialWidgets }: { initialWidgets: Widget[] }) {
   }, []);
 
   const cols = width > 0 ? columnCountForWidth(width) : 1;
-  const cellWidth = width > 0 ? width / cols : ROW_UNIT_PX;
+  // Track width minus the inter-column gaps (1rem) so resize snapping matches real cells.
+  const cellWidth = width > 0 ? (width - (cols - 1) * 16) / cols : ROW_UNIT_PX;
   const visible = orderedWidgets(widgets);
   const isEmpty = visible.length === 0;
   const activeWidget = activeId ? widgets.find((w) => w.id === activeId) ?? null : null;
@@ -133,7 +134,7 @@ export function Dashboard({ initialWidgets }: { initialWidgets: Widget[] }) {
   return (
     <>
       <Toolbar onAdd={onAdd} />
-      <main className="mx-auto max-w-[110rem] px-4 py-6 sm:px-6 lg:px-8">
+      <main className="px-4 py-6 sm:px-6 lg:px-8">
         <div ref={gridRef} className="wd-grid" style={{ ["--wd-cols" as string]: cols, ["--wd-row-unit" as string]: `${ROW_UNIT_PX}px` }}>
           {isEmpty ? (
             <EmptyState />

@@ -27,7 +27,7 @@ export function SortableCard({
     gridRow: `span ${widget.rowSpan}`,
   };
   return (
-    <div ref={setNodeRef} style={style} className="relative min-h-0">
+    <div ref={setNodeRef} style={style} className="group/card relative min-h-0">
       <WidgetCard
         widget={widget}
         onRemove={onRemove}

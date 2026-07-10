@@ -15,7 +15,12 @@ export function applyReorder(widgets: Widget[], activeId: string, overId: string
   const reordered = [...visible];
   const [moved] = reordered.splice(from, 1);
   reordered.splice(to, 0, moved);
-  const orderById = new Map(reordered.map((w, i) => [w.id, i]));
+  // Renumber visible first (0..k-1), then hidden after them, so `order` stays a
+  // collision-free global sequence even though hidden widgets aren't in the grid.
+  const hidden = widgets.filter((w) => w.hidden).sort((a, b) => a.order - b.order);
+  const orderById = new Map<string, number>();
+  reordered.forEach((w, i) => orderById.set(w.id, i));
+  hidden.forEach((w, i) => orderById.set(w.id, reordered.length + i));
   return widgets.map((w) => (orderById.has(w.id) ? { ...w, order: orderById.get(w.id)! } : w));
 }
 

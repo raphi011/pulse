@@ -54,7 +54,7 @@ export function ResizeHandle({
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      className="absolute bottom-1 right-1 z-10 hidden h-4 w-4 cursor-se-resize touch-none place-items-center rounded text-slate-400 opacity-0 transition-opacity group-hover/card:grid group-hover/card:opacity-100 hover:text-slate-600 dark:hover:text-slate-200"
+      className="absolute bottom-1 right-1 z-10 grid h-4 w-4 cursor-se-resize touch-none place-items-center rounded text-slate-400 opacity-0 transition-opacity group-hover/card:opacity-100 focus-visible:opacity-100 hover:text-slate-600 dark:hover:text-slate-200"
     >
       <span aria-hidden className="text-[0.7rem] leading-none">⇲</span>
     </button>
