@@ -3,6 +3,7 @@ import { getWidget } from "./config-repo";
 import * as cache from "./cache-repo";
 import { getServerWidget } from "@/modules/server-registry";
 import { NotFoundError } from "./errors";
+import { CliError } from "./cli";
 
 export async function getWidgetData(widgetId: string, refresh: boolean): Promise<cache.CacheRow> {
   const widget = getWidget(widgetId);
@@ -18,16 +19,19 @@ export async function getWidgetData(widgetId: string, refresh: boolean): Promise
 
   if (!def) {
     return cache.set(widgetId, {
-      status: "error", payload: prev?.payload ?? null, error: `Unknown widget type: ${widget.type}`,
+      status: "error", payload: prev?.payload ?? null, error: `Unknown widget type: ${widget.type}`, errorKind: "failed",
     });
   }
 
   try {
     const payload = await def.fetch(widget.config);
-    return cache.set(widgetId, { status: "ok", payload, error: null });
+    return cache.set(widgetId, { status: "ok", payload, error: null, errorKind: null });
   } catch (err) {
     return cache.set(widgetId, {
-      status: "error", payload: prev?.payload ?? null, error: err instanceof Error ? err.message : String(err),
+      status: "error",
+      payload: prev?.payload ?? null,
+      error: err instanceof Error ? err.message : String(err),
+      errorKind: err instanceof CliError ? err.kind : "failed",
     });
   }
 }

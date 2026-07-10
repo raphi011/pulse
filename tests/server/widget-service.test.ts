@@ -52,4 +52,18 @@ describe("widget-service", () => {
     expect(errored.status).toBe("error");
     expect(errored.error).toContain("kaput");
   });
+
+  it("stores CliError.kind in the cache on failure", async () => {
+    const { CliError } = await import("@/server/cli");
+    registerServerWidget({
+      type: "fake.authfail",
+      configSchema: z.object({}),
+      defaultConfig: {},
+      fetch: async () => { throw new CliError("Not authenticated — run `gh auth login`", "auth"); },
+    });
+    const w = repo.addWidget("fake.authfail", {});
+    const row = await getWidgetData(w.id, true);
+    expect(row.status).toBe("error");
+    expect(row.errorKind).toBe("auth");
+  });
 });
