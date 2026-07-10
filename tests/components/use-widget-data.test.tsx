@@ -87,3 +87,23 @@ test("fires a toast when a refresh fails", async () => {
   await act(async () => { await vi.advanceTimersByTimeAsync(0); });
   expect(screen.getByRole("alert").textContent).toContain("Refresh failed");
 });
+
+test("fires a toast when the initial load fails", async () => {
+  (fetch as unknown as ReturnType<typeof vi.fn>).mockImplementation(async () => ({
+    ok: false,
+    status: 500,
+    json: async () => ({}),
+  }));
+  renderProbe();
+  await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+  expect(screen.getByRole("alert").textContent).toContain("Failed to load widget");
+});
+
+test("stops auto-refreshing after toggling off", async () => {
+  renderProbe();
+  await act(async () => { screen.getByText("toggle").click(); }); // enable
+  await act(async () => { await vi.advanceTimersByTimeAsync(5 * 60 * 1000); }); // one refresh
+  await act(async () => { screen.getByText("toggle").click(); }); // disable
+  await act(async () => { await vi.advanceTimersByTimeAsync(10 * 60 * 1000); });
+  expect(refreshCallCount()).toBe(1); // no further refreshes after disabling
+});
