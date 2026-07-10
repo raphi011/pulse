@@ -30,6 +30,24 @@ Adds Google Chat as **two new read-only widget types inside the existing `gws` m
 
 ---
 
+## ⚠️ Corrections after live verification (Task 0, 2026-07-10)
+
+Recorded against the authenticated `gws` CLI. Two pre-auth assumptions were **wrong**; where the sections
+below disagree, **these win** (fixtures in `tests/fixtures/gws/chat/`):
+
+- **A message's `sender` is `{ name, type }` with NO `displayName`.** `members.list` also returns only
+  user ids. So the partner name is **not** available from the Chat API. It is resolved via the **People
+  API** (`gws people people get --params '{"resourceName":"people/<id>","personFields":"names"}'` →
+  `names[0].displayName`), mapping the sender's `users/<id>` to `people/<id>` (same numeric id). This adds
+  one People call per unread DM — cost returns to `1 + limit + (2 × unreadCount)`.
+- **Deep links come from `Space.spaceUri`**, not a hand-built URL. Both DM spaces
+  (`https://chat.google.com/dm/<id>?cls=11`) and named spaces (`https://chat.google.com/room/<id>?cls=11`)
+  carry it in `spaces.list`/`spaces.get`. The `chatUrl`/`spaceIdSegment` helpers are dropped.
+- **Confirmed:** the `getSpaceReadState` response `name` carries a numeric `users/<id>` (so `callerUserId`
+  works), and named spaces do return `displayName` (so channels need no People call).
+
+---
+
 ## Decisions (resolved during brainstorming)
 
 - **Placement:** new widget types in the **existing `gws` module**, not a separate `chat` module —
@@ -53,10 +71,12 @@ Adds Google Chat as **two new read-only widget types inside the existing `gws` m
   response includes `lastActiveTime` (list strips only `permissionSettings`).
 - `chat users spaces getSpaceReadState` → `{ name, lastReadTime }` for `users/me/spaces/<id>/spaceReadState`.
 - `chat spaces messages list --params '{"parent":"spaces/<id>","orderBy":"createTime desc","pageSize":1}'`
-  → latest message: `text`, `createTime`, and `sender` (a `User` with `name` = `users/<id>` and, under
-  user auth, `displayName`). For an unread DM the latest message is from the partner, so
-  `sender.displayName` *is* the partner's name — no separate `members list` call needed.
-- `chat spaces get` → a named space's `displayName` + `lastActiveTime`.
+  → latest message: `text`, `createTime`, and `sender` = `{ name: "users/<id>", type }` (**no
+  `displayName`** — see corrections). For an unread DM the sender is the partner.
+- `people people get --params '{"resourceName":"people/<id>","personFields":"names"}'` → `names[0].displayName`.
+  Resolves a DM partner's user id (`users/<id>` → `people/<id>`) to a human name.
+- `chat spaces get` → a named space's `displayName`, `spaceUri`, `lastActiveTime`.
+- `Space.spaceUri` → the canonical deep link for both DMs and named spaces.
 - The caller's own user id is recovered by parsing `users/<id>` out of the `getSpaceReadState` response
   `name` (`users/<id>/spaces/<space>/spaceReadState`) — used to drop self-sent last messages.
 
@@ -92,12 +112,13 @@ The key design point: **detail work is proportional to the number of *unread* DM
 3. For those ≤ `limit` DMs — `getSpaceReadState` each (`Promise.allSettled`; 1 light call per DM).
    Unread candidate ⇔ `lastActiveTime > lastReadTime`. The response `name` also yields the caller's own
    user id (parsed once).
-4. **Only for the actually-unread few** — fetch the latest message (`Promise.allSettled`). It supplies
-   the snippet (`text`), the time (`createTime`), and the partner name (`sender.displayName`). Drop it
-   if `sender` is the caller (self-sent). No `members list` call.
+4. **Only for the actually-unread few** — fetch the latest message (`Promise.allSettled`) for the snippet
+   (`text`), time (`createTime`), and partner id (`sender.name`). Drop it if `sender` is the caller
+   (self-sent). Then resolve the partner id → name via the **People API**. `url` comes from the DM's
+   `spaceUri`.
 
-Cost ≈ `1 + limit + unreadCount`. Since most DMs are read, the step-4 message fetch fires only for the
-handful genuinely unread.
+Cost ≈ `1 + limit + (2 × unreadCount)`. Since most DMs are read, the step-4 message + People fetches fire
+only for the handful genuinely unread.
 
 - **Unread definition:** `lastActiveTime > lastReadTime`. If the last message's `sender` resolves to
   the caller, drop it (you don't need to "read" your own send) — belt-and-suspenders on top of read
@@ -114,10 +135,10 @@ handful genuinely unread.
   ```ts
   type ChatDm = {
     spaceId: string;          // "spaces/AAAA"
-    partner: string;          // latest message sender.displayName (fallback: "Direct message")
+    partner: string;          // People-API-resolved name (fallback: "Direct message")
     snippet: string;          // latest message text, trimmed
     time: string;             // ISO createTime of latest message
-    url: string;              // https://mail.google.com/chat/u/0/#chat/dm/<id> deep link
+    url: string;              // Space.spaceUri
   };
   type ChatDmsData = { dms: ChatDm[] };   // unread only
   ```
@@ -144,7 +165,7 @@ handful genuinely unread.
     snippet: string;          // latest message text
     time: string;             // ISO createTime
     unread: boolean;
-    url: string;              // chat deep link to the space
+    url: string;              // Space.spaceUri
   };
   type ChatChannelsData = { channels: ChatChannel[] };  // all configured, unread-badged
   ```
@@ -170,16 +191,14 @@ interval, or post-config-save) re-runs `fetch()` → writes `widget_cache` → r
 
 ## Testing (TDD)
 
-No network in tests. Record real `gws chat …` output as fixtures under `tests/fixtures/gws/chat/`
-(`dm-spaces.json`, `space-read-state.json`, `messages-latest.json`); until auth is available, hand-built
-JSON of the same shape is acceptable, replaced by real output before asserting final fields. Recording
-`space-read-state.json` confirms the response `name` carries a numeric `users/<id>` (not the literal
-`me`); if it were `me`, the self-sent check still works since the sender id would match.
+No network in tests. Sanitized fixtures live under `tests/fixtures/gws/chat/` (`dm-spaces.json`,
+`space-read-state.json`, `messages-latest.json`, `space-get.json`, `people-get.json`) — recorded from
+real output in Task 0, then names/message text replaced with placeholders.
 
 1. **`fetchChatDms()`** — mock `gwsJson` to return fixtures; assert: the funnel filters to unread only
    (`lastActiveTime > lastReadTime`), read DMs are excluded, a DM whose latest message sender is the
-   caller is excluded, `partner` = `sender.displayName` with the "Direct message" fallback, `limit`
-   bounds the read-state scan, and the no-unread-DMs case → `{ dms: [] }`.
+   caller is excluded, `partner` = People-API-resolved name with the "Direct message" fallback, `url`
+   comes from `spaceUri`, `limit` bounds the read-state scan, and the no-unread-DMs case → `{ dms: [] }`.
 2. **`fetchChatChannels()`** — assert per-space enrichment, `unread` flag derivation, a 404 space ID is
    dropped while others survive, and empty config → `{ channels: [] }`.
 3. **Registration test** — `tests/modules/gws-registration.test.ts` (extend if present, else add):
