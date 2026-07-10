@@ -1,49 +1,63 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("@/modules/jira/jira", () => ({ runJira: vi.fn(), jiraJson: vi.fn() }));
+vi.mock("@/modules/jira/jira", () => ({
+  runJira: vi.fn(), jiraJson: vi.fn(), jiraServerUrl: vi.fn(() => "https://x.atlassian.net"),
+}));
 import { jiraJson } from "@/modules/jira/jira";
+import { CliError } from "@/server/cli";
 import { normalizeIssue, fetchJql, type JiraRawIssue } from "@/modules/jira/jql";
 import fixture from "../fixtures/jira/jql.json";
 
 const mockJson = jiraJson as unknown as ReturnType<typeof vi.fn>;
 beforeEach(() => { mockJson.mockReset(); });
 
-const rawInProgress = fixture.issues[0] as JiraRawIssue;
-
 describe("normalizeIssue", () => {
-  it("maps a raw issue to JiraIssue with a browse URL", () => {
-    expect(normalizeIssue(rawInProgress)).toEqual({
+  it("maps a raw issue to JiraIssue with a browse URL from the server base", () => {
+    expect(normalizeIssue(fixture[0] as JiraRawIssue, "https://x.atlassian.net")).toEqual({
       key: "CORE-101",
       summary: "Fix seizure edge case",
       status: "In Progress",
-      statusCategory: "inprogress",
       assignee: "Raphael Gruber",
-      url: "https://acme-jira.atlassian.net/browse/CORE-101",
+      url: "https://x.atlassian.net/browse/CORE-101",
     });
   });
 
-  it("maps statusCategory keys new/indeterminate/done to todo/inprogress/done", () => {
-    expect(normalizeIssue(fixture.issues[1] as JiraRawIssue).statusCategory).toBe("todo");
-    expect(normalizeIssue(fixture.issues[2] as JiraRawIssue).statusCategory).toBe("done");
+  it("normalizes an empty-string assignee to null", () => {
+    expect(normalizeIssue(fixture[1] as JiraRawIssue, "https://x.atlassian.net").assignee).toBeNull();
   });
 
-  it("returns null assignee when unassigned", () => {
-    expect(normalizeIssue(fixture.issues[1] as JiraRawIssue).assignee).toBeNull();
+  it("normalizes a null assignee to null", () => {
+    expect(normalizeIssue(fixture[2] as JiraRawIssue, "https://x.atlassian.net").assignee).toBeNull();
   });
 });
 
 describe("fetchJql", () => {
-  it("runs the configured JQL with a paginate limit and normalizes every issue", async () => {
+  it("maps the top-level array and passes JQL with --order-by updated (no --raw here)", async () => {
     mockJson.mockResolvedValueOnce(fixture);
     const data = await fetchJql({ jql: "project = CORE", limit: 25 });
     expect(data.issues).toHaveLength(3);
-    expect(data.issues[0].key).toBe("CORE-101");
-    const args = mockJson.mock.calls[0][0] as string[];
-    expect(args).toEqual(["issue", "list", "-q", "project = CORE", "--paginate", "0:25"]);
+    expect(data.issues[0].url).toBe("https://x.atlassian.net/browse/CORE-101");
+    expect(mockJson.mock.calls[0][0]).toEqual(
+      ["issue", "list", "-q", "project = CORE", "--order-by", "updated", "--paginate", "0:25"],
+    );
   });
 
-  it("returns an empty list when no issues match", async () => {
-    mockJson.mockResolvedValueOnce({ issues: [], total: 0 });
+  it("strips a trailing ORDER BY clause from the user's JQL", async () => {
+    mockJson.mockResolvedValueOnce(fixture);
+    await fetchJql({ jql: "project = CORE ORDER BY updated DESC", limit: 10 });
+    const args = mockJson.mock.calls[0][0] as string[];
+    expect(args[3]).toBe("project = CORE");
+  });
+
+  it("returns an empty list when jira-cli reports no results", async () => {
+    mockJson.mockRejectedValueOnce(
+      new CliError('No result found for given query in project "CORE"', "failed"),
+    );
     await expect(fetchJql({ jql: "project = CORE", limit: 10 })).resolves.toEqual({ issues: [] });
+  });
+
+  it("rethrows other CLI errors", async () => {
+    mockJson.mockRejectedValueOnce(new CliError("Not authenticated — run `jira init`", "auth"));
+    await expect(fetchJql({ jql: "project = CORE", limit: 10 })).rejects.toThrow(/Not authenticated/);
   });
 });

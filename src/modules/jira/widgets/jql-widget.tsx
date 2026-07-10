@@ -1,12 +1,6 @@
 "use client";
 import type { WidgetBodyProps } from "@/modules/contracts";
-import type { JqlData, JqlConfig, StatusCategory } from "../manifest";
-
-const PILL: Record<StatusCategory, string> = {
-  done: "bg-ok/15 text-ok",
-  inprogress: "bg-warn/15 text-warn",
-  todo: "bg-slate-500/15 text-slate-500 dark:text-slate-400",
-};
+import type { JqlData, JqlConfig } from "../manifest";
 
 function initials(name: string): string {
   return name.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
@@ -29,7 +23,7 @@ export function JqlWidget({ data }: WidgetBodyProps<JqlData, JqlConfig>) {
             <span className="font-medium tabular-nums text-slate-500 dark:text-slate-400">{issue.key}</span>{" "}
             {issue.summary}
           </a>
-          <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[0.6875rem] font-medium ${PILL[issue.statusCategory]}`}>
+          <span className="shrink-0 rounded-full bg-slate-500/15 px-1.5 py-0.5 text-[0.6875rem] font-medium text-slate-500 dark:text-slate-400">
             {issue.status}
           </span>
           <span

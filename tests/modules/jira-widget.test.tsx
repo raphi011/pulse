@@ -9,8 +9,7 @@ const noop = async () => {};
 const data: JqlData = {
   issues: [
     { key: "CORE-101", summary: "Fix seizure edge case", status: "In Progress",
-      statusCategory: "inprogress", assignee: "Raphael Gruber",
-      url: "https://x.atlassian.net/browse/CORE-101" },
+      assignee: "Raphael Gruber", url: "https://x.atlassian.net/browse/CORE-101" },
   ],
 };
 
@@ -22,25 +21,22 @@ describe("JqlWidget", () => {
     expect(screen.getByRole("link")).toHaveAttribute("href", "https://x.atlassian.net/browse/CORE-101");
   });
 
-  it("shows an empty message when there are no issues", () => {
-    render(<JqlWidget data={{ issues: [] }} config={config} runAction={noop} />);
-    expect(screen.getByText(/no matching issues/i)).toBeInTheDocument();
-  });
-
-  it("renders assignee initials, the unassigned fallback, and status pill text", () => {
-    const twoIssues: JqlData = {
+  it("shows the status name and assignee initials, with — for unassigned", () => {
+    const two: JqlData = {
       issues: [
-        { key: "CORE-101", summary: "Fix seizure edge case", status: "In Progress",
-          statusCategory: "inprogress", assignee: "Raphael Gruber",
-          url: "https://x.atlassian.net/browse/CORE-101" },
-        { key: "CORE-102", summary: "Unassigned todo", status: "To Do",
-          statusCategory: "todo", assignee: null,
-          url: "https://x.atlassian.net/browse/CORE-102" },
+        data.issues[0],
+        { key: "CORE-102", summary: "Investigate flaky test", status: "To Do",
+          assignee: null, url: "https://x.atlassian.net/browse/CORE-102" },
       ],
     };
-    render(<JqlWidget data={twoIssues} config={config} runAction={noop} />);
+    render(<JqlWidget data={two} config={config} runAction={noop} />);
     expect(screen.getByText("RG")).toBeInTheDocument();
     expect(screen.getByText("—")).toBeInTheDocument();
     expect(screen.getByText("In Progress")).toBeInTheDocument();
+  });
+
+  it("shows an empty message when there are no issues", () => {
+    render(<JqlWidget data={{ issues: [] }} config={config} runAction={noop} />);
+    expect(screen.getByText(/no matching issues/i)).toBeInTheDocument();
   });
 });

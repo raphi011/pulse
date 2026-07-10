@@ -9,18 +9,15 @@ export const jqlConfigSchema = z.object({
 });
 export type JqlConfig = z.infer<typeof jqlConfigSchema>;
 export const jqlDefaultConfig: JqlConfig = {
-  jql: "assignee = currentUser() AND resolution = EMPTY ORDER BY updated DESC",
+  jql: "assignee = currentUser() AND resolution = EMPTY",
   limit: 10,
 };
-
-export type StatusCategory = "todo" | "inprogress" | "done";
 
 export type JiraIssue = {
   key: string;              // e.g. "CORE-123"
   summary: string;
-  status: string;           // status display name
-  statusCategory: StatusCategory;
-  assignee: string | null;  // displayName, null if unassigned
-  url: string;              // <origin>/browse/<KEY>
+  status: string;           // status display name (no category available from `issue list --raw`)
+  assignee: string | null;  // displayName, null if unassigned (empty string normalized to null)
+  url: string;              // <server>/browse/<KEY>
 };
 export type JqlData = { issues: JiraIssue[] };

@@ -1,32 +1,29 @@
-{
-  "issues": [
-    {
-      "key": "CORE-101",
-      "self": "https://acme-jira.atlassian.net/rest/api/2/issue/100101",
-      "fields": {
-        "summary": "Fix seizure edge case",
-        "status": { "name": "In Progress", "statusCategory": { "key": "indeterminate" } },
-        "assignee": { "displayName": "Raphael Gruber" }
-      }
-    },
-    {
-      "key": "CORE-102",
-      "self": "https://acme-jira.atlassian.net/rest/api/2/issue/100102",
-      "fields": {
-        "summary": "Investigate flaky test",
-        "status": { "name": "To Do", "statusCategory": { "key": "new" } },
-        "assignee": null
-      }
-    },
-    {
-      "key": "CORE-103",
-      "self": "https://acme-jira.atlassian.net/rest/api/2/issue/100103",
-      "fields": {
-        "summary": "Ship dashboard",
-        "status": { "name": "Done", "statusCategory": { "key": "done" } },
-        "assignee": { "displayName": "Jane Doe" }
-      }
+[
+  {
+    "key": "CORE-101",
+    "fields": {
+      "summary": "Fix seizure edge case",
+      "status": { "name": "In Progress" },
+      "assignee": { "displayName": "Raphael Gruber" },
+      "updated": "2026-07-09T10:00:00.000+0200"
     }
-  ],
-  "total": 3
-}
+  },
+  {
+    "key": "CORE-102",
+    "fields": {
+      "summary": "Investigate flaky test",
+      "status": { "name": "To Do" },
+      "assignee": { "displayName": "" },
+      "updated": "2026-07-08T09:00:00.000+0200"
+    }
+  },
+  {
+    "key": "CORE-103",
+    "fields": {
+      "summary": "Ship dashboard",
+      "status": { "name": "Done" },
+      "assignee": null,
+      "updated": "2026-07-07T08:00:00.000+0200"
+    }
+  }
+]
