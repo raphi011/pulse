@@ -4,7 +4,7 @@ import { execFile } from "node:child_process";
 export type CliErrorKind = "not-found" | "auth" | "timeout" | "failed";
 
 export class CliError extends Error {
-  constructor(message: string, readonly kind: CliErrorKind, readonly stderr = "") {
+  constructor(message: string, readonly kind: CliErrorKind, readonly stderr = "", readonly stdout = "") {
     super(message);
     this.name = "CliError";
   }
@@ -40,8 +40,59 @@ export function runCli(
         return reject(new CliError(opts.notAuthenticatedMessage ?? "Not authenticated", "auth", errText));
       }
       return reject(
-        new CliError(errText.trim() || (err as Error).message || `${bin} exited with an error`, "failed", errText),
+        new CliError(
+          errText.trim() || (err as Error).message || `${bin} exited with an error`,
+          "failed",
+          errText,
+          (stdout || "").toString(),
+        ),
       );
     });
   });
+}
+
+export interface ApiError {
+  code?: number;
+  message?: string;
+}
+
+/** Pulls an embedded API error out of a parsed JSON body, or null if the call succeeded. */
+export type ApiErrorExtractor = (body: unknown) => ApiError | null;
+
+/**
+ * For CLIs that wrap a REST API and report errors *inside* the JSON body on stdout —
+ * sometimes with a zero exit code (e.g. `gws` returns an HTTP 401 as exit 0). The body is
+ * authoritative, not the exit status, so we always parse and inspect it. Maps 401/403 to an
+ * auth failure (using `notAuthenticatedMessage`); any other embedded error becomes `failed`.
+ */
+export async function runJsonCli<T>(
+  bin: string,
+  args: string[],
+  extractError: ApiErrorExtractor,
+  opts: RunCliOptions = {},
+): Promise<T> {
+  let stdout: string;
+  try {
+    ({ stdout } = await runCli(bin, args, opts));
+  } catch (err) {
+    // Non-zero exit (e.g. HTTP 404): the JSON error body is carried on the CliError.
+    if (err instanceof CliError && err.stdout) stdout = err.stdout;
+    else throw err;
+  }
+
+  let body: unknown;
+  try {
+    body = JSON.parse(stdout);
+  } catch {
+    throw new CliError(`${bin} returned non-JSON output`, "failed");
+  }
+
+  const apiError = extractError(body);
+  if (apiError) {
+    if (apiError.code === 401 || apiError.code === 403) {
+      throw new CliError(opts.notAuthenticatedMessage ?? "Not authenticated", "auth");
+    }
+    throw new CliError(apiError.message?.trim() || `${bin} error ${apiError.code ?? ""}`.trim(), "failed");
+  }
+  return body as T;
 }

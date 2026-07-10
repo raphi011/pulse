@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 
 vi.mock("node:child_process", () => ({ execFile: vi.fn() }));
 import { execFile } from "node:child_process";
-import { runCli, CliError } from "@/server/cli";
+import { runCli, runJsonCli, CliError } from "@/server/cli";
 
 const mockExec = execFile as unknown as Mock;
 
@@ -86,5 +86,45 @@ describe("runCli", () => {
     expect(err).toBeInstanceOf(CliError);
     expect(err.kind).toBe("failed");
     expect(err.message).toMatch(/too large|maxBuffer/i);
+  });
+});
+
+// Extractor mirroring a Google-style `{ error: { code, message } }` body on stdout.
+const extractApiError = (body: unknown) => (body as { error?: { code?: number; message?: string } }).error ?? null;
+
+describe("runJsonCli", () => {
+  it("parses and returns the JSON body on success", async () => {
+    whenExec(null, '{"messages":[{"id":"1"}]}', "");
+    await expect(runJsonCli("gws", ["x"], extractApiError)).resolves.toEqual({ messages: [{ id: "1" }] });
+  });
+
+  it("throws auth for an embedded 401 even when the process exits 0", async () => {
+    whenExec(null, '{"error":{"code":401,"message":"bad token"}}', "");
+    const err = await runJsonCli("gws", ["x"], extractApiError, {
+      notAuthenticatedMessage: "Not authenticated — run `gws auth login`",
+    }).catch((e) => e);
+    expect(err).toBeInstanceOf(CliError);
+    expect(err.kind).toBe("auth");
+    expect(err.message).toBe("Not authenticated — run `gws auth login`");
+  });
+
+  it("reads the error body carried on a non-zero exit (e.g. 404)", async () => {
+    whenExec(Object.assign(new Error("exit 1"), { code: 1 }), '{"error":{"code":404,"message":"not found"}}', "");
+    const err = await runJsonCli("gws", ["x"], extractApiError).catch((e) => e);
+    expect(err.kind).toBe("failed");
+    expect(err.message).toBe("not found");
+  });
+
+  it("rethrows process failures with no JSON body (e.g. ENOENT)", async () => {
+    whenExec(Object.assign(new Error("spawn ENOENT"), { code: "ENOENT" }));
+    const err = await runJsonCli("gws", ["x"], extractApiError).catch((e) => e);
+    expect(err.kind).toBe("not-found");
+  });
+
+  it("throws failed on non-JSON output", async () => {
+    whenExec(null, "not json", "");
+    const err = await runJsonCli("gws", ["x"], extractApiError).catch((e) => e);
+    expect(err.kind).toBe("failed");
+    expect(err.message).toMatch(/non-JSON/);
   });
 });
