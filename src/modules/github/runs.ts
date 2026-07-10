@@ -27,9 +27,10 @@ export async function fetchFailingActions(config: FailingActionsConfig): Promise
       return raw.map((r) => normalizeRun(repo, r));
     }),
   );
-  const runs = results.filter((r) => r.status === "fulfilled").flatMap((r) => (r as PromiseFulfilledResult<RunItem[]>).value);
-  if (runs.length === 0 && results.every((r) => r.status === "rejected")) {
+  if (results.every((r) => r.status === "rejected")) {
     throw (results[0] as PromiseRejectedResult).reason;
   }
-  return { runs };
+  const runs = results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
+  const errors = config.repos.filter((_, i) => results[i].status === "rejected");
+  return errors.length ? { runs, errors } : { runs };
 }

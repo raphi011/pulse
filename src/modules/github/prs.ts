@@ -1,6 +1,6 @@
 import "server-only";
 import { ghJson } from "./gh";
-import type { CiStatus, PrItem, MyPrsData, TeamPrsData, MyPrsConfig, TeamPrsConfig } from "./manifest";
+import type { CiStatus, PrItem, PrsData, PrsConfig } from "./manifest";
 
 export type GhSearchPr = {
   number: number; title: string; url: string;
@@ -53,17 +53,11 @@ async function searchAndEnrich(searchArgs: string[]): Promise<PrItem[]> {
 
 const SEARCH_JSON = "number,title,url,repository,author,updatedAt";
 
-export async function fetchMyPrs(config: MyPrsConfig): Promise<MyPrsData> {
-  const prs = await searchAndEnrich([
-    "search", "prs", "--author=@me", "--state=open",
-    "--json", SEARCH_JSON, "--limit", String(config.limit),
-  ]);
-  return { prs };
-}
-
-export async function fetchTeamPrs(config: TeamPrsConfig): Promise<TeamPrsData> {
-  if (config.authors.length === 0) return { prs: [] };
-  const authorArgs = config.authors.map((a) => `--author=${a}`);
+export async function fetchPrs(config: PrsConfig): Promise<PrsData> {
+  // Blank authors → your own open PRs; otherwise the listed teammates'.
+  const authorArgs = config.authors.length
+    ? config.authors.map((a) => `--author=${a}`)
+    : ["--author=@me"];
   const prs = await searchAndEnrich([
     "search", "prs", ...authorArgs, "--state=open",
     "--json", SEARCH_JSON, "--limit", String(config.limit),

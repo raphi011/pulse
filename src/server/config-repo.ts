@@ -27,7 +27,7 @@ export function addWidget(type: string, config: Record<string, unknown>): Widget
   const column = counts.indexOf(Math.min(...counts));
   const order = existing.filter((w) => w.column === column).length;
   const row: Widget = {
-    id: randomUUID(), type, column, order, hidden: false, config: validated, refreshInterval: null,
+    id: randomUUID(), type, title: null, column, order, hidden: false, config: validated, refreshInterval: null,
   };
   getDb().insert(widgets).values(row).run();
   return row;
@@ -48,6 +48,11 @@ export function setHidden(id: string, hidden: boolean): void {
 
 export function setConfig(id: string, config: Record<string, unknown>): void {
   getDb().update(widgets).set({ config }).where(eq(widgets.id, id)).run();
+}
+
+/** Per-widget display title override; null/empty restores the definition default. */
+export function setTitle(id: string, title: string | null): void {
+  getDb().update(widgets).set({ title: title || null }).where(eq(widgets.id, id)).run();
 }
 
 export function removeWidget(id: string): void {

@@ -28,6 +28,10 @@ export function runCli(
       if (!err) return resolve({ stdout: stdout.toString(), stderr: stderr.toString() });
       const code = (err as NodeJS.ErrnoException).code;
       if (code === "ENOENT") return reject(new CliError(`${bin} not found — install it`, "not-found"));
+      // maxBuffer overflow also sets killed:true, so classify it before the timeout check.
+      if (code === "ERR_CHILD_PROCESS_STDOUT_MAXBUFFER") {
+        return reject(new CliError(`${bin} output too large`, "failed"));
+      }
       if ((err as { killed?: boolean }).killed) {
         return reject(new CliError(`${bin} timed out after ${timeoutMs / 1000}s`, "timeout"));
       }

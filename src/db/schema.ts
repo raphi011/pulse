@@ -3,6 +3,7 @@ import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 export const widgets = sqliteTable("widgets", {
   id: text("id").primaryKey(),
   type: text("type").notNull(),
+  title: text("title"), // null = use the widget definition's default title
   column: integer("column").notNull().default(0),
   order: integer("order").notNull().default(0),
   hidden: integer("hidden", { mode: "boolean" }).notNull().default(false),

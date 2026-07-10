@@ -1,0 +1,1 @@
+ALTER TABLE `widgets` ADD `title` text;

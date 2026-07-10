@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Work Dashboard",
+  title: "Pulse",
   description: "A local, pluggable dashboard for organizing daily work.",
 };
 

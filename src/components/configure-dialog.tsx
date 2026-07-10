@@ -10,11 +10,12 @@ export function ConfigureDialog({
 }: {
   widget: Widget;
   onClose: () => void;
-  onSaved: (id: string, config: Record<string, unknown>) => void;
+  onSaved: (id: string, config: Record<string, unknown>, title: string | null) => void;
 }) {
   const def = getClientWidget(widget.type);
   const qc = useQueryClient();
   const [values, setValues] = useState<Record<string, unknown>>(widget.config);
+  const [title, setTitle] = useState(widget.title ?? "");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -29,19 +30,24 @@ export function ConfigureDialog({
   async function save() {
     setSaving(true);
     setError(null);
+    const nextTitle = title.trim() || null;
     const res = await fetch(`/api/widgets/${widget.id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ config: values }),
+      body: JSON.stringify({ config: values, title: nextTitle }),
     });
     if (!res.ok) {
       setError("Invalid configuration");
       setSaving(false);
       return;
     }
+    const { config: stored, title: storedTitle } = (await res.json()) as {
+      config?: Record<string, unknown>;
+      title?: string | null;
+    };
     const fresh = await fetch(`/api/widgets/${widget.id}/data?refresh=1`).then((r) => r.json());
     qc.setQueryData(["widget", widget.id], fresh);
-    onSaved(widget.id, values);
+    onSaved(widget.id, stored ?? values, storedTitle ?? nextTitle);
     setSaving(false);
     onClose();
   }
@@ -60,6 +66,17 @@ export function ConfigureDialog({
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="mb-4 text-sm font-semibold">Configure {def.title}</h2>
+        <div className="mb-4 space-y-1.5">
+          <label htmlFor="cfg-title" className="block text-xs font-medium text-slate-600 dark:text-slate-300">Title</label>
+          <input
+            id="cfg-title"
+            className="w-full rounded-lg bg-surface px-2.5 py-1.5 text-sm ring-1 ring-border focus:outline-none focus:ring-2 focus:ring-primary-500/50 dark:bg-surface-dark dark:ring-border-dark"
+            value={title}
+            placeholder={def.title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
+          <p className="text-xs text-slate-500 dark:text-slate-400">Blank uses the default ({def.title}).</p>
+        </div>
         <SchemaForm schema={def.configSchema} values={values} onChange={setValues} />
         {error && <p className="mt-3 text-sm text-danger">{error}</p>}
         <div className="mt-5 flex justify-end gap-2">

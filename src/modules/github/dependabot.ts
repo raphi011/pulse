@@ -29,9 +29,10 @@ export async function fetchDependabot(config: DependabotConfig): Promise<Dependa
       return raw.map((a) => normalizeAlert(repo, a));
     }),
   );
-  const alerts = results.filter((r) => r.status === "fulfilled").flatMap((r) => (r as PromiseFulfilledResult<AlertItem[]>).value);
-  if (alerts.length === 0 && results.every((r) => r.status === "rejected")) {
+  if (results.every((r) => r.status === "rejected")) {
     throw (results[0] as PromiseRejectedResult).reason;
   }
-  return { alerts };
+  const alerts = results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
+  const errors = config.repos.filter((_, i) => results[i].status === "rejected");
+  return errors.length ? { alerts, errors } : { alerts };
 }

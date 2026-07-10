@@ -25,7 +25,7 @@ describe("normalizeAlert", () => {
 describe("fetchDependabot", () => {
   it("queries open alerts per repo and merges", async () => {
     mockJson.mockResolvedValueOnce([rawAlert]).mockResolvedValueOnce([]);
-    const data = await fetchDependabot({ repos: ["o/r", "o/r2"] });
+    const data = await fetchDependabot({ repos: ["o/r", "o/r2"], limit: 10 });
     expect(data.alerts).toHaveLength(1);
     expect((mockJson.mock.calls[0][0] as string[]).join(" ")).toContain("/repos/o/r/dependabot/alerts");
     expect((mockJson.mock.calls[0][0] as string[]).join(" ")).toContain("state=open");
@@ -33,11 +33,23 @@ describe("fetchDependabot", () => {
 
   it("passes severity filter when set", async () => {
     mockJson.mockResolvedValueOnce([]);
-    await fetchDependabot({ repos: ["o/r"], severity: "critical" });
+    await fetchDependabot({ repos: ["o/r"], severity: "critical", limit: 10 });
     expect((mockJson.mock.calls[0][0] as string[]).join(" ")).toContain("severity=critical");
   });
 
   it("returns empty when no repos configured", async () => {
-    await expect(fetchDependabot({ repos: [] })).resolves.toEqual({ alerts: [] });
+    await expect(fetchDependabot({ repos: [], limit: 10 })).resolves.toEqual({ alerts: [] });
+  });
+
+  it("keeps successful repos when one repo errors and reports the failed repo", async () => {
+    mockJson.mockResolvedValueOnce([rawAlert]).mockRejectedValueOnce(new Error("boom"));
+    const data = await fetchDependabot({ repos: ["o/r", "o/bad"], limit: 10 });
+    expect(data.alerts).toHaveLength(1);
+    expect(data.errors).toEqual(["o/bad"]);
+  });
+
+  it("throws when every repo errors", async () => {
+    mockJson.mockRejectedValue(new Error("boom"));
+    await expect(fetchDependabot({ repos: ["o/a", "o/b"], limit: 10 })).rejects.toThrow();
   });
 });
