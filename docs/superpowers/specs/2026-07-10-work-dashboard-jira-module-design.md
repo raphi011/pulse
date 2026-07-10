@@ -30,6 +30,33 @@ changes** — the Jira module is purely additive apart from the two module barre
 
 ---
 
+## ⚠️ Corrections after live verification (2026-07-10)
+
+The data-shape assumptions below (written pre-auth) were **wrong**. Verified against an authenticated
+`jira` CLI (v1.7.0, Jira Cloud), `jira issue list --raw` is a **reduced projection**, not the Jira
+search API response. The module was corrected accordingly — see
+`docs/superpowers/plans/2026-07-10-work-dashboard-jira-module-fixes.md` (commits `726f73a`, `a087705`).
+Where the sections below disagree, **these corrections win**:
+
+- **Response is a bare JSON array** of issues, not `{ issues: [...] }`.
+- **No `self`/`id`** on issues → the browse URL is built from jira-cli's own config `server:`
+  (`~/.config/.jira/.config.yml`, or `JIRA_CONFIG_FILE`) as `${server}/browse/${KEY}`, via a cached
+  `jiraServerUrl()` helper in `jira.ts`.
+- **No `statusCategory`** — status is only `{ name }`. So the pill is **neutral** (status *name* in one
+  muted color); the `statusCategory` field/type was dropped entirely.
+- **jira-cli appends its own `ORDER BY`**, so any `ORDER BY` inside the JQL is a syntax error. `fetchJql`
+  **strips a trailing `ORDER BY …`** from the user's JQL and sorts via `--order-by updated` (newest-updated
+  first). The default JQL no longer contains `ORDER BY`.
+- **No matches → non-zero exit** with stderr `No result found for given query…` (no JSON). `fetchJql`
+  catches that `CliError` (`/no result found/i`) and returns `{ issues: [] }` so the empty state renders.
+- **Unassigned → `{ displayName: "" }`** (empty string) → normalized to `null`.
+
+Corrected normalized shape: `JiraIssue = { key; summary; status: string; assignee: string | null; url }`
+(no `statusCategory`). All six points were verified live end-to-end (real issues render, empty state,
+`ORDER BY` stripped, browse links open).
+
+---
+
 ## Decisions (resolved during brainstorming)
 
 - **Data path:** `jira` CLI (already installed at `~/.local/bin/jira`, v1.7.0). Mirrors the `gh`
