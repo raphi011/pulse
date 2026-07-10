@@ -54,9 +54,11 @@ export function ResizeHandle({
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      className="absolute bottom-1 right-1 z-10 grid h-4 w-4 cursor-se-resize touch-none place-items-center rounded text-slate-400 opacity-0 transition-opacity group-hover/card:opacity-100 focus-visible:opacity-100 hover:text-slate-600 dark:hover:text-slate-200"
+      className="absolute bottom-1 right-1 z-10 grid h-5 w-5 cursor-se-resize touch-none place-items-center rounded-md bg-card/70 text-slate-400 opacity-60 backdrop-blur-sm transition-all group-hover/card:opacity-100 hover:bg-card hover:text-slate-600 focus-visible:opacity-100 dark:bg-card-dark/70 dark:text-slate-500 dark:hover:bg-card-dark dark:hover:text-slate-300"
     >
-      <span aria-hidden className="text-[0.7rem] leading-none">⇲</span>
+      <svg aria-hidden width="11" height="11" viewBox="0 0 11 11" fill="none" className="pointer-events-none">
+        <path d="M10 2 L2 10 M10 6 L6 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
     </button>
   );
 }
