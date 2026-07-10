@@ -27,6 +27,8 @@ export interface WidgetBodyProps<Data = unknown, Config = unknown> {
   data: Data;
   config: Config;
   runAction: (actionId: string, params?: Record<string, unknown>) => Promise<void>;
+  /** Persist a new config for this widget (PATCH + re-fetch + cache update). */
+  saveConfig: (next: Config) => Promise<void>;
 }
 
 /** Client-only: how a widget renders. */
@@ -42,4 +44,8 @@ export interface ClientWidget<Data = unknown, Config = unknown> {
   integration?: string;
   /** Brand logo shown beside the title; omit for widgets with no brand (e.g. core). */
   icon?: BrandMark;
+  /** Optional header action rendered in place of the built-in refresh button. */
+  HeaderControls?: FC<WidgetBodyProps<Data, Config>>;
+  /** When false, the Configure dialog hides the auto-generated config form. Default true. */
+  formEditable?: boolean;
 }
