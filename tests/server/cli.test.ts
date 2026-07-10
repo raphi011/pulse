@@ -76,4 +76,15 @@ describe("runCli", () => {
     expect(err.kind).toBe("timeout");
     expect(err.message).toMatch(/timed out/);
   });
+
+  it("classifies a maxBuffer overflow as failed, not timeout", async () => {
+    whenExec(Object.assign(new Error("stdout maxBuffer length exceeded"), {
+      code: "ERR_CHILD_PROCESS_STDOUT_MAXBUFFER",
+      killed: true,
+    }));
+    const err = await runCli("gh", ["x"]).catch((e) => e);
+    expect(err).toBeInstanceOf(CliError);
+    expect(err.kind).toBe("failed");
+    expect(err.message).toMatch(/too large|maxBuffer/i);
+  });
 });

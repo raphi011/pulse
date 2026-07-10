@@ -1,6 +1,6 @@
 "use client";
 import type { WidgetBodyProps } from "@/modules/contracts";
-import type { MyPrsData, CiStatus } from "../manifest";
+import type { PrsData, PrsConfig, CiStatus } from "../manifest";
 
 const ciDot: Record<CiStatus, string> = {
   ok: "bg-ok", warn: "bg-warn", danger: "bg-danger", none: "bg-slate-300 dark:bg-white/20",
@@ -11,12 +11,12 @@ const reviewBadge: Record<string, { label: string; cls: string }> = {
   REVIEW_REQUIRED: { label: "review", cls: "text-warn" },
 };
 
-export function PrListWidget({ data }: WidgetBodyProps<MyPrsData, unknown>) {
+export function PrListWidget({ data, config }: WidgetBodyProps<PrsData, PrsConfig>) {
   if (data.prs.length === 0)
     return <p className="text-sm text-slate-500 dark:text-slate-400">No open PRs.</p>;
   return (
     <ul className="divide-y divide-border dark:divide-border-dark">
-      {data.prs.map((pr) => {
+      {data.prs.slice(0, config.limit).map((pr) => {
         const rev = reviewBadge[pr.review];
         return (
           <li key={pr.url} className="flex items-center gap-2.5 py-2">

@@ -30,10 +30,17 @@ describe("fetchFailingActions", () => {
     expect((mockJson.mock.calls[0][0] as string[]).join(" ")).toContain("-R o/r");
   });
 
-  it("keeps successful repos when one repo errors (partial failure)", async () => {
+  it("keeps successful repos when one repo errors and reports the failed repo", async () => {
     mockJson.mockResolvedValueOnce([rawRun]).mockRejectedValueOnce(new Error("boom"));
     const data = await fetchFailingActions({ repos: ["o/r", "o/bad"], limit: 10 });
     expect(data.runs).toHaveLength(1);
+    expect(data.errors).toEqual(["o/bad"]);
+  });
+
+  it("omits errors when every repo succeeds", async () => {
+    mockJson.mockResolvedValueOnce([rawRun]).mockResolvedValueOnce([]);
+    const data = await fetchFailingActions({ repos: ["o/r", "o/r2"], limit: 10 });
+    expect(data.errors).toBeUndefined();
   });
 
   it("returns empty when no repos configured", async () => {

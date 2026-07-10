@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("@/modules/github/gh", () => ({ runGh: vi.fn(), ghJson: vi.fn() }));
 import { ghJson } from "@/modules/github/gh";
-import { rollupCi, normalizeSearchPr, fetchMyPrs, fetchTeamPrs, type GhSearchPr } from "@/modules/github/prs";
+import { rollupCi, normalizeSearchPr, fetchPrs, type GhSearchPr } from "@/modules/github/prs";
 import prView from "../fixtures/github/pr-view.json";
 import searchPrs from "../fixtures/github/search-prs.json";
 
@@ -48,12 +48,12 @@ describe("normalizeSearchPr", () => {
   });
 });
 
-describe("fetchMyPrs", () => {
-  it("searches then enriches each PR with CI + review", async () => {
+describe("fetchPrs", () => {
+  it("defaults to your own PRs (--author=@me) when authors are blank", async () => {
     mockJson
       .mockResolvedValueOnce([rawPr]) // search
       .mockResolvedValueOnce({ statusCheckRollup: [{ conclusion: "FAILURE" }], reviewDecision: "APPROVED" }); // enrich
-    const data = await fetchMyPrs({ limit: 20 });
+    const data = await fetchPrs({ authors: [], limit: 20 });
     expect(data.prs).toHaveLength(1);
     expect(data.prs[0].ci).toBe("danger");
     expect(data.prs[0].review).toBe("APPROVED");
@@ -62,7 +62,7 @@ describe("fetchMyPrs", () => {
 
   it("returns empty prs when search finds nothing", async () => {
     mockJson.mockResolvedValueOnce([]);
-    await expect(fetchMyPrs({ limit: 20 })).resolves.toEqual({ prs: [] });
+    await expect(fetchPrs({ authors: [], limit: 20 })).resolves.toEqual({ prs: [] });
   });
 
   it("degrades a failed enrichment to its normalized base", async () => {
@@ -71,27 +71,21 @@ describe("fetchMyPrs", () => {
       .mockResolvedValueOnce([rawPr, second]) // search
       .mockResolvedValueOnce({ statusCheckRollup: [{ conclusion: "FAILURE" }], reviewDecision: "APPROVED" }) // enrich #1
       .mockRejectedValueOnce(new Error("gh pr view failed")); // enrich #2
-    const data = await fetchMyPrs({ limit: 20 });
+    const data = await fetchPrs({ authors: [], limit: 20 });
     expect(data.prs).toHaveLength(2);
     expect(data.prs[0].ci).toBe("danger");
     expect(data.prs[1].ci).toBe("none");
     expect(data.prs[1].review).toBe("none");
   });
-});
 
-describe("fetchTeamPrs", () => {
-  it("returns empty prs without calling gh when no authors", async () => {
-    await expect(fetchTeamPrs({ authors: [], limit: 20 })).resolves.toEqual({ prs: [] });
-    expect(mockJson).not.toHaveBeenCalled();
-  });
-
-  it("builds a search call with one --author arg per author", async () => {
+  it("builds a search call with one --author arg per listed author", async () => {
     mockJson
       .mockResolvedValueOnce([rawPr]) // search
       .mockResolvedValueOnce({ statusCheckRollup: [{ conclusion: "SUCCESS" }], reviewDecision: "APPROVED" }); // enrich
-    await fetchTeamPrs({ authors: ["alice", "bob"], limit: 20 });
+    await fetchPrs({ authors: ["alice", "bob"], limit: 20 });
     const args = (mockJson.mock.calls[0][0] as string[]).join(" ");
     expect(args).toContain("--author=alice");
     expect(args).toContain("--author=bob");
+    expect(args).not.toContain("--author=@me");
   });
 });

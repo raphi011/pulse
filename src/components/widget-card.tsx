@@ -1,22 +1,23 @@
 "use client";
 import { getClientWidget } from "@/modules/client-registry";
 import type { Widget } from "@/server/config-repo";
-import { WidgetShell, type WidgetState } from "./widget-shell";
+import { WidgetShell, type WidgetState, type DragHandle } from "./widget-shell";
 import { useWidgetData } from "./use-widget-data";
 import { CardMenu } from "./card-menu";
 
 export function WidgetCard({
-  widget, onConfigure, onRemove,
+  widget, onConfigure, onRemove, dragHandle,
 }: {
   widget: Widget;
   onConfigure?: (w: Widget) => void;
   onRemove?: (id: string) => void;
+  dragHandle?: DragHandle;
 }) {
   const def = getClientWidget(widget.type);
   const { data, isLoading, refresh } = useWidgetData(widget.id, widget.refreshInterval);
 
   if (!def) {
-    return <WidgetShell title={widget.type} state="error" error={`No renderer for ${widget.type}`} fetchedAt={null} onRefresh={() => {}} />;
+    return <WidgetShell title={widget.title ?? widget.type} state="error" error={`No renderer for ${widget.type}`} fetchedAt={null} onRefresh={() => {}} dragHandle={dragHandle} />;
   }
 
   const hasData = data != null && data.payload != null;
@@ -32,12 +33,13 @@ export function WidgetCard({
 
   return (
     <WidgetShell
-      title={def.title}
+      title={widget.title ?? def.title}
       state={state}
       error={data?.error}
       fetchedAt={data?.fetchedAt ?? null}
       onRefresh={refresh}
       menu={menu}
+      dragHandle={dragHandle}
       headerExtra={
         errored && hasData ? (
           <span

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { listClientWidgets } from "@/modules/client-registry";
 
 export function AddWidgetDrawer({ onAdd }: { onAdd: (type: string) => void }) {
@@ -19,7 +20,7 @@ export function AddWidgetDrawer({ onAdd }: { onAdd: (type: string) => void }) {
         <span aria-hidden className="text-base leading-none">+</span>
         Add widget
       </button>
-      {open && (
+      {open && createPortal(
         <div
           className="fixed inset-0 z-50 flex justify-end bg-slate-950/40 [animation:wd-fade-in_.15s_ease-out] dark:bg-black/60"
           onClick={() => setOpen(false)}
@@ -55,7 +56,8 @@ export function AddWidgetDrawer({ onAdd }: { onAdd: (type: string) => void }) {
               )}
             </ul>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

@@ -39,14 +39,17 @@ const inputCls =
 
 function StringListEditor({ id, value, onChange }: { id: string; value: string[]; onChange: (v: string[]) => void }) {
   return (
-    <textarea
-      id={id}
-      className={inputCls}
-      rows={4}
-      value={value.join("\n")}
-      placeholder="one per line"
-      onChange={(e) => onChange(e.target.value.split("\n").map((s) => s.trim()).filter(Boolean))}
-    />
+    <>
+      <textarea
+        id={id}
+        className={inputCls}
+        rows={4}
+        value={value.join("\n")}
+        placeholder="one per line"
+        onChange={(e) => onChange(e.target.value.split("\n").map((s) => s.trim()).filter(Boolean))}
+      />
+      <p className="text-xs text-slate-500 dark:text-slate-400">One per line — press Enter for each.</p>
+    </>
   );
 }
 

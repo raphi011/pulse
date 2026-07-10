@@ -1,8 +1,7 @@
 import { registerClientWidget } from "@/modules/client-registry";
 import {
-  MY_PRS_TYPE, TEAM_PRS_TYPE, FAILING_ACTIONS_TYPE, DEPENDABOT_TYPE,
-  myPrsConfigSchema, myPrsDefaultConfig,
-  teamPrsConfigSchema, teamPrsDefaultConfig,
+  PRS_TYPE, FAILING_ACTIONS_TYPE, DEPENDABOT_TYPE,
+  prsConfigSchema, prsDefaultConfig,
   failingActionsConfigSchema, failingActionsDefaultConfig,
   dependabotConfigSchema, dependabotDefaultConfig,
 } from "./manifest";
@@ -11,12 +10,8 @@ import { FailingActionsWidget } from "./widgets/failing-actions-widget";
 import { DependabotWidget } from "./widgets/dependabot-widget";
 
 registerClientWidget({
-  type: MY_PRS_TYPE, title: "My PRs", Component: PrListWidget,
-  configSchema: myPrsConfigSchema, defaultConfig: myPrsDefaultConfig,
-});
-registerClientWidget({
-  type: TEAM_PRS_TYPE, title: "Team PRs", Component: PrListWidget,
-  configSchema: teamPrsConfigSchema, defaultConfig: teamPrsDefaultConfig,
+  type: PRS_TYPE, title: "Pull Requests", Component: PrListWidget,
+  configSchema: prsConfigSchema, defaultConfig: prsDefaultConfig,
 });
 registerClientWidget({
   type: FAILING_ACTIONS_TYPE, title: "Failing Actions", Component: FailingActionsWidget,
