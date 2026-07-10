@@ -77,3 +77,44 @@ export type ChatChannel = {
   url: string;     // Space.spaceUri
 };
 export type ChatChannelsData = { channels: ChatChannel[] };
+
+// --- Drive (starred files) ---
+export const DRIVE_TYPE = "gws.drive";
+
+export const driveConfigSchema = z.object({
+  showDocs: z.boolean().default(true).describe("Show Docs"),
+  showSheets: z.boolean().default(true).describe("Show Sheets"),
+  showSlides: z.boolean().default(true).describe("Show Slides"),
+  showOther: z.boolean().default(true).describe("Show other files"),
+  limit: z.number().int().min(1).max(100).default(25).describe("Max files"),
+});
+export type DriveConfig = z.infer<typeof driveConfigSchema>;
+export const driveDefaultConfig: DriveConfig = {
+  showDocs: true,
+  showSheets: true,
+  showSlides: true,
+  showOther: true,
+  limit: 25,
+};
+
+export type DriveCategory = "docs" | "sheets" | "slides" | "other";
+export type DriveFileItem = {
+  id: string;
+  name: string;
+  category: DriveCategory;
+  modifiedTime: string; // ISO ("" if unknown)
+  url: string; // webViewLink
+  iconLink: string; // Google per-type icon URL ("" if missing)
+};
+export type DriveData = { files: DriveFileItem[] }; // ALL starred (unfiltered); the widget filters.
+
+/** Drop files whose category toggle is off. Pure — safe to import from client or server. */
+export function filterDriveFiles(files: DriveFileItem[], config: DriveConfig): DriveFileItem[] {
+  const enabled: Record<DriveCategory, boolean> = {
+    docs: config.showDocs,
+    sheets: config.showSheets,
+    slides: config.showSlides,
+    other: config.showOther,
+  };
+  return files.filter((f) => enabled[f.category]);
+}
