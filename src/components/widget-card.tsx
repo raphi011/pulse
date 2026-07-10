@@ -43,16 +43,7 @@ export function WidgetCard({
       refreshing={isRefreshing}
       menu={menu}
       dragHandle={dragHandle}
-      headerExtra={
-        errored && hasData ? (
-          <span
-            title={data?.error ?? "Refresh failed"}
-            className="rounded-full bg-warn/15 px-1.5 py-0.5 text-[0.6875rem] font-medium text-warn"
-          >
-            stale
-          </span>
-        ) : undefined
-      }
+      issue={errored ? { message: data?.error ?? "Refresh failed" } : null}
     >
       {hasData && (
         <Body data={data!.payload} config={widget.config} runAction={async () => {}} />

@@ -28,7 +28,7 @@ function Skeleton() {
 }
 
 export function WidgetShell({
-  title, count, state, error, fetchedAt, onRefresh, refreshing, children, headerExtra, menu, dragHandle,
+  title, count, state, error, fetchedAt, onRefresh, refreshing, children, headerExtra, menu, dragHandle, issue,
 }: {
   title: string;
   count?: number | null;
@@ -41,6 +41,7 @@ export function WidgetShell({
   headerExtra?: ReactNode;
   menu?: ReactNode;
   dragHandle?: DragHandle;
+  issue?: { message: string } | null;
 }) {
   const { setRef, attributes, listeners } = dragHandle ?? {};
   return (
@@ -67,6 +68,15 @@ export function WidgetShell({
           )}
         </div>
         <div className="flex shrink-0 items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+          {issue && (
+            <span
+              aria-label="Has an issue"
+              title={issue.message}
+              className="grid h-5 w-5 place-items-center rounded text-warn"
+            >
+              <span aria-hidden className="text-[0.95rem] leading-none">⚠</span>
+            </span>
+          )}
           {fetchedAt && <span className="tabular-nums">{ago(fetchedAt)}</span>}
           {headerExtra}
           {menu}
