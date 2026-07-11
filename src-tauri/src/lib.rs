@@ -1,4 +1,5 @@
 mod db_batch;
+mod system_stats;
 
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
@@ -25,7 +26,8 @@ pub fn run() {
       tauri_plugin_autostart::MacosLauncher::LaunchAgent,
       None,
     ))
-    .invoke_handler(tauri::generate_handler![db_batch::db_batch])
+    .manage(system_stats::SystemMonitor::new())
+    .invoke_handler(tauri::generate_handler![db_batch::db_batch, system_stats::system_stats])
     .setup(|app| {
       if cfg!(debug_assertions) {
         app.handle().plugin(
