@@ -85,8 +85,8 @@ export function ConfigureDialog({
               aria-label="No color"
               aria-pressed={accent === null}
               onClick={() => setAccent(null)}
-              className={`grid h-5 w-5 place-items-center rounded-full bg-surface text-[0.6rem] leading-none text-slate-400 ring-1 ring-border dark:bg-surface-dark dark:ring-border-dark ${
-                accent === null ? "ring-2 ring-primary-500" : ""
+              className={`grid h-5 w-5 place-items-center rounded-full bg-surface text-[0.6rem] leading-none text-slate-400 dark:bg-surface-dark ${
+                accent === null ? "ring-2 ring-primary-500" : "ring-1 ring-border dark:ring-border-dark"
               }`}
             >
               <span aria-hidden>✕</span>
