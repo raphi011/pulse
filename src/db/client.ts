@@ -1,4 +1,5 @@
 import { drizzle, type SqliteRemoteDatabase } from "drizzle-orm/sqlite-proxy";
+import { invoke } from "@tauri-apps/api/core";
 import * as schema from "./schema";
 
 let db: SqliteRemoteDatabase<typeof schema> | null = null;
@@ -21,7 +22,11 @@ function makeTauriTransport(): Transport {
   let loading: Promise<import("@tauri-apps/plugin-sql").default> | null = null;
   const load = async () => {
     const { default: Database } = await import("@tauri-apps/plugin-sql");
-    return (loading ??= Database.load("sqlite:dashboard.db"));
+    // WAL parity with the Node transport; runs exactly once on first load.
+    return (loading ??= Database.load("sqlite:dashboard.db").then(async (sqlDb) => {
+      await sqlDb.execute("PRAGMA journal_mode=WAL", []);
+      return sqlDb;
+    }));
   };
   const query = async (sql: string, params: unknown[], method: string): Promise<{ rows: unknown[] }> => {
     const sqlDb = await load();
@@ -30,7 +35,10 @@ function makeTauriTransport(): Transport {
       return { rows: [] };
     }
     const objRows = await sqlDb.select<Record<string, unknown>[]>(sql, params);
-    const arr = objRows.map((r) => Object.values(r)); // object → column-ordered array (SQLite returns select-order keys)
+    // object → column-ordered array (SQLite returns select-order keys). NOTE: if a
+    // query ever selects two columns with the same/aliased name, the duplicate key
+    // collapses and Object.values silently drops a column. No current query does this.
+    const arr = objRows.map((r) => Object.values(r));
     // undefined on a miss: sqlite-proxy's mapGetResult treats a falsy `rows` as a miss.
     if (method === "get") return { rows: arr[0] as unknown[] };
     return { rows: arr };
@@ -38,18 +46,15 @@ function makeTauriTransport(): Transport {
   return {
     query,
     batch: async (queries: { sql: string; params: unknown[]; method: string }[]) => {
-      const sqlDb = await load();
-      // tauri-plugin-sql has no multi-statement transaction API from JS; emulate atomicity with BEGIN/COMMIT.
-      await sqlDb.execute("BEGIN", []);
-      try {
-        const out: { rows: unknown[] }[] = [];
-        for (const q of queries) out.push(await query(q.sql, q.params, q.method));
-        await sqlDb.execute("COMMIT", []);
-        return out;
-      } catch (e) {
-        await sqlDb.execute("ROLLBACK", []);
-        throw e;
-      }
+      // Real atomicity: the `db_batch` Rust command runs every statement inside ONE
+      // held sqlx transaction. (Separate BEGIN/COMMIT IPC calls would race across
+      // pooled connections and lose atomicity — that's the bug this replaces.)
+      // Our batches are write-only; a batched select is unsupported by db_batch and
+      // must fail loudly, not silently return [].
+      const bad = queries.find((q) => q.method !== "run");
+      if (bad) throw new Error(`db_batch supports only write ("run") statements; got method "${bad.method}"`);
+      await invoke("db_batch", { statements: queries.map((q) => ({ sql: q.sql, params: q.params })) });
+      return queries.map(() => ({ rows: [] as unknown[] })); // drizzle batch expects one result per query
     },
   };
 }

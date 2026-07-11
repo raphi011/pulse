@@ -1,3 +1,5 @@
+mod db_batch;
+
 use tauri_plugin_sql::{Migration, MigrationKind};
 
 fn migrations() -> Vec<Migration> {
@@ -17,6 +19,7 @@ pub fn run() {
         .add_migrations("sqlite:dashboard.db", migrations())
         .build())
     .plugin(tauri_plugin_shell::init())
+    .invoke_handler(tauri::generate_handler![db_batch::db_batch])
     .setup(|app| {
       if cfg!(debug_assertions) {
         app.handle().plugin(
