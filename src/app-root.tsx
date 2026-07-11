@@ -8,6 +8,7 @@ import { ToastProvider } from "@/components/toast-context";
 import { Dashboard } from "@/components/dashboard";
 import { IntegrationsPanel } from "@/components/integrations-panel";
 import { fetchLayout, createWidget, fetchIntegrations } from "@/lib/dashboard-data";
+import { ensureCacheVersion } from "@/server/cache-version";
 import type { Widget } from "@/server/config-repo";
 import type { IntegrationStatus } from "@/modules/integration-contracts";
 
@@ -53,7 +54,12 @@ export function AppRoot() {
         defaultOptions: { queries: { staleTime: 30_000, refetchOnWindowFocus: false } },
       }),
   );
+  const [dbReady, setDbReady] = useState(false);
   const route = useHashRoute();
+  useEffect(() => {
+    void ensureCacheVersion().then(() => setDbReady(true));
+  }, []);
+  if (!dbReady) return null;
   return (
     <QueryClientProvider client={client}>
       <AutoRefreshProvider>
