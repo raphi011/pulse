@@ -1,7 +1,7 @@
 import { getFetchWidget } from "@/modules/fetch-registry";
 import {
   addWidget as repoAddWidget, getWidget, getWidgets, getPref,
-  setHidden, setConfig, setTitle, removeWidget, setPositions,
+  setHidden, setConfig, setTitle, removeWidget, setPositions, setAccent,
   type Widget,
 } from "@/server/config-repo";
 import { getWidgetData } from "@/server/widget-service";
@@ -10,6 +10,7 @@ import {
 } from "@/server/integration-service";
 import type { CacheRow } from "@/server/cache-repo";
 import type { IntegrationStatus } from "@/modules/integration-contracts";
+import { isAccentName } from "@/lib/accents";
 
 export type LayoutSnapshot = { widgets: Widget[]; prefs: { theme: string } };
 
@@ -28,14 +29,25 @@ export async function createWidget(type: string): Promise<Widget> {
   return repoAddWidget(type, def.manifest.defaultConfig as Record<string, unknown>);
 }
 
-export type WidgetPatch = { hidden?: boolean; config?: Record<string, unknown>; title?: string | null };
+export type WidgetPatch = {
+  hidden?: boolean;
+  config?: Record<string, unknown>;
+  title?: string | null;
+  accent?: string | null;
+};
 
-/** Mirrors PATCH /api/widgets/:id — validates config against the schema, echoes stored config+title. */
-export async function updateWidget(id: string, patch: WidgetPatch): Promise<{ config?: unknown; title: string | null }> {
+/** Mirrors PATCH /api/widgets/:id — validates config against the schema, echoes stored config+title+accent. */
+export async function updateWidget(
+  id: string, patch: WidgetPatch,
+): Promise<{ config?: unknown; title: string | null; accent: string | null }> {
   const widget = await getWidget(id);
   if (!widget) throw new Error("Not found");
   if (typeof patch.hidden === "boolean") await setHidden(id, patch.hidden);
   if (patch.title !== undefined) await setTitle(id, patch.title);
+  if (patch.accent !== undefined) {
+    // Non-preset values degrade to "no accent" silently (spec: never an error).
+    await setAccent(id, isAccentName(patch.accent) ? patch.accent : null);
+  }
   if (patch.config !== undefined) {
     const def = getFetchWidget(widget.type);
     const parsed = def?.manifest.configSchema.safeParse(patch.config);
@@ -43,7 +55,7 @@ export async function updateWidget(id: string, patch: WidgetPatch): Promise<{ co
     await setConfig(id, (parsed?.success ? parsed.data : patch.config) as Record<string, unknown>);
   }
   const fresh = await getWidget(id);
-  return { config: fresh?.config, title: fresh?.title ?? null };
+  return { config: fresh?.config, title: fresh?.title ?? null, accent: fresh?.accent ?? null };
 }
 
 export async function deleteWidget(id: string): Promise<void> {
