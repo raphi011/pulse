@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "tauri dev",
+    "start": "tauri build --bundles app && open src-tauri/target/release/bundle/macos/Pulse.app",
     "dev:vite": "vite",
     "build": "tauri build",
     "build:vite": "vite build",

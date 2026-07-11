@@ -2,6 +2,9 @@
 
 Local, single-user, pluggable work dashboard.
 
+## Run
+- `npm start` — build the release `.app` and open it (one command to run the real app)
+
 ## Develop
 - `npm run dev` — start dev server (`tauri dev`: Rust + webview)
 - `npm test` — run tests

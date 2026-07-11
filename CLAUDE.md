@@ -19,6 +19,7 @@ Local, single-user, pluggable Tauri desktop dashboard (Vite + React) for organiz
 ## Commands
 
 - `npm run dev` — `tauri dev` (Rust + webview); `npm run dev:vite` — Vite only, no Rust
+- `npm start` — release build (`.app` only) + open it (how the app is run for daily use)
 - `npm test` / `npm run test:watch` — tests
 - `npm run build` — `tauri build` (release `.app`/`.dmg`); `npm run build:vite` — Vite build only; `npm run lint`
 - `npm run db:generate` — Drizzle migration files (migrations run in-app via the SQL plugin, not a CLI step)
