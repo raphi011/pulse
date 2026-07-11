@@ -22,8 +22,21 @@ export async function getWidgetData(widgetId: string, refresh: boolean): Promise
     });
   }
 
+  // Validate stored config before fetching: Zod defaults backfill additive schema
+  // changes for free; a breaking change surfaces as a fixable error instead of a
+  // crash — the stored config is NOT overwritten.
+  const parsed = def.manifest.configSchema.safeParse(widget.config);
+  if (!parsed.success) {
+    return cache.set(widgetId, {
+      status: "error",
+      payload: prev?.payload ?? null,
+      error: "Invalid config — open Configure and re-save this widget.",
+      errorKind: "failed",
+    });
+  }
+
   try {
-    const payload = await def.fetch(widget.config);
+    const payload = await def.fetch(parsed.data);
     return cache.set(widgetId, { status: "ok", payload, error: null, errorKind: null });
   } catch (err) {
     return cache.set(widgetId, {

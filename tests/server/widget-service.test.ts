@@ -65,4 +65,29 @@ describe("widget-service", () => {
     expect(row.status).toBe("error");
     expect(row.errorKind).toBe("auth");
   });
+
+  it("caches a fixable error when the stored config no longer matches the schema", async () => {
+    registerFetch(
+      defineManifest({ type: "test.strict", title: "Strict", configSchema: z.object({ q: z.string() }), defaultConfig: { q: "x" } }),
+      { fetch: async (c) => c },
+    );
+    const w = await repo.addWidget("test.strict", { q: "ok" });
+    await repo.setConfig(w.id, {} as Record<string, unknown>); // simulate a breaking schema change
+    const row = await getWidgetData(w.id, true);
+    expect(row.status).toBe("error");
+    expect(row.error).toContain("Invalid config");
+    expect((await repo.getWidget(w.id))!.config).toEqual({}); // stored config untouched
+  });
+
+  it("backfills Zod defaults from the schema on read", async () => {
+    let seen: unknown;
+    registerFetch(
+      defineManifest({ type: "test.defaults", title: "D", configSchema: z.object({ limit: z.number().default(5) }), defaultConfig: { limit: 5 } }),
+      { fetch: async (c) => { seen = c; return c; } },
+    );
+    const w = await repo.addWidget("test.defaults", { limit: 5 });
+    await repo.setConfig(w.id, {} as Record<string, unknown>); // an additive schema change
+    await getWidgetData(w.id, true);
+    expect(seen).toEqual({ limit: 5 });
+  });
 });
