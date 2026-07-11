@@ -1,6 +1,6 @@
 ---
 name: create-module
-description: Use when adding a new integration to the work-dashboard (a new data source or widget — e.g. GitHub, Jira, Google Workspace), scaffolding a module under src/modules/, or registering a new widget type. Covers the manifest/fetch/render split, registry wiring, config-form constraints, CLI-backed fetching, and the registration test.
+description: Use when adding a new integration to the work-dashboard (a new data source or widget — e.g. GitHub, Jira, Google Workspace, system stats), scaffolding a module under src/modules/, or registering a new widget type. Covers the manifest/fetch/render split, registry + integration wiring, config-form constraints, CLI-backed and live Tauri-command fetching, and the registration test.
 ---
 
 # Create a Dashboard Module
@@ -10,8 +10,10 @@ more **widget types**. Vocabulary is pinned in `CONTEXT.md` — read it first. T
 only knows the widget contract (`src/modules/contracts.ts`); it never imports a module.
 
 Reference modules to copy: **`jira`** (single widget, custom-query config, CLI-backed),
-**`github`** (three widgets, N+1 enrichment), and **`bookmarks`** (local-data module — no
-CLI, no external fetch, its own DB table; see "Local-data modules" below).
+**`github`** (three widgets, N+1 enrichment), **`bookmarks`** (local-data module — no
+CLI, no external fetch, its own DB table; see "Local-data modules" below), and
+**`system`** (live module — Tauri command + in-webview sampler, no cache; see "Live
+modules" below).
 
 ## Files (single-widget module)
 
@@ -20,6 +22,7 @@ src/modules/<name>/
   manifest.ts          # type id, Zod config schema + default, data shapes, and a
                         # WidgetManifest per widget type via defineManifest(). NO runtime deps.
   <cli>.ts             # (CLI-backed only) runCli/runJsonCli wrapper + auth detection
+  integration.ts       # (only if manifest sets `integration`) registerIntegration(...) — see step 5
   <feature>.ts         # fetch(config): Promise<Data>
   fetch.ts             # registerFetch(manifest, { fetch })
   render.ts            # registerRender(manifest, { Component, icon?, count?, HeaderControls?, formEditable? })
@@ -61,10 +64,29 @@ Multiple widget types? One `manifest.ts` (one `defineManifest()` call per type),
    });
    ```
 
-5. **Wire the barrels** — add `import "./<name>/fetch";` to `src/modules/fetch.ts` and
+5. **Declare the integration** (only if the manifest sets `integration`) — add
+   `src/modules/<name>/integration.ts` and import it in `src/modules/integrations.ts`:
+
+   ```ts
+   import { registerIntegration } from "@/modules/integration-registry";
+   import { probeHealth } from "@/modules/integration-health";
+   import { runX } from "./x";
+
+   registerIntegration({
+     id: "example", // must match manifest.integration
+     name: "Example",
+     tool: { bin: "x", installHint: "brew install x", authHint: "Run `x auth login`." },
+     checkHealth: () => probeHealth(() => runX(["auth", "status"])),
+   });
+   ```
+
+   The add-widget drawer only lists types whose integration id is **declared and enabled**
+   — a manifest `integration` with no matching `registerIntegration` silently hides the
+   widget. Add the id to `tests/modules/integrations-registration.test.ts`.
+6. **Wire the barrels** — add `import "./<name>/fetch";` to `src/modules/fetch.ts` and
    `import "./<name>/render";` to `src/modules/render.ts`. **Both, or it won't appear.**
    Registering in the render registry auto-adds it to the "Add widget" drawer — no DB seeding.
-6. **Test** — add `tests/modules/<name>-registration.test.ts` (copy `bookmarks-registration.test.ts`
+7. **Test** — add `tests/modules/<name>-registration.test.ts` (copy `bookmarks-registration.test.ts`
    or `jira-registration.test.ts`) asserting:
    - the fetch registry resolves the type with the expected `manifest.defaultConfig` and a
      `fetch` function;
@@ -96,6 +118,28 @@ Shape (copy `src/modules/bookmarks/`):
   change. No server boundary to cross — the webview runs everything.
 - `render.ts` — often adds a `HeaderControls` component (e.g. an "add" popover) alongside
   `formEditable: false` when the auto-generated config form has nothing useful to show.
+
+## Live modules (Tauri-command-backed)
+
+Widgets whose data is sampled live in the webview instead of fetched-and-cached — e.g.
+`system` (CPU/memory charts). Shape (copy `src/modules/system/`):
+
+- **Rust side** — a Tauri command in `src-tauri/src/<name>.rs`; register it in `lib.rs`
+  (`mod`, any `.manage(...)` state, and the `generate_handler![...]` list). Call it from
+  TS with `invoke<Payload>("<command>")`. Keep the payload keys pinned in `manifest.ts`
+  (serde camelCase).
+- `sampler.ts` — module-level singleton (ticker + ring buffer) **outside React**, so the
+  rolling history survives card drag/remount. Starts on first subscriber, stops at zero,
+  pauses while the window is hidden. Exposes `subscribe`/`getSnapshot`/`configure`.
+- `use-<x>.ts` — hook: `useSyncExternalStore(sampler.subscribe, sampler.getSnapshot)`
+  plus an effect that `configure()`s the sampler from widget config. **`safeParse` the
+  config before it reaches any timer** — after a breaking schema change the body can
+  receive stale invalid config, and e.g. `setInterval(cb, NaN)` fires unthrottled; fall
+  back to the schema defaults.
+- `manifest.ts` — `refreshable: false`; `Data = Record<string, never>`; `fetch` is a
+  contract no-op returning `{}` (the cache pipeline carries no data for live widgets).
+- Tolerate transient failures: flip to an error state only after N consecutive failed
+  ticks so a single hiccup doesn't flicker the card.
 
 ## Config schema → form (hard constraint)
 
@@ -172,6 +216,8 @@ and drop/fall back on rejection, so one failure doesn't sink the widget (`github
 ## Common mistakes
 
 - Wired only one barrel → widget missing from drawer, or nothing to fetch its data.
+- Manifest sets `integration: "x"` but no `registerIntegration({ id: "x", ... })` wired in
+  `src/modules/integrations.ts` → widget silently absent from the drawer.
 - Unsupported config field kind (object, nested array, union) → form throws at render.
 - Building shell command strings → pass an arg array to `runCli`; never interpolate into a shell.
 - `fetch` swallowing errors and returning empty → let it throw; the cache keeps last-good data.
