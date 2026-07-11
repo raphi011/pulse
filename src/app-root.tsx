@@ -57,7 +57,10 @@ export function AppRoot() {
   const [dbReady, setDbReady] = useState(false);
   const route = useHashRoute();
   useEffect(() => {
-    void ensureCacheVersion().then(() => setDbReady(true));
+    // Best-effort: a failed wipe must not blank the app — widgets surface DB errors themselves.
+    ensureCacheVersion()
+      .catch((err) => console.error("cache version check failed", err))
+      .finally(() => setDbReady(true));
   }, []);
   if (!dbReady) return null;
   return (
