@@ -8,6 +8,7 @@ use tauri_plugin_sql::{Migration, MigrationKind};
 fn migrations() -> Vec<Migration> {
     vec![
         Migration { version: 1, description: "baseline", sql: include_str!("../../drizzle/0000_silky_bromley.sql"), kind: MigrationKind::Up },
+        Migration { version: 2, description: "widget accent", sql: include_str!("../../drizzle/0001_ambiguous_jean_grey.sql"), kind: MigrationKind::Up },
     ]
 }
 
