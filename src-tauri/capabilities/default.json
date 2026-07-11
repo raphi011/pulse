@@ -20,7 +20,14 @@
         { "name": "gws", "cmd": "gws", "args": true }
       ]
     },
-    "shell:allow-spawn",
+    {
+      "identifier": "shell:allow-spawn",
+      "allow": [
+        { "name": "gh", "cmd": "gh", "args": true },
+        { "name": "jira", "cmd": "jira", "args": true },
+        { "name": "gws", "cmd": "gws", "args": true }
+      ]
+    },
     "os:default",
     {
       "identifier": "fs:allow-read-text-file",
