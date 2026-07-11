@@ -16,15 +16,17 @@ CREATE TABLE `widget_cache` (
 	`payload` text,
 	`fetched_at` integer NOT NULL,
 	`status` text NOT NULL,
-	`error` text
+	`error` text,
+	`error_kind` text
 );
 --> statement-breakpoint
 CREATE TABLE `widgets` (
 	`id` text PRIMARY KEY NOT NULL,
 	`type` text NOT NULL,
-	`column` integer DEFAULT 0 NOT NULL,
+	`title` text,
 	`order` integer DEFAULT 0 NOT NULL,
+	`col_span` integer DEFAULT 1 NOT NULL,
+	`row_span` integer DEFAULT 6 NOT NULL,
 	`hidden` integer DEFAULT false NOT NULL,
-	`config` text NOT NULL,
-	`refresh_interval` integer
+	`config` text NOT NULL
 );

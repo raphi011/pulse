@@ -5,36 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1783602803348,
-      "tag": "0000_short_cannonball",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1783664146051,
-      "tag": "0001_bizarre_inertia",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1783686820235,
-      "tag": "0002_breezy_iceman",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1783700000000,
-      "tag": "0003_grid_layout",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1783693706714,
-      "tag": "0004_yummy_boom_boom",
+      "when": 1783761947693,
+      "tag": "0000_silky_bromley",
       "breakpoints": true
     }
   ]

@@ -1,1 +1,0 @@
-ALTER TABLE `widget_cache` ADD `error_kind` text;
