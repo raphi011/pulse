@@ -16,8 +16,9 @@ export function StatusWidget({ data, config }: WidgetBodyProps<StatusData, Statu
     <dl className="divide-y divide-border dark:divide-border-dark">
       <Row label="Label" value={config.label} />
       <Row label="Time" value={new Date(data.now).toLocaleTimeString()} mono />
-      <Row label="Node" value={data.node} mono />
       <Row label="Platform" value={data.platform} />
+      <Row label="OS Version" value={data.osVersion} mono />
+      <Row label="Arch" value={data.arch} />
     </dl>
   );
 }

@@ -29,7 +29,7 @@ export async function fetchJql(config: JqlConfig): Promise<JqlData> {
     const raw = await jiraJson<JiraRawIssue[]>([
       "issue", "list", "-q", jql, "--order-by", "updated", "--paginate", `0:${config.limit}`,
     ]);
-    const server = jiraServerUrl();
+    const server = await jiraServerUrl();
     return { issues: raw.map((r) => normalizeIssue(r, server)) };
   } catch (err) {
     // jira-cli exits non-zero with this message when a query matches nothing.

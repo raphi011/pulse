@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { eq, asc } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { getDb } from "@/db/client";
@@ -22,7 +21,7 @@ export async function addWidget(type: string, config: Record<string, unknown>): 
   const existing = await getWidgets();
   const order = existing.reduce((max, w) => Math.max(max, w.order + 1), 0);
   const row: Widget = {
-    id: randomUUID(), type, title: null, order, colSpan: 1, rowSpan: DEFAULT_ROW_SPAN,
+    id: crypto.randomUUID(), type, title: null, order, colSpan: 1, rowSpan: DEFAULT_ROW_SPAN,
     hidden: false, config: validated,
   };
   await getDb().insert(widgets).values(row);

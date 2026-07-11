@@ -20,6 +20,11 @@
         { "name": "gws", "cmd": "gws", "args": true }
       ]
     },
-    "shell:allow-spawn"
+    "shell:allow-spawn",
+    "os:default",
+    {
+      "identifier": "fs:allow-read-text-file",
+      "allow": [{ "path": "$HOME/.config/.jira/.config.yml" }]
+    }
   ]
 }

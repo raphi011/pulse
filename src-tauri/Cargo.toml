@@ -26,6 +26,8 @@ tauri-plugin-log = "2"
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }
 tauri-plugin-shell = "2"
 tauri-plugin-autostart = "2"
+tauri-plugin-os = "2"
+tauri-plugin-fs = "2"
 # Must resolve to the SAME sqlx version tauri-plugin-sql uses (0.8.x) so the
 # Pool<Sqlite> types unify in db_batch. `runtime-tokio` matches the plugin's
 # sqlite runtime feature.

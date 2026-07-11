@@ -9,7 +9,8 @@ export type StatusConfig = z.infer<typeof statusConfigSchema>;
 export const statusDefaultConfig: StatusConfig = { label: "System" };
 
 export type StatusData = {
-  now: string;      // ISO timestamp
-  node: string;     // process.version
-  platform: string; // process.platform
+  now: string;       // ISO timestamp
+  platform: string;  // OS platform, e.g. "macos" (@tauri-apps/plugin-os platform())
+  osVersion: string; // OS version string (plugin-os version())
+  arch: string;      // CPU architecture, e.g. "aarch64" (plugin-os arch())
 };

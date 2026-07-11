@@ -22,6 +22,8 @@ pub fn run() {
         .add_migrations("sqlite:dashboard.db", migrations())
         .build())
     .plugin(tauri_plugin_shell::init())
+    .plugin(tauri_plugin_os::init())
+    .plugin(tauri_plugin_fs::init())
     .plugin(tauri_plugin_autostart::init(
       tauri_plugin_autostart::MacosLauncher::LaunchAgent,
       None,

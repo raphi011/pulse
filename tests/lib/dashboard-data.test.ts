@@ -1,4 +1,12 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+
+// core.status fetch calls @tauri-apps/plugin-os, whose invoke() is unavailable in Node.
+vi.mock("@tauri-apps/plugin-os", () => ({
+  platform: () => "macos",
+  version: () => "15.0",
+  arch: () => "aarch64",
+}));
+
 import "@/modules/fetch";
 import "@/modules/render";
 import "@/modules/integrations";
@@ -121,7 +129,7 @@ describe("dashboard-data", () => {
     const w = await data.createWidget("core.status");
     const row = await data.fetchWidgetData(w.id, false);
     expect(row.status).toBe("ok");
-    expect((row.payload as { node: string }).node).toBe(process.version);
+    expect((row.payload as { platform: string }).platform).toBe("macos");
     expect(row.fetchedAt).toBeGreaterThan(0);
   });
 });

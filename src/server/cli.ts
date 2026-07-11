@@ -95,6 +95,9 @@ export function runCli(
       .spawn()
       .then((c) => {
         child = c;
+        // If the timeout already fired before spawn resolved, `child` was still
+        // undefined then, so the timer's kill was a no-op — kill the leaked child now.
+        if (settled) void c.kill();
       })
       .catch((e) => {
         if (settled) return;
