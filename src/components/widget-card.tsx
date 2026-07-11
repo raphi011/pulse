@@ -5,6 +5,7 @@ import { WidgetShell, type WidgetState, type DragHandle } from "./widget-shell";
 import { useWidgetData } from "./use-widget-data";
 import { CardMenu } from "./card-menu";
 import { BrandIcon } from "./brand-icon";
+import { WidgetErrorBoundary } from "./widget-error-boundary";
 
 export function WidgetCard({
   widget, onConfigure, onRemove, dragHandle,
@@ -55,7 +56,11 @@ export function WidgetCard({
       dragHandle={dragHandle}
       issue={errored ? { message: data?.error ?? "Refresh failed", kind: data?.errorKind } : null}
     >
-      {hasData && <Body data={data!.payload} config={widget.config} refresh={refresh} />}
+      {hasData && (
+        <WidgetErrorBoundary resetKey={data!.fetchedAt}>
+          <Body data={data!.payload} config={widget.config} refresh={refresh} />
+        </WidgetErrorBoundary>
+      )}
     </WidgetShell>
   );
 }
