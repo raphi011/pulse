@@ -40,6 +40,7 @@ let frozenRemainingMs = 0; // remaining while paused; duration of the queued pha
 let frozenDurationMs = 0; // duration of the phase in flight (running/paused)
 let workBlocksSinceLongBreak = 0;
 let completedToday = 0;
+let countDayStart: number | null = null; // local day-start ms completedToday was computed for
 let notifyBlocked = false;
 let countLoaded = false;
 let timer: ReturnType<typeof setInterval> | null = null;
@@ -59,6 +60,10 @@ function currentRemainingMs(): number {
 
 function currentDurationMs(): number {
   return status === "running" || status === "paused" ? frozenDurationMs : durationMsFor(phase);
+}
+
+function localDayStart(now: number = Date.now()): number {
+  return new Date(now).setHours(0, 0, 0, 0);
 }
 
 let snapshot: PomodoroSnapshot = buildSnapshot();
@@ -113,6 +118,7 @@ async function persistSession() {
   try {
     await addSession(Date.now());
     completedToday = await countSessionsToday();
+    countDayStart = localDayStart();
     publish();
   } catch {
     // DB hiccup: keep the optimistic in-memory count; next load reconciles.
@@ -129,11 +135,16 @@ async function sendPhaseEndNotification(ended: PomodoroPhase) {
     notifyBlocked = true;
     publish();
   }
+  if (ok && notifyBlocked) {
+    notifyBlocked = false;
+    publish();
+  }
 }
 
 async function loadCount() {
   try {
     completedToday = await countSessionsToday();
+    countDayStart = localDayStart();
     publish();
   } catch {
     // Card renders with 0 until a session completes; not worth an error state.
@@ -169,6 +180,9 @@ export const pomodoroEngine = {
   /** Start the queued phase, or resume a paused one. No-op while running. */
   start(): void {
     if (status === "running") return;
+    // Local day rolled over since completedToday was last computed (e.g. an
+    // overnight tray app) — reconcile before the next notification fires.
+    if (countDayStart !== null && localDayStart() !== countDayStart) void loadCount();
     const remaining = status === "paused" ? frozenRemainingMs : durationMsFor(phase);
     if (status !== "paused") frozenDurationMs = durationMsFor(phase);
     deadline = Date.now() + remaining;
@@ -217,6 +231,7 @@ export function __resetEngineForTests(): void {
   frozenDurationMs = 0;
   workBlocksSinceLongBreak = 0;
   completedToday = 0;
+  countDayStart = null;
   notifyBlocked = false;
   countLoaded = false;
   snapshot = buildSnapshot();

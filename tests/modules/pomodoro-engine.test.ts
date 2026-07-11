@@ -153,4 +153,33 @@ describe("pomodoro engine", () => {
     await vi.advanceTimersByTimeAsync(0); // flush the async load
     expect(pomodoroEngine.getSnapshot().completedToday).toBe(7);
   });
+
+  it("reconciles completedToday when start() is pressed after local midnight has passed", async () => {
+    vi.setSystemTime(new Date("2026-07-11T10:00:00"));
+    attach();
+    await vi.advanceTimersByTimeAsync(0); // flush initial loadCount
+    pomodoroEngine.start();
+    await vi.advanceTimersByTimeAsync(25 * MIN); // one completed work block
+    expect(pomodoroEngine.getSnapshot().completedToday).toBe(1);
+
+    vi.setSystemTime(new Date("2026-07-12T10:00:00")); // next local day
+    repoMock.countSessionsToday.mockResolvedValueOnce(0); // no sessions yet today
+
+    pomodoroEngine.start(); // start the queued short break
+    await vi.advanceTimersByTimeAsync(0); // flush the reconciling loadCount
+    expect(pomodoroEngine.getSnapshot().completedToday).toBe(0);
+  });
+
+  it("clears notifyBlocked once a later notification succeeds", async () => {
+    notifyMock.notifyPhaseEnd.mockResolvedValueOnce(false); // work end blocked
+    attach();
+    pomodoroEngine.start();
+    await vi.advanceTimersByTimeAsync(25 * MIN);
+    expect(pomodoroEngine.getSnapshot().notifyBlocked).toBe(true);
+
+    notifyMock.notifyPhaseEnd.mockResolvedValueOnce(true); // break end succeeds
+    pomodoroEngine.start();
+    await vi.advanceTimersByTimeAsync(5 * MIN);
+    expect(pomodoroEngine.getSnapshot().notifyBlocked).toBe(false);
+  });
 });
