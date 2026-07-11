@@ -8,6 +8,10 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./vitest.setup.ts"],
+    // Git worktrees live inside the repo (.claude/worktrees/<name>) and carry
+    // their own tests + node_modules; without this, a root `npm test` sweeps
+    // them up and fails on duplicate React copies.
+    exclude: ["**/node_modules/**", ".claude/**"],
   },
   resolve: {
     alias: {
