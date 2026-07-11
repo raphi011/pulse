@@ -33,11 +33,10 @@ export interface WidgetBodyProps<Data = unknown, Config = unknown> {
   data: Data;
   config: Config;
   /**
-   * Persist a new config for this widget (PATCH + re-fetch + cache update).
-   * Only `data` is refreshed, not the `config` prop — derive the next config
-   * from `data`, not from the (now stale) `config` prop.
+   * Force a re-fetch + re-cache (same as the header refresh button).
+   * Call after mutating module-owned data (e.g. addBookmark) to show the result.
    */
-  saveConfig: (next: Config) => Promise<void>;
+  refresh: () => Promise<void>;
 }
 
 /** How a widget gets its data: the shared manifest + the fetch side. */

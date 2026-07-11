@@ -1,11 +1,8 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import type { WidgetBodyProps } from "@/modules/contracts";
-import {
-  normalizeUrl,
-  type BookmarksConfig,
-  type BookmarksData,
-} from "../manifest";
+import { normalizeUrl, type BookmarksConfig, type BookmarksData } from "../manifest";
+import { addBookmark, removeBookmark } from "../repo";
 
 type Props = WidgetBodyProps<BookmarksData, BookmarksConfig>;
 
@@ -32,9 +29,9 @@ function Favicon({ url }: { url: string }) {
   );
 }
 
-export function BookmarksWidget({ data, saveConfig }: Props) {
+export function BookmarksWidget({ data, refresh }: Props) {
   const bookmarks = data.bookmarks;
-  const [pendingRemove, setPendingRemove] = useState<number | null>(null);
+  const [pendingRemove, setPendingRemove] = useState<string | null>(null);
 
   if (bookmarks.length === 0) {
     return (
@@ -44,20 +41,21 @@ export function BookmarksWidget({ data, saveConfig }: Props) {
     );
   }
 
-  async function remove(index: number) {
+  async function remove(id: string) {
     try {
-      await saveConfig({ bookmarks: bookmarks.filter((_, i) => i !== index) });
+      await removeBookmark(id);
+      await refresh();
     } catch {
-      // Save failed; data is unchanged so the row remains. Swallow to avoid an unhandled rejection.
+      // Delete or refresh failed; the row stays visible. Swallow to avoid an unhandled rejection.
     }
     setPendingRemove(null);
   }
 
   return (
     <ul className="space-y-0.5">
-      {bookmarks.map((b, i) => (
+      {bookmarks.map((b) => (
         <li
-          key={i}
+          key={b.id}
           className="group/row flex items-center gap-2 rounded-md px-1.5 py-1 hover:bg-slate-100 dark:hover:bg-white/5"
         >
           <Favicon url={b.url} />
@@ -69,10 +67,10 @@ export function BookmarksWidget({ data, saveConfig }: Props) {
           >
             {b.title}
           </a>
-          {pendingRemove === i ? (
+          {pendingRemove === b.id ? (
             <span className="flex shrink-0 items-center gap-1 text-xs">
               <span className="text-slate-500 dark:text-slate-400">Remove?</span>
-              <button aria-label="Confirm remove" onClick={() => remove(i)} className="icon-btn text-danger">
+              <button aria-label="Confirm remove" onClick={() => remove(b.id)} className="icon-btn text-danger">
                 ✓
               </button>
               <button aria-label="Cancel remove" onClick={() => setPendingRemove(null)} className="icon-btn">
@@ -82,7 +80,7 @@ export function BookmarksWidget({ data, saveConfig }: Props) {
           ) : (
             <button
               aria-label={`Remove ${b.title}`}
-              onClick={() => setPendingRemove(i)}
+              onClick={() => setPendingRemove(b.id)}
               className="icon-btn shrink-0 opacity-0 transition-opacity group-hover/row:opacity-100"
             >
               ×
@@ -94,7 +92,7 @@ export function BookmarksWidget({ data, saveConfig }: Props) {
   );
 }
 
-export function BookmarksHeaderControls({ data, saveConfig }: Props) {
+export function BookmarksHeaderControls({ refresh }: Props) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
   const [title, setTitle] = useState("");
@@ -140,7 +138,8 @@ export function BookmarksHeaderControls({ data, saveConfig }: Props) {
     }
     setSaving(true);
     try {
-      await saveConfig({ bookmarks: [...data.bookmarks, { title: title.trim(), url: normalized }] });
+      await addBookmark(title.trim(), normalized);
+      await refresh();
     } catch {
       setError("Couldn't save. Try again.");
       setSaving(false);

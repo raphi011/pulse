@@ -7,7 +7,7 @@ describe("bookmarks server registration", () => {
   it("registers bookmarks.links on the server registry with defaults", () => {
     const def = getFetchWidget(BOOKMARKS_TYPE);
     expect(def).toBeDefined();
-    expect(def!.manifest.defaultConfig).toMatchObject({ bookmarks: [] });
+    expect(def!.manifest.defaultConfig).toEqual({});
     expect(typeof def!.fetch).toBe("function");
   });
 });
@@ -21,7 +21,7 @@ describe("bookmarks client registration", () => {
     expect(def).toBeDefined();
     expect(def!.manifest.title).toBe("Bookmarks");
     expect(def!.manifest.configSchema).toBeDefined();
-    expect(def!.manifest.defaultConfig).toMatchObject({ bookmarks: [] });
+    expect(def!.manifest.defaultConfig).toEqual({});
     expect(def!.formEditable).toBe(false);
     expect(def!.HeaderControls).toBeDefined();
   });

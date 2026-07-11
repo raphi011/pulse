@@ -13,14 +13,14 @@ const mkPr = (n: number) => ({
 
 describe("PrListWidget", () => {
   it("shows the empty result when there are no PRs (blank authors is valid)", () => {
-    render(<PrListWidget data={{ prs: [] }} config={{ authors: [], limit: 20 }} saveConfig={noop} />);
+    render(<PrListWidget data={{ prs: [] }} config={{ authors: [], limit: 20 }} refresh={noop} />);
     expect(screen.getByText(/no open prs/i)).toBeInTheDocument();
     expect(screen.queryByText(/not configured/i)).not.toBeInTheDocument();
   });
 
   it("caps the rendered list to config.limit", () => {
     render(
-      <PrListWidget data={{ prs: [mkPr(1), mkPr(2), mkPr(3)] }} config={{ authors: [], limit: 2 }} saveConfig={noop} />,
+      <PrListWidget data={{ prs: [mkPr(1), mkPr(2), mkPr(3)] }} config={{ authors: [], limit: 2 }} refresh={noop} />,
     );
     expect(screen.getAllByRole("listitem")).toHaveLength(2);
   });
@@ -28,7 +28,7 @@ describe("PrListWidget", () => {
 
 describe("FailingActionsWidget", () => {
   it("nudges to Configure when no repos", () => {
-    render(<FailingActionsWidget data={{ runs: [] }} config={{ repos: [], limit: 10 }} saveConfig={noop} />);
+    render(<FailingActionsWidget data={{ runs: [] }} config={{ repos: [], limit: 10 }} refresh={noop} />);
     expect(screen.getByText(/not configured/i)).toBeInTheDocument();
   });
 
@@ -39,7 +39,7 @@ describe("FailingActionsWidget", () => {
           runs: [{ repo: "o/r", name: "CI", url: "u", branch: "main", event: "push", createdAt: "" }],
           errors: ["o/bad"],
         }}
-        config={{ repos: ["o/r", "o/bad"], limit: 10 }} saveConfig={noop}
+        config={{ repos: ["o/r", "o/bad"], limit: 10 }} refresh={noop}
       />,
     );
     expect(screen.getByText(/1 repo failed to load/i)).toBeInTheDocument();
@@ -48,7 +48,7 @@ describe("FailingActionsWidget", () => {
 
 describe("DependabotWidget", () => {
   it("nudges to Configure when no repos", () => {
-    render(<DependabotWidget data={{ alerts: [] }} config={{ repos: [], limit: 10 }} saveConfig={noop} />);
+    render(<DependabotWidget data={{ alerts: [] }} config={{ repos: [], limit: 10 }} refresh={noop} />);
     expect(screen.getByText(/not configured/i)).toBeInTheDocument();
   });
 
@@ -56,7 +56,7 @@ describe("DependabotWidget", () => {
     render(
       <DependabotWidget
         data={{ alerts: [], errors: ["o/a", "o/b"] }}
-        config={{ repos: ["o/a", "o/b"], limit: 10 }} saveConfig={noop}
+        config={{ repos: ["o/a", "o/b"], limit: 10 }} refresh={noop}
       />,
     );
     expect(screen.getByText(/2 repos failed to load/i)).toBeInTheDocument();
@@ -67,7 +67,7 @@ describe("DependabotWidget", () => {
     render(
       <DependabotWidget
         data={{ alerts: [alert("a"), alert("b"), alert("c")] }}
-        config={{ repos: ["o/r"], limit: 2 }} saveConfig={noop}
+        config={{ repos: ["o/r"], limit: 2 }} refresh={noop}
       />,
     );
     expect(screen.getAllByRole("listitem")).toHaveLength(2);

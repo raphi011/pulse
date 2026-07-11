@@ -3,16 +3,12 @@ import { defineManifest } from "@/modules/contracts";
 
 export const BOOKMARKS_TYPE = "bookmarks.links";
 
-export type Bookmark = { title: string; url: string };
+export type Bookmark = { id: string; title: string; url: string };
 
-export const bookmarksConfigSchema = z.object({
-  bookmarks: z
-    .array(z.object({ title: z.string(), url: z.string() }))
-    .default([]),
-});
+/** Bookmark data lives in the module-owned `bookmarks` table, not in config. */
+export const bookmarksConfigSchema = z.object({});
 export type BookmarksConfig = z.infer<typeof bookmarksConfigSchema>;
-
-export const bookmarksDefaultConfig: BookmarksConfig = { bookmarks: [] };
+export const bookmarksDefaultConfig: BookmarksConfig = {};
 
 export type BookmarksData = { bookmarks: Bookmark[] };
 
