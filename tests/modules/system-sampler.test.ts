@@ -95,4 +95,49 @@ describe("system sampler", () => {
     expect(listener).toHaveBeenCalledTimes(2);
     unsub();
   });
+
+  it("restarts the timer when sampleIntervalSeconds changes while running", async () => {
+    const unsub = systemSampler.subscribe(() => {});
+    await vi.advanceTimersByTimeAsync(0); // flush immediate tick
+    expect(systemSampler.getSnapshot().points).toHaveLength(1);
+    const initialCallCount = invokeMock.mock.calls.length;
+
+    systemSampler.configure(config({ sampleIntervalSeconds: 1 }));
+    await vi.advanceTimersByTimeAsync(0); // flush restart's immediate tick
+    expect(systemSampler.getSnapshot().points).toHaveLength(2); // immediate + previous
+
+    await vi.advanceTimersByTimeAsync(1000); // one 1s tick
+    expect(systemSampler.getSnapshot().points).toHaveLength(3);
+    expect(invokeMock.mock.calls.length).toBeGreaterThan(initialCallCount);
+    unsub();
+  });
+
+  it("trims the buffer when historySeconds shrinks below current point count", async () => {
+    systemSampler.configure(config({ sampleIntervalSeconds: 1, historySeconds: 600 })); // capacity 600
+    const unsub = systemSampler.subscribe(() => {});
+    await vi.advanceTimersByTimeAsync(0);
+
+    // accumulate ~10 points
+    await vi.advanceTimersByTimeAsync(9000);
+    expect(systemSampler.getSnapshot().points.length).toBeGreaterThanOrEqual(10);
+
+    // shrink history to 5s capacity
+    systemSampler.configure(config({ sampleIntervalSeconds: 1, historySeconds: 5 }));
+    expect(systemSampler.getSnapshot().points).toHaveLength(5);
+    unsub();
+  });
+
+  it("no-ops when called with unchanged values", async () => {
+    const unsub = systemSampler.subscribe(() => {});
+    await vi.advanceTimersByTimeAsync(0);
+    const snapshotBefore = systemSampler.getSnapshot();
+    const callCountBefore = invokeMock.mock.calls.length;
+
+    systemSampler.configure(config());
+    const snapshotAfter = systemSampler.getSnapshot();
+
+    expect(snapshotAfter).toBe(snapshotBefore); // same reference
+    expect(invokeMock.mock.calls.length).toBe(callCountBefore); // no extra invoke
+    unsub();
+  });
 });
