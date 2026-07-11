@@ -28,7 +28,15 @@ export function WidgetCard({
   // Keep showing last-good data on error (per spec); only blank to an error state
   // when there's nothing cached to fall back to.
   const state: WidgetState = isLoading ? "loading" : hasData ? "ok" : errored ? "error" : "empty";
-  const count = def.count && hasData ? def.count(data!.payload, widget.config) : null;
+  // count() runs outside the body's ErrorBoundary — a stale config/payload combo must not crash the card.
+  let count: number | null = null;
+  if (def.count && hasData) {
+    try {
+      count = def.count(data!.payload, widget.config);
+    } catch {
+      count = null;
+    }
+  }
   const Body = def.Component;
   const menu =
     onConfigure && onRemove ? (

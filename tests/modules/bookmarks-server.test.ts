@@ -13,11 +13,11 @@ describe("bookmarks fetch (reads the module table)", () => {
 
   it("returns stored bookmarks as {id,title,url} in order", async () => {
     const a = await addBookmark("Acme", "https://example.com/");
-    await addBookmark("GitHub", "https://github.com/");
+    const b = await addBookmark("GitHub", "https://github.com/");
     const data = await fetchBookmarks();
     expect(data.bookmarks).toEqual([
       { id: a.id, title: "Acme", url: "https://example.com/" },
-      { id: data.bookmarks[1].id, title: "GitHub", url: "https://github.com/" },
+      { id: b.id, title: "GitHub", url: "https://github.com/" },
     ]);
   });
 });
