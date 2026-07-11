@@ -1,5 +1,4 @@
-import "server-only";
-import { execFile } from "node:child_process";
+import { Command } from "@tauri-apps/plugin-shell";
 
 export type CliErrorKind = "not-found" | "auth" | "timeout" | "failed";
 
@@ -16,6 +15,35 @@ export interface RunCliOptions {
   timeoutMs?: number;
 }
 
+// Homebrew-inclusive PATH: a Finder-launched .app inherits only the minimal system PATH,
+// so prepend the common Homebrew dirs where gh/jira/gws live. (Simpler + more robust than a
+// login-shell probe, which would require allowlisting the user's shell. Revisit only if a
+// tool lives elsewhere.)
+const TOOL_PATH = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin";
+
+/** Pure: turn a finished process result into a resolved value or a CliError. Unit-testable. */
+export function classifyExit(
+  bin: string,
+  code: number | null,
+  stdout: string,
+  stderr: string,
+  opts: RunCliOptions,
+): { stdout: string; stderr: string } {
+  if (code === 0) return { stdout, stderr };
+  if (opts.notAuthenticatedPattern?.test(stderr)) {
+    throw new CliError(opts.notAuthenticatedMessage ?? "Not authenticated", "auth", stderr, stdout);
+  }
+  throw new CliError(stderr.trim() || `${bin} exited with code ${code ?? "unknown"}`, "failed", stderr, stdout);
+}
+
+/** Pure: classify a spawn/exec failure (missing binary → not-found). Unit-testable. */
+export function classifySpawnError(bin: string, message: string): CliError {
+  if (/not found|no such file|os error 2|cannot find|failed to (spawn|execute)/i.test(message)) {
+    return new CliError(`${bin} not found — install it`, "not-found");
+  }
+  return new CliError(message || `${bin} failed to start`, "failed");
+}
+
 /** Spawn a CLI with an arg array (no shell interpolation). Throws CliError on failure. */
 export function runCli(
   bin: string,
@@ -24,30 +52,56 @@ export function runCli(
 ): Promise<{ stdout: string; stderr: string }> {
   const timeoutMs = opts.timeoutMs ?? 20000;
   return new Promise((resolve, reject) => {
-    execFile(bin, args, { maxBuffer: 10 * 1024 * 1024, timeout: timeoutMs }, (err, stdout, stderr) => {
-      if (!err) return resolve({ stdout: stdout.toString(), stderr: stderr.toString() });
-      const code = (err as NodeJS.ErrnoException).code;
-      if (code === "ENOENT") return reject(new CliError(`${bin} not found — install it`, "not-found"));
-      // maxBuffer overflow also sets killed:true, so classify it before the timeout check.
-      if (code === "ERR_CHILD_PROCESS_STDOUT_MAXBUFFER") {
-        return reject(new CliError(`${bin} output too large`, "failed"));
-      }
-      if ((err as { killed?: boolean }).killed) {
-        return reject(new CliError(`${bin} timed out after ${timeoutMs / 1000}s`, "timeout"));
-      }
-      const errText = (stderr || "").toString();
-      if (opts.notAuthenticatedPattern?.test(errText)) {
-        return reject(new CliError(opts.notAuthenticatedMessage ?? "Not authenticated", "auth", errText));
-      }
-      return reject(
-        new CliError(
-          errText.trim() || (err as Error).message || `${bin} exited with an error`,
-          "failed",
-          errText,
-          (stdout || "").toString(),
-        ),
-      );
+    let stdout = "";
+    let stderr = "";
+    let settled = false;
+
+    const cmd = Command.create(bin, args, { env: { PATH: TOOL_PATH } });
+
+    cmd.stdout.on("data", (line) => {
+      stdout += line + "\n";
     });
+    cmd.stderr.on("data", (line) => {
+      stderr += line + "\n";
+    });
+
+    cmd.on("error", (msg) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      reject(classifySpawnError(bin, String(msg)));
+    });
+
+    cmd.on("close", ({ code }) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      try {
+        resolve(classifyExit(bin, code, stdout, stderr, opts));
+      } catch (e) {
+        reject(e);
+      }
+    });
+
+    let child: { kill: () => Promise<void> } | undefined;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      void child?.kill();
+      reject(new CliError(`${bin} timed out after ${timeoutMs / 1000}s`, "timeout"));
+    }, timeoutMs);
+
+    cmd
+      .spawn()
+      .then((c) => {
+        child = c;
+      })
+      .catch((e) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        reject(classifySpawnError(bin, String(e)));
+      });
   });
 }
 

@@ -10,6 +10,15 @@
     "sql:default",
     "sql:allow-load",
     "sql:allow-execute",
-    "sql:allow-select"
+    "sql:allow-select",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        { "name": "gh", "cmd": "gh", "args": true },
+        { "name": "jira", "cmd": "jira", "args": true },
+        { "name": "gws", "cmd": "gws", "args": true }
+      ]
+    },
+    "shell:allow-spawn"
   ]
 }
