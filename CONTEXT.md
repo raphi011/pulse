@@ -42,12 +42,13 @@ defaults, and data shapes. Importable by both fetch and render.
 _Avoid_: types file, index.
 
 **Fetch** (the module's fetch side):
-The module's server-only surface: how each widget type gets its data, plus any
-actions. Registers into the fetch registry.
-_Avoid_: backend, api.
+The module's non-UI surface: how each widget type gets its data, plus any
+actions. Runs in the webview alongside everything else (no server process,
+no API route). Registers into the fetch registry.
+_Avoid_: backend, api, server-only.
 
 **Render** (the module's render side):
-The module's browser surface: the React body that renders a widget type.
+The module's UI surface: the React body that renders a widget type.
 Registers into the render registry.
 _Avoid_: frontend, ui, view.
 
@@ -81,6 +82,7 @@ _Avoid_: grid, arrangement, positions.
 **Repo**:
 The persistence layer for the widget cache and config (`cache-repo`,
 `config-repo`). Its functions are async — `await` them. They reach the DB via
-`getDb()` (`src/db/client.ts`), a `sqlite-proxy` async seam over better-sqlite3;
-atomic multi-statement writes use `db.batch()`, not `db.transaction()`.
+`getDb()` (`src/db/client.ts`), a `sqlite-proxy` async seam whose transport is
+`tauri-plugin-sql` in the app and better-sqlite3 in tests; atomic
+multi-statement writes use `db.batch()`, not `db.transaction()`.
 _Avoid_: dao, store, model.

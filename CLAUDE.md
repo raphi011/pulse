@@ -1,6 +1,6 @@
 # Work Dashboard
 
-Local, single-user, pluggable Next.js dashboard for organizing daily work. Personal project.
+Local, single-user, pluggable Tauri desktop dashboard (Vite + React) for organizing daily work. Personal project.
 
 ## Conventions
 
@@ -10,18 +10,18 @@ Local, single-user, pluggable Next.js dashboard for organizing daily work. Perso
 
 ## Stack
 
-- Next.js (App Router) + React + TypeScript
-- Tailwind v4 (CSS-native `@theme` in `src/app/globals.css`; class-based dark mode)
-- Drizzle ORM + better-sqlite3 (`dashboard.db`)
+- Tauri v2 + Vite 6 + React 19 + TypeScript (SPA rendered in the webview, no server)
+- Tailwind v4 (CSS-native `@theme` in `src/globals.css`; class-based dark mode)
+- Drizzle ORM (`dashboard.db`; `tauri-plugin-sql` transport in-app, `better-sqlite3` test-only)
 - dnd-kit (drag/reorder), TanStack Query (cache-first fetch)
 - Zod (widget config), Vitest + Testing Library (tests)
 
 ## Commands
 
-- `npm run dev` — dev server
+- `npm run dev` — `tauri dev` (Rust + webview); `npm run dev:vite` — Vite only, no Rust
 - `npm test` / `npm run test:watch` — tests
-- `npm run build` / `npm run lint`
-- `npm run db:generate` / `npm run db:migrate` — Drizzle migrations
+- `npm run build` — `tauri build` (release `.app`/`.dmg`); `npm run build:vite` — Vite build only; `npm run lint`
+- `npm run db:generate` — Drizzle migration files (migrations run in-app via the SQL plugin, not a CLI step)
 
 ## Architecture
 
@@ -36,13 +36,15 @@ Data flow is **cache-first**: widgets read cached rows from `widget_cache` insta
 
 **Authoring a module:** vocabulary is pinned in `CONTEXT.md` (glossary); use the **`create-module`** skill (`.claude/skills/create-module/`) to scaffold one.
 
+**No server, no API routes, no RSC.** The app is a Vite SPA: the webview runs *all* non-UI TS (module fetch/parse, Zod validation, Drizzle, repos, services) in-process. React reads/writes through `src/lib/dashboard-data.ts` directly (still wrapped by TanStack Query) — no `fetch()`-to-an-endpoint indirection.
+
 **Gotchas / patterns (code-verified):**
 - Config forms auto-generate from the Zod schema; only these field kinds render (`src/components/schema-form.tsx`): `string`, `number`, `boolean`, `stringList` (`z.array(z.string())`), `enum`. `.describe()` sets the label. Other shapes throw.
-- CLI-backed modules wrap `runCli` (`src/server/cli.ts`, spawns via `execFile` — no shell). Two error models: process-model CLIs (stderr + non-zero exit, e.g. `gh`/`jira`) use `runCli` + an auth regex; payload-model CLIs (errors as JSON on stdout, maybe exit 0, e.g. `gws`) use `runJsonCli` + an error extractor. Errors classify as `not-found`/`auth`/`timeout`/`failed`.
+- CLI-backed modules wrap `runCli` (`src/server/cli.ts`, spawns via `tauri-plugin-shell`'s `Command`, with a Homebrew-inclusive `PATH` prepended so a Finder-launched `.app` still finds `gh`/`jira`/`gws`). Two error models: process-model CLIs (stderr + non-zero exit, e.g. `gh`/`jira`) use `runCli` + an auth regex; payload-model CLIs (errors as JSON on stdout, maybe exit 0, e.g. `gws`) use `runJsonCli` + an error extractor. Errors classify as `not-found`/`auth`/`timeout`/`failed`.
 - N+1 enrichment (list → per-item detail) uses `Promise.allSettled` so one failure doesn't sink the widget (`github/prs.ts`).
 - Reference modules: `github` (3 widgets, N+1 enrichment) and `jira` (single widget, custom-query config) — both fully wired; copy their shape.
 - Registration test per module asserts both registries resolve each widget type (`tests/modules/*-registration.test.ts`).
-- DB access goes through `getDb()` (`src/db/client.ts`), which uses Drizzle's `sqlite-proxy` async driver over a `better-sqlite3` transport. **All repo functions (`cache-repo`, `config-repo`) are async** — `await` them. Multi-statement atomic writes use `db.batch([...])`, not `db.transaction()` (the async proxy driver does not support interactive transactions). This proxy callback is the seam the Tauri build swaps to `tauri-plugin-sql`.
+- DB access goes through `getDb()` (`src/db/client.ts`), which uses Drizzle's `sqlite-proxy` async driver. The transport swaps by environment: `tauri-plugin-sql` in the app, `better-sqlite3` in tests (Node). **All repo functions (`cache-repo`, `config-repo`) are async** — `await` them. Multi-statement atomic writes use `db.batch([...])`, not `db.transaction()`; in-app this goes through the custom `db_batch` Rust command (`src-tauri/src/db_batch.rs`), which runs every statement inside one held `sqlx` transaction (separate BEGIN/COMMIT IPC calls would race across pooled connections). Migrations live in `src-tauri` (`include_str!` of the generated `drizzle/*.sql` files, run by the SQL plugin's migration runner on startup). The DB file lives in the macOS app-data dir: `~/Library/Application Support/com.pulse.dashboard/dashboard.db`.
 
 ## Design & docs
 
