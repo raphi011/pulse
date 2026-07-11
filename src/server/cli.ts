@@ -1,4 +1,5 @@
 import { Command } from "@tauri-apps/plugin-shell";
+import { homeDir, join } from "@tauri-apps/api/path";
 
 export type CliErrorKind = "not-found" | "auth" | "timeout" | "failed";
 
@@ -15,11 +16,33 @@ export interface RunCliOptions {
   timeoutMs?: number;
 }
 
-// Homebrew-inclusive PATH: a Finder-launched .app inherits only the minimal system PATH,
-// so prepend the common Homebrew dirs where gh/jira/gws live. (Simpler + more robust than a
-// login-shell probe, which would require allowlisting the user's shell. Revisit only if a
-// tool lives elsewhere.)
-const TOOL_PATH = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin";
+// Base PATH for spawned CLIs: a Finder-launched .app inherits only the minimal system PATH,
+// so prepend the common Homebrew/system dirs where gh/jira/node live. (Simpler + more robust
+// than a login-shell probe, which would require allowlisting the user's shell.) User-local tool
+// dirs that don't sit under these — e.g. bun's global bin, where `gws` installs — are folded in
+// by warmToolPath() once the home dir is known.
+const BASE_TOOL_PATH = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin";
+
+// Mutable so warmToolPath() can extend it with home-relative dirs: homeDir() is async, but
+// runCli builds its Command synchronously, so the resolved PATH must already be a plain string.
+let toolPath = BASE_TOOL_PATH;
+let warmed: Promise<string> | undefined;
+
+/**
+ * Fold home-relative tool dirs (bun's global bin) into the spawn PATH. Idempotent + memoized;
+ * call once at startup before any fetch spawns a CLI (see app-root). Best-effort — on failure,
+ * or outside Tauri (e.g. tests where homeDir() has no IPC), the base PATH stands.
+ */
+export function warmToolPath(): Promise<string> {
+  return (warmed ??= (async () => {
+    try {
+      toolPath = `${BASE_TOOL_PATH}:${await join(await homeDir(), ".bun", "bin")}`;
+    } catch {
+      // keep BASE_TOOL_PATH
+    }
+    return toolPath;
+  })());
+}
 
 /** Pure: turn a finished process result into a resolved value or a CliError. Unit-testable. */
 export function classifyExit(
@@ -56,7 +79,7 @@ export function runCli(
     let stderr = "";
     let settled = false;
 
-    const cmd = Command.create(bin, args, { env: { PATH: TOOL_PATH } });
+    const cmd = Command.create(bin, args, { env: { PATH: toolPath } });
 
     cmd.stdout.on("data", (line) => {
       stdout += line + "\n";

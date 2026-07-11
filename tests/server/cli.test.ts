@@ -2,8 +2,12 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 
 vi.mock("@tauri-apps/plugin-shell", () => ({ Command: { create: vi.fn() } }));
+vi.mock("@tauri-apps/api/path", () => ({
+  homeDir: vi.fn().mockResolvedValue("/Users/tester"),
+  join: vi.fn((...parts: string[]) => Promise.resolve(parts.join("/"))),
+}));
 import { Command } from "@tauri-apps/plugin-shell";
-import { runCli, runJsonCli, classifyExit, classifySpawnError, CliError } from "@/server/cli";
+import { runCli, runJsonCli, warmToolPath, classifyExit, classifySpawnError, CliError } from "@/server/cli";
 
 const mockCreate = Command.create as unknown as Mock;
 
@@ -252,5 +256,21 @@ describe("runJsonCli (driven through the mocked runCli/Command)", () => {
     const err = (await promise.catch((e) => e)) as CliError;
     expect(err.kind).toBe("failed");
     expect(err.message).toMatch(/non-JSON/);
+  });
+});
+
+describe("warmToolPath (mocked @tauri-apps/api/path)", () => {
+  it("folds the bun global bin dir into the PATH that runCli spawns with", async () => {
+    const path = await warmToolPath();
+    expect(path).toContain("/opt/homebrew/bin"); // base dirs preserved
+    expect(path).toContain("/Users/tester/.bun/bin"); // home-relative dir appended
+
+    const cmd = nextCommand();
+    const promise = runCli("gws", ["--version"]);
+    cmd.emitClose({ code: 0, signal: null });
+    await promise;
+    expect(mockCreate).toHaveBeenCalledWith("gws", ["--version"], {
+      env: { PATH: expect.stringContaining("/Users/tester/.bun/bin") },
+    });
   });
 });

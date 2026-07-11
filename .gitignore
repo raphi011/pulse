@@ -41,3 +41,7 @@ yarn-error.log*
 # local database
 dashboard.db
 dashboard.db-*
+
+# next.js build artifacts (legacy, pre-Tauri rebuild)
+.next/
+next-env.d.ts

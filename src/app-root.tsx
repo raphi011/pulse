@@ -9,6 +9,7 @@ import { Dashboard } from "@/components/dashboard";
 import { IntegrationsPanel } from "@/components/integrations-panel";
 import { fetchLayout, createWidget, fetchIntegrations } from "@/lib/dashboard-data";
 import { ensureCacheVersion } from "@/server/cache-version";
+import { warmToolPath } from "@/server/cli";
 import type { Widget } from "@/server/config-repo";
 import type { IntegrationStatus } from "@/modules/integration-contracts";
 
@@ -57,9 +58,13 @@ export function AppRoot() {
   const [dbReady, setDbReady] = useState(false);
   const route = useHashRoute();
   useEffect(() => {
-    // Best-effort: a failed wipe must not blank the app — widgets surface DB errors themselves.
-    ensureCacheVersion()
-      .catch((err) => console.error("cache version check failed", err))
+    // Best-effort startup, gated before any widget fetch: a failed cache wipe must not blank the
+    // app (widgets surface DB errors themselves), and warmToolPath folds home-relative CLI dirs
+    // (bun, where `gws` lives) into the spawn PATH. Neither blocks readiness on failure.
+    Promise.allSettled([ensureCacheVersion(), warmToolPath()])
+      .then(([cache]) => {
+        if (cache.status === "rejected") console.error("cache version check failed", cache.reason);
+      })
       .finally(() => setDbReady(true));
   }, []);
   if (!dbReady) return null;
