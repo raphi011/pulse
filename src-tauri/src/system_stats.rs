@@ -58,4 +58,17 @@ mod tests {
         let second = sample(&mut sys);
         assert!((0.0..=100.0).contains(&second.cpu_percent), "cpu% out of range: {}", second.cpu_percent);
     }
+
+    /// Pins the serde camelCase field names the TS `SystemStatsPayload` type
+    /// depends on — a rename here would silently break the frontend.
+    #[test]
+    fn sample_serializes_with_expected_camel_case_keys() {
+        let mut sys = System::new();
+        let value = serde_json::to_value(sample(&mut sys)).expect("payload should serialize");
+        let keys: std::collections::BTreeSet<&str> =
+            value.as_object().expect("payload should be a JSON object").keys().map(String::as_str).collect();
+        let expected: std::collections::BTreeSet<&str> =
+            ["cpuPercent", "memUsedBytes", "memTotalBytes"].into_iter().collect();
+        assert_eq!(keys, expected);
+    }
 }

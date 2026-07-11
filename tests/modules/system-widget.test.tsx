@@ -4,31 +4,34 @@ import type { SamplePoint } from "@/modules/system/manifest";
 
 const state = vi.hoisted(() => ({
   snapshot: { points: [] as SamplePoint[], error: false },
+  configure: vi.fn(),
 }));
 
 vi.mock("@/modules/system/sampler", () => ({
   systemSampler: {
     subscribe: () => () => {},
     getSnapshot: () => state.snapshot,
-    configure: () => {},
+    configure: state.configure,
   },
 }));
 
 import { SystemStatsWidget } from "@/modules/system/widgets/system-stats-widget";
 import { systemStatsDefaultConfig } from "@/modules/system/manifest";
+import type { SystemStatsConfig } from "@/modules/system/manifest";
 
 const GIB = 1024 ** 3;
 const point = (t: number, cpu: number): SamplePoint => ({ t, cpu, memUsed: 8.2 * GIB, memTotal: 32 * GIB });
 
-function renderWidget() {
+function renderWidget(config: SystemStatsConfig = systemStatsDefaultConfig) {
   return render(
-    <SystemStatsWidget data={{}} config={systemStatsDefaultConfig} refresh={async () => {}} />,
+    <SystemStatsWidget data={{}} config={config} refresh={async () => {}} />,
   );
 }
 
 describe("SystemStatsWidget", () => {
   beforeEach(() => {
     state.snapshot = { points: [], error: false };
+    state.configure.mockReset();
   });
 
   it("shows a measuring state until two samples exist", () => {
@@ -50,5 +53,16 @@ describe("SystemStatsWidget", () => {
     state.snapshot = { points: [], error: true };
     renderWidget();
     expect(screen.getByText(/unavailable/i)).toBeInTheDocument();
+  });
+
+  it("falls back to the default config when the stored config is invalid, never handing bad values to the sampler timer", () => {
+    renderWidget({} as never);
+    expect(state.configure).toHaveBeenCalledWith(systemStatsDefaultConfig);
+  });
+
+  it("passes a valid config through to the sampler unchanged", () => {
+    const config: SystemStatsConfig = { sampleIntervalSeconds: 5, historySeconds: 300 };
+    renderWidget(config);
+    expect(state.configure).toHaveBeenCalledWith(config);
   });
 });

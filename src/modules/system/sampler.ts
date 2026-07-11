@@ -11,6 +11,9 @@ export type SamplerSnapshot = { points: SamplePoint[]; error: boolean };
  * dashboard remounts widget bodies on reorder). Starts on the first subscriber,
  * stops at zero, and pauses while the app window is hidden — no sampling when
  * nobody can see the graph. History is in-memory only; lost on app restart by design.
+ *
+ * Multiple widget instances of this type share this one buffer and ticker;
+ * the last configure() call wins.
  */
 const MAX_CONSECUTIVE_FAILURES = 3;
 
