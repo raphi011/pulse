@@ -51,6 +51,16 @@
     outline: 2px solid var(--color-primary-500);
     outline-offset: 2px;
   }
+  /* Chart series colors — dataviz six-checks validated against the card surfaces
+     (#ffffff light / #121826 dark): lightness band, chroma, CVD ΔE, ≥3:1 contrast. */
+  :root {
+    --chart-cpu: #4f46e5;
+    --chart-mem: #0d9488;
+  }
+  .dark {
+    --chart-cpu: #6366f1;
+    --chart-mem: #0d9488;
+  }
 }
 
 @layer components {
