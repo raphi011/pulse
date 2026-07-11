@@ -26,9 +26,10 @@ Local, single-user, pluggable Tauri desktop dashboard (Vite + React) for organiz
 ## Architecture
 
 Integrations are self-contained **modules** under `src/modules/<name>/`, split into:
-- `manifest.ts` — shared types, Zod config schema, defaults (no runtime deps)
-- `fetch.ts` — `fetch()` + actions; registers into the **fetch** registry (CLI-first, but API is fine)
-- `widgets/*.tsx` + `render.ts` — React body; registers into the **render** registry
+- `manifest.ts` — shared types, Zod config schema, defaults, and one `WidgetManifest` per widget (`type/title/configSchema/defaultConfig/refreshable?/integration?`) via `defineManifest` (no runtime deps)
+- `fetch.ts` — `registerFetch(manifest, { fetch })`; CLI-first, but API is fine
+- `widgets/*.tsx` + `render.ts` — `registerRender(manifest, { Component, icon?, count?, HeaderControls?, formEditable? })`
+- `repo.ts` (only for local-data modules, e.g. bookmarks) — module-owned table + CRUD functions
 
 The shell knows only the widget contract, never a specific integration. Add a module = drop a folder + add its import to `src/modules/fetch.ts` and `src/modules/render.ts`.
 
@@ -44,6 +45,10 @@ Data flow is **cache-first**: widgets read cached rows from `widget_cache` insta
 - N+1 enrichment (list → per-item detail) uses `Promise.allSettled` so one failure doesn't sink the widget (`github/prs.ts`).
 - Reference modules: `github` (3 widgets, N+1 enrichment) and `jira` (single widget, custom-query config) — both fully wired; copy their shape.
 - Registration test per module asserts both registries resolve each widget type (`tests/modules/*-registration.test.ts`).
+- Widget bodies get `{ data, config, refresh }`. There is no action/RPC API: widgets that mutate module data import the module's repo functions directly (no server boundary) and call `refresh()` after — see `bookmarks`. Local user data lives in a module-owned table, never in widget config.
+- `refreshable: false` in the manifest hides the refresh button + fetchedAt and skips auto-refresh; `HeaderControls` render *next to* the refresh button, never instead of it.
+- Stored config is validated against the manifest schema on every read (`widget-service.ts`); Zod `.default()`s backfill additive schema changes, breaking ones surface as an in-card "Invalid config" error without overwriting the stored config.
+- Payload shape changed? Bump `CACHE_VERSION` (`src/server/cache-version.ts`) — the cache is wiped on startup mismatch. Widget bodies are wrapped in a per-card ErrorBoundary.
 - DB access goes through `getDb()` (`src/db/client.ts`), which uses Drizzle's `sqlite-proxy` async driver. The transport swaps by environment: `tauri-plugin-sql` in the app, `better-sqlite3` in tests (Node). **All repo functions (`cache-repo`, `config-repo`) are async** — `await` them. Multi-statement atomic writes use `db.batch([...])`, not `db.transaction()`; in-app this goes through the custom `db_batch` Rust command (`src-tauri/src/db_batch.rs`), which runs every statement inside one held `sqlx` transaction (separate BEGIN/COMMIT IPC calls would race across pooled connections). Migrations live in `src-tauri` (`include_str!` of the generated `drizzle/*.sql` files, run by the SQL plugin's migration runner on startup). The DB file lives in the macOS app-data dir: `~/Library/Application Support/com.pulse.dashboard/dashboard.db`.
 
 ## Design & docs
