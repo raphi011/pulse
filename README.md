@@ -15,9 +15,9 @@ Local, single-user, pluggable work dashboard.
   `xattr -cr <path-to-app>` to clear the quarantine flag before it'll open.
 
 ## Add a module
-1. Create `src/modules/<name>/manifest.ts` (types, Zod config, defaults).
-2. `fetch.ts` — call `registerFetchWidget({ type, configSchema, defaultConfig, fetch })`.
-3. `widgets/*.tsx` + `render.ts` — call `registerRenderWidget({ type, title, Component })`.
+1. Create `src/modules/<name>/manifest.ts` (export `<name>Manifest` via `defineManifest({ type, title, configSchema, defaultConfig, refreshable?, integration? })`).
+2. `fetch.ts` — call `registerFetch(manifest, { fetch })`.
+3. `widgets/*.tsx` + `render.ts` — call `registerRender(manifest, { Component, icon?, count?, HeaderControls?, formEditable? })`.
 4. Add `import "./<name>/fetch"` to `src/modules/fetch.ts` and `import "./<name>/render"` to `src/modules/render.ts`.
 
 Storage lives in `dashboard.db` (SQLite). Layout is the `widgets` table; cached fetch results live in `widget_cache`.
