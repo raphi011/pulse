@@ -49,16 +49,7 @@ function AutoRefreshControls() {
 function Toolbar({ onAdd }: { onAdd: (type: string) => void }) {
   return (
     <div className="sticky top-0 z-30 border-b border-border/80 bg-surface/80 backdrop-blur dark:border-border-dark/80 dark:bg-surface-dark/70">
-      <div className="flex items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-2.5">
-          <span
-            aria-hidden
-            className="grid h-7 w-7 place-items-center rounded-lg bg-primary-600 text-sm font-bold text-white shadow-sm"
-          >
-            P
-          </span>
-          <h1 className="text-[0.9375rem] font-semibold tracking-tight">Pulse</h1>
-        </div>
+      <div className="flex items-center justify-end gap-4 px-4 py-3 sm:px-6 lg:px-8">
         <div className="flex items-center gap-3">
           <AutoRefreshControls />
           <Link
