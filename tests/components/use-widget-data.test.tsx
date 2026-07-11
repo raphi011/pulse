@@ -18,6 +18,12 @@ function Probe() {
   return <span>ready</span>;
 }
 
+function StaticProbe() {
+  const { refresh } = useWidgetData("w1", false);
+  void refresh;
+  return <span>ready</span>;
+}
+
 // Buttons to drive the global context from within the provider.
 function Controls() {
   const { toggle, refreshAll } = useAutoRefresh();
@@ -36,6 +42,20 @@ function renderProbe() {
       <AutoRefreshProvider>
         <ToastProvider>
           <Probe />
+          <Controls />
+        </ToastProvider>
+      </AutoRefreshProvider>
+    </QueryClientProvider>,
+  );
+}
+
+function renderStaticProbe() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={client}>
+      <AutoRefreshProvider>
+        <ToastProvider>
+          <StaticProbe />
           <Controls />
         </ToastProvider>
       </AutoRefreshProvider>
@@ -105,4 +125,20 @@ test("stops auto-refreshing after toggling off", async () => {
   await act(async () => { screen.getByText("toggle").click(); }); // disable
   await act(async () => { await vi.advanceTimersByTimeAsync(10 * 60 * 1000); });
   expect(refreshCallCount()).toBe(1); // no further refreshes after disabling
+});
+
+test("refreshable=false ignores auto-refresh interval and refreshAll", async () => {
+  mockFetchWidgetData.mockResolvedValue({
+    widgetId: "w1", payload: { ok: true }, fetchedAt: Date.now(), status: "ok", error: null, errorKind: null,
+  });
+  renderStaticProbe();
+  await act(async () => { await vi.advanceTimersByTimeAsync(0); }); // flush the cache-first load
+  expect(screen.getByText("ready")).toBeInTheDocument();
+  const initialCalls = mockFetchWidgetData.mock.calls.length; // the cache-first load
+  await act(async () => { screen.getByText("toggle").click(); });        // enable auto-refresh
+  await act(async () => { await vi.advanceTimersByTimeAsync(5 * 60 * 1000 + 1000); });
+  await act(async () => { screen.getByText("refreshAll").click(); });
+  expect(
+    mockFetchWidgetData.mock.calls.slice(initialCalls).filter(([, refresh]) => refresh === true),
+  ).toHaveLength(0);
 });

@@ -15,7 +15,8 @@ export function WidgetCard({
   dragHandle?: DragHandle;
 }) {
   const def = getRenderWidget(widget.type);
-  const { data, isLoading, refresh, isRefreshing } = useWidgetData(widget.id);
+  const refreshable = def?.manifest.refreshable !== false;
+  const { data, isLoading, refresh, isRefreshing } = useWidgetData(widget.id, refreshable);
 
   if (!def) {
     return <WidgetShell title={widget.title ?? widget.type} state="error" error={`No renderer for ${widget.type}`} fetchedAt={null} onRefresh={() => {}} dragHandle={dragHandle} />;
@@ -33,7 +34,7 @@ export function WidgetCard({
       <CardMenu onConfigure={() => onConfigure(widget)} onRemove={() => onRemove(widget.id)} />
     ) : undefined;
   const HeaderControls = def.HeaderControls;
-  const headerAction =
+  const headerExtra =
     HeaderControls && hasData ? (
       <HeaderControls data={data!.payload} config={widget.config} refresh={refresh} />
     ) : undefined;
@@ -48,8 +49,9 @@ export function WidgetCard({
       fetchedAt={data?.fetchedAt ?? null}
       onRefresh={refresh}
       refreshing={isRefreshing}
+      refreshable={refreshable}
       menu={menu}
-      headerAction={headerAction}
+      headerExtra={headerExtra}
       dragHandle={dragHandle}
       issue={errored ? { message: data?.error ?? "Refresh failed", kind: data?.errorKind } : null}
     >

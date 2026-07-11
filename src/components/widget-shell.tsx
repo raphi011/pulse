@@ -37,7 +37,7 @@ function Skeleton() {
 }
 
 export function WidgetShell({
-  title, icon, count, state, error, fetchedAt, onRefresh, refreshing, children, headerExtra, headerAction, menu, dragHandle, issue,
+  title, icon, count, state, error, fetchedAt, onRefresh, refreshing, refreshable = true, children, headerExtra, menu, dragHandle, issue,
 }: {
   title: string;
   icon?: ReactNode;
@@ -47,9 +47,10 @@ export function WidgetShell({
   fetchedAt: number | null;
   onRefresh: () => void;
   refreshing?: boolean;
+  /** False = widget data only changes through its own controls: no refresh button, no timestamp. */
+  refreshable?: boolean;
   children?: ReactNode;
   headerExtra?: ReactNode;
-  headerAction?: ReactNode;
   menu?: ReactNode;
   dragHandle?: DragHandle;
   issue?: { message: string; kind?: string | null } | null;
@@ -92,10 +93,10 @@ export function WidgetShell({
             </span>
             );
           })()}
-          {!headerAction && fetchedAt && <span className="tabular-nums">{ago(fetchedAt)}</span>}
+          {refreshable && fetchedAt && <span className="tabular-nums">{ago(fetchedAt)}</span>}
           {headerExtra}
           {menu}
-          {headerAction ?? (
+          {refreshable && (
             <button
               aria-label="Refresh"
               onClick={onRefresh}

@@ -12,7 +12,7 @@ async function fetchData(id: string, refresh: boolean): Promise<CacheRow> {
 
 const msg = (err: unknown) => (err instanceof Error ? err.message : "unknown error");
 
-export function useWidgetData(id: string) {
+export function useWidgetData(id: string, refreshable = true) {
   const qc = useQueryClient();
   const { enabled, nonce } = useAutoRefresh();
   const { toast } = useToast();
@@ -40,17 +40,17 @@ export function useWidgetData(id: string) {
 
   // Auto-refresh must force refresh=1; a plain refetch would only re-read the cache.
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || !refreshable) return;
     const t = setInterval(() => void refresh(), INTERVAL_MS);
     return () => clearInterval(t);
-  }, [enabled, refresh]);
+  }, [enabled, refreshable, refresh]);
 
   // Force-refresh-now: refresh when the global nonce bumps, but not on initial mount.
   const initialNonce = useRef(nonce);
   useEffect(() => {
-    if (nonce === initialNonce.current) return;
+    if (!refreshable || nonce === initialNonce.current) return;
     void refresh();
-  }, [nonce, refresh]);
+  }, [nonce, refreshable, refresh]);
 
   // Surface an initial cache-load failure too.
   useEffect(() => {
