@@ -27,6 +27,7 @@ pub fn run() {
       tauri_plugin_autostart::MacosLauncher::LaunchAgent,
       None,
     ))
+    .plugin(tauri_plugin_notification::init())
     .manage(system_stats::SystemMonitor::new())
     .invoke_handler(tauri::generate_handler![db_batch::db_batch, system_stats::system_stats])
     .setup(|app| {

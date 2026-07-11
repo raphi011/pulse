@@ -34,3 +34,4 @@ tauri-plugin-fs = "2"
 sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio"] }
 # CPU/memory sampling for the system module's `system_stats` command.
 sysinfo = { version = "0.35", default-features = false, features = ["system"] }
+tauri-plugin-notification = "2.3.3"

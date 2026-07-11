@@ -29,6 +29,7 @@
       ]
     },
     "os:default",
+    "notification:default",
     {
       "identifier": "fs:allow-read-text-file",
       "allow": [{ "path": "$HOME/.config/.jira/.config.yml" }]
