@@ -1,4 +1,3 @@
-import "server-only";
 import { gwsJson } from "./gws";
 import type { DriveCategory, DriveFileItem, DriveData, DriveConfig } from "./manifest";
 

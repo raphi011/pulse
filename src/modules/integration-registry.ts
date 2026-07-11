@@ -1,4 +1,3 @@
-import "server-only";
 import type { Integration } from "./integration-contracts";
 
 const registry = new Map<string, Integration>();

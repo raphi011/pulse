@@ -1,4 +1,3 @@
-import "server-only";
 import { registerFetchWidget } from "@/modules/fetch-registry";
 import {
   BOOKMARKS_TYPE,

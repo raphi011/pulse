@@ -1,4 +1,3 @@
-import "server-only";
 import { eq } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { widgetCache } from "@/db/schema";

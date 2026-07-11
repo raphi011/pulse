@@ -1,4 +1,3 @@
-import "server-only";
 import { registerFetchWidget } from "@/modules/fetch-registry";
 import {
   PRS_TYPE, FAILING_ACTIONS_TYPE, DEPENDABOT_TYPE,

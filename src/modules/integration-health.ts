@@ -1,4 +1,3 @@
-import "server-only";
 import { CliError } from "@/server/cli";
 import type { IntegrationHealth } from "./integration-contracts";
 

@@ -1,4 +1,3 @@
-import "server-only";
 import { registerFetchWidget } from "@/modules/fetch-registry";
 import {
   GMAIL_TYPE, CALENDAR_TYPE,

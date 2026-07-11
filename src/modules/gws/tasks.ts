@@ -1,4 +1,3 @@
-import "server-only";
 import { gwsJson } from "./gws";
 import type { TasksConfig, TasksData, TaskItem } from "./manifest";
 

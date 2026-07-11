@@ -1,4 +1,3 @@
-import "server-only";
 import "./github/integration";
 import "./jira/integration";
 import "./gws/integration";

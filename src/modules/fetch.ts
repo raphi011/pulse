@@ -1,4 +1,3 @@
-import "server-only";
 import "./core/fetch";
 import "./github/fetch";
 import "./jira/fetch";

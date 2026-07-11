@@ -14,7 +14,7 @@ export interface WidgetAction {
   run(config: unknown, params: Record<string, unknown>): Promise<void>;
 }
 
-/** Server-only: how a widget gets its data. Never imported by client code. */
+/** How a widget gets its data. */
 export interface FetchWidget<Data = unknown, Config = unknown> {
   type: string;
   configSchema: ZodType<Config>;
@@ -35,7 +35,7 @@ export interface WidgetBodyProps<Data = unknown, Config = unknown> {
   saveConfig: (next: Config) => Promise<void>;
 }
 
-/** Client-only: how a widget renders. */
+/** How a widget renders. */
 export interface RenderWidget<Data = unknown, Config = unknown> {
   type: string;
   title: string;

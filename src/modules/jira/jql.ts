@@ -1,4 +1,3 @@
-import "server-only";
 import { jiraJson, jiraServerUrl } from "./jira";
 import { CliError } from "@/server/cli";
 import type { JiraIssue, JqlData, JqlConfig } from "./manifest";

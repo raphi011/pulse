@@ -1,4 +1,3 @@
-import "server-only";
 import { gwsJson } from "./gws";
 import type { EmailItem, GmailData, GmailConfig } from "./manifest";
 

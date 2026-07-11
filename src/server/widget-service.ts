@@ -1,4 +1,3 @@
-import "server-only";
 import { getWidget } from "./config-repo";
 import * as cache from "./cache-repo";
 import { getFetchWidget } from "@/modules/fetch-registry";

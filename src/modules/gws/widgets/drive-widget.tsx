@@ -20,7 +20,6 @@ export function DriveWidget({ data, config }: WidgetBodyProps<DriveData, DriveCo
       {files.map((f) => (
         <li key={f.id} className="flex items-center gap-2.5 py-2">
           {f.iconLink ? (
-            // eslint-disable-next-line @next/next/no-img-element -- local single-user app; Google's static icon host, matches existing plain-element widgets
             <img src={f.iconLink.replace("/16/", "/32/")} alt="" className="h-4 w-4 shrink-0" />
           ) : (
             <span className="h-2 w-2 shrink-0 rounded-full bg-slate-300 dark:bg-slate-600" />

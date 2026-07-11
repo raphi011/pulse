@@ -1,4 +1,3 @@
-import "server-only";
 import { registerFetchWidget } from "@/modules/fetch-registry";
 import { STATUS_TYPE, statusConfigSchema, statusDefaultConfig, type StatusData } from "./manifest";
 

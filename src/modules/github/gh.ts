@@ -1,4 +1,3 @@
-import "server-only";
 import { runCli } from "@/server/cli";
 
 const GH_AUTH_PATTERN = /gh auth login|not logged in|authentication|HTTP 401|Bad credentials/i;

@@ -11,7 +11,6 @@ export function Avatar({ src, name, className = "h-4 w-4" }: { src?: string | nu
   const base = `${className} shrink-0 rounded-full`;
   if (src) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element -- local single-user app; matches existing plain-element widgets
       <img src={src} alt={name} title={name} loading="lazy" className={`${base} bg-slate-200 object-cover dark:bg-white/10`} />
     );
   }

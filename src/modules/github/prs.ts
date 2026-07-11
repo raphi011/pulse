@@ -1,4 +1,3 @@
-import "server-only";
 import { ghJson } from "./gh";
 import type { CiStatus, PrItem, PrsData, PrsConfig } from "./manifest";
 

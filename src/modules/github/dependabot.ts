@@ -1,4 +1,3 @@
-import "server-only";
 import { ghJson } from "./gh";
 import type { AlertItem, Severity, DependabotData, DependabotConfig } from "./manifest";
 

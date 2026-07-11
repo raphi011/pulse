@@ -23,7 +23,6 @@ function Favicon({ url }: { url: string }) {
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   if (!src || failedSrc === src) return <span className="h-4 w-4 shrink-0" aria-hidden />;
   return (
-    // eslint-disable-next-line @next/next/no-img-element
     <img
       src={src}
       alt=""

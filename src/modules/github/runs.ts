@@ -1,4 +1,3 @@
-import "server-only";
 import { ghJson } from "./gh";
 import type { RunItem, FailingActionsData, FailingActionsConfig } from "./manifest";
 

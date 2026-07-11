@@ -1,4 +1,3 @@
-import "server-only";
 import { runJsonCli, type ApiError } from "@/server/cli";
 
 // gws prints Google API errors as `{ "error": { code, message, reason } }` on stdout,

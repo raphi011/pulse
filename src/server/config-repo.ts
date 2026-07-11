@@ -1,4 +1,3 @@
-import "server-only";
 import { randomUUID } from "node:crypto";
 import { eq, asc } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";

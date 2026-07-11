@@ -1,4 +1,3 @@
-import "server-only";
 import type { FetchWidget } from "./contracts";
 
 const registry = new Map<string, FetchWidget>();
