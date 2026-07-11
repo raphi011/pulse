@@ -1,7 +1,5 @@
-import { registerFetchWidget } from "@/modules/fetch-registry";
-import { JQL_TYPE, jqlConfigSchema, jqlDefaultConfig } from "./manifest";
+import { registerFetch } from "@/modules/fetch-registry";
+import { jqlManifest } from "./manifest";
 import { fetchJql } from "./jql";
 
-registerFetchWidget({
-  type: JQL_TYPE, configSchema: jqlConfigSchema, defaultConfig: jqlDefaultConfig, fetch: fetchJql,
-});
+registerFetch(jqlManifest, { fetch: fetchJql });

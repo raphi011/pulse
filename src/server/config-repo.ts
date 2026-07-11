@@ -17,7 +17,7 @@ export async function getWidget(id: string): Promise<Widget | undefined> {
 
 export async function addWidget(type: string, config: Record<string, unknown>): Promise<Widget> {
   const def = getFetchWidget(type);
-  const validated = def ? (def.configSchema.parse(config) as Record<string, unknown>) : config;
+  const validated = def ? (def.manifest.configSchema.parse(config) as Record<string, unknown>) : config;
   const existing = await getWidgets();
   const order = existing.reduce((max, w) => Math.max(max, w.order + 1), 0);
   const row: Widget = {

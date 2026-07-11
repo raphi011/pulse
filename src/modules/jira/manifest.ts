@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { defineManifest } from "@/modules/contracts";
 
 export const JQL_TYPE = "jira.jql";
 
@@ -21,3 +22,9 @@ export type JiraIssue = {
   url: string;              // <server>/browse/<KEY>
 };
 export type JqlData = { issues: JiraIssue[] };
+
+export const jqlManifest = defineManifest({
+  type: JQL_TYPE, title: "Jira Query",
+  configSchema: jqlConfigSchema, defaultConfig: jqlDefaultConfig,
+  integration: "jira",
+});

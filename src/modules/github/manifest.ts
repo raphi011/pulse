@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { defineManifest } from "@/modules/contracts";
 
 export const PRS_TYPE = "github.prs";
 export const FAILING_ACTIONS_TYPE = "github.failingActions";
@@ -49,3 +50,19 @@ export type AlertItem = {
 export type PrsData = { prs: PrItem[] };
 export type FailingActionsData = { runs: RunItem[]; errors?: string[] };
 export type DependabotData = { alerts: AlertItem[]; errors?: string[] };
+
+export const prsManifest = defineManifest({
+  type: PRS_TYPE, title: "Pull Requests",
+  configSchema: prsConfigSchema, defaultConfig: prsDefaultConfig,
+  integration: "github",
+});
+export const failingActionsManifest = defineManifest({
+  type: FAILING_ACTIONS_TYPE, title: "Failing Actions",
+  configSchema: failingActionsConfigSchema, defaultConfig: failingActionsDefaultConfig,
+  integration: "github",
+});
+export const dependabotManifest = defineManifest({
+  type: DEPENDABOT_TYPE, title: "Dependabot Alerts",
+  configSchema: dependabotConfigSchema, defaultConfig: dependabotDefaultConfig,
+  integration: "github",
+});

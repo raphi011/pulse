@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { defineManifest } from "@/modules/contracts";
 
 export const STATUS_TYPE = "core.status";
 
@@ -14,3 +15,10 @@ export type StatusData = {
   osVersion: string; // OS version string (plugin-os version())
   arch: string;      // CPU architecture, e.g. "aarch64" (plugin-os arch())
 };
+
+export const statusManifest = defineManifest({
+  type: STATUS_TYPE,
+  title: "System Status",
+  configSchema: statusConfigSchema,
+  defaultConfig: statusDefaultConfig,
+});

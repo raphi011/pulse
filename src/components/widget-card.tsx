@@ -52,14 +52,13 @@ export function WidgetCard({
       <HeaderControls
         data={data!.payload}
         config={widget.config}
-        runAction={async () => {}}
         saveConfig={saveConfig}
       />
     ) : undefined;
 
   return (
     <WidgetShell
-      title={widget.title ?? def.title}
+      title={widget.title ?? def.manifest.title}
       icon={def.icon && <BrandIcon mark={def.icon} />}
       count={count}
       state={state}
@@ -76,7 +75,6 @@ export function WidgetCard({
         <Body
           data={data!.payload}
           config={widget.config}
-          runAction={async () => {}}
           saveConfig={saveConfig}
         />
       )}

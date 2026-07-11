@@ -1,11 +1,16 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { z } from "zod";
+import { defineManifest } from "@/modules/contracts";
 import {
-  registerFetchWidget, getFetchWidget, listFetchTypes, __clearFetchRegistry,
+  registerFetch, getFetchWidget, listFetchTypes, __clearFetchRegistry,
 } from "@/modules/fetch-registry";
 import {
-  registerRenderWidget, getRenderWidget, listRenderWidgets, __clearRenderRegistry,
+  registerRender, getRenderWidget, listRenderWidgets, __clearRenderRegistry,
 } from "@/modules/render-registry";
+
+const manifest = defineManifest({
+  type: "t.a", title: "A", configSchema: z.object({}), defaultConfig: {},
+});
 
 beforeEach(() => {
   __clearFetchRegistry();
@@ -14,27 +19,26 @@ beforeEach(() => {
 
 describe("registries", () => {
   it("registers and resolves a fetch widget", () => {
-    registerFetchWidget({
-      type: "t.a", configSchema: z.object({}), defaultConfig: {},
-      fetch: async () => 1,
-    });
-    expect(getFetchWidget("t.a")?.type).toBe("t.a");
+    registerFetch(manifest, { fetch: async () => 1 });
+    expect(getFetchWidget("t.a")?.manifest.type).toBe("t.a");
     expect(listFetchTypes()).toContain("t.a");
   });
 
-  it("throws on duplicate server registration", () => {
-    const def = { type: "t.a", configSchema: z.object({}), defaultConfig: {}, fetch: async () => 1 };
-    registerFetchWidget(def);
-    expect(() => registerFetchWidget(def)).toThrow(/already registered/);
+  it("throws on duplicate fetch registration", () => {
+    registerFetch(manifest, { fetch: async () => 1 });
+    expect(() => registerFetch(manifest, { fetch: async () => 1 })).toThrow(/already registered/);
   });
 
   it("registers and lists a render widget", () => {
-    registerRenderWidget({
-      type: "t.a", title: "A", Component: () => null,
-      configSchema: z.object({}), defaultConfig: {},
-    });
-    expect(getRenderWidget("t.a")?.title).toBe("A");
-    expect(listRenderWidgets()).toEqual([{ type: "t.a", title: "A" }]);
+    registerRender(manifest, { Component: () => null });
+    expect(getRenderWidget("t.a")?.manifest.title).toBe("A");
+    expect(listRenderWidgets()).toEqual([{ type: "t.a", title: "A", integration: undefined, icon: undefined }]);
+  });
+
+  it("both registries share the same manifest object", () => {
+    registerFetch(manifest, { fetch: async () => 1 });
+    registerRender(manifest, { Component: () => null });
+    expect(getFetchWidget("t.a")!.manifest).toBe(getRenderWidget("t.a")!.manifest);
   });
 
   it("render widgets carry an integration id where applicable", async () => {

@@ -8,6 +8,10 @@ import { STATUS_TYPE } from "@/modules/core/manifest";
 describe("core registration barrels", () => {
   it("registers core.status on both sides", () => {
     expect(getFetchWidget(STATUS_TYPE)).toBeDefined();
-    expect(getRenderWidget(STATUS_TYPE)?.title).toBe("System Status");
+    expect(getRenderWidget(STATUS_TYPE)?.manifest.title).toBe("System Status");
+  });
+
+  it("both sides share the same manifest object", () => {
+    expect(getFetchWidget(STATUS_TYPE)!.manifest).toBe(getRenderWidget(STATUS_TYPE)!.manifest);
   });
 });

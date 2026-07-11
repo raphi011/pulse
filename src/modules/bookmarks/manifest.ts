@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { defineManifest } from "@/modules/contracts";
 
 export const BOOKMARKS_TYPE = "bookmarks.links";
 
@@ -14,6 +15,12 @@ export type BookmarksConfig = z.infer<typeof bookmarksConfigSchema>;
 export const bookmarksDefaultConfig: BookmarksConfig = { bookmarks: [] };
 
 export type BookmarksData = { bookmarks: Bookmark[] };
+
+export const bookmarksManifest = defineManifest({
+  type: BOOKMARKS_TYPE, title: "Bookmarks",
+  configSchema: bookmarksConfigSchema, defaultConfig: bookmarksDefaultConfig,
+  refreshable: false,
+});
 
 /**
  * Normalize a user-typed URL: prepend `https://` when no scheme is present,

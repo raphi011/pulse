@@ -1,10 +1,13 @@
-import type { BrandMark, RenderWidget } from "./contracts";
+import type { BrandMark, RenderWidget, WidgetManifest } from "./contracts";
 
 const registry = new Map<string, RenderWidget>();
 
-export function registerRenderWidget<Data, Config>(def: RenderWidget<Data, Config>): void {
-  if (registry.has(def.type)) throw new Error(`Render widget already registered: ${def.type}`);
-  registry.set(def.type, def as RenderWidget);
+export function registerRender<Data, Config>(
+  manifest: WidgetManifest<Config>,
+  extras: Omit<RenderWidget<Data, Config>, "manifest">,
+): void {
+  if (registry.has(manifest.type)) throw new Error(`Render widget already registered: ${manifest.type}`);
+  registry.set(manifest.type, { manifest, ...extras } as unknown as RenderWidget);
 }
 
 export function getRenderWidget(type: string): RenderWidget | undefined {
@@ -12,7 +15,12 @@ export function getRenderWidget(type: string): RenderWidget | undefined {
 }
 
 export function listRenderWidgets(): { type: string; title: string; integration?: string; icon?: BrandMark }[] {
-  return [...registry.values()].map((d) => ({ type: d.type, title: d.title, integration: d.integration, icon: d.icon }));
+  return [...registry.values()].map((d) => ({
+    type: d.manifest.type,
+    title: d.manifest.title,
+    integration: d.manifest.integration,
+    icon: d.icon,
+  }));
 }
 
 export function __clearRenderRegistry(): void {

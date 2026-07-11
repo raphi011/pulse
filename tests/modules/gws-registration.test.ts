@@ -10,21 +10,22 @@ describe("gws registration barrels", () => {
     for (const t of [GMAIL_TYPE, CALENDAR_TYPE, CHAT_DMS_TYPE, CHAT_CHANNELS_TYPE, DRIVE_TYPE, TASKS_TYPE]) {
       expect(getFetchWidget(t), `server ${t}`).toBeDefined();
       expect(getRenderWidget(t), `client ${t}`).toBeDefined();
+      expect(getFetchWidget(t)!.manifest).toBe(getRenderWidget(t)!.manifest);
     }
-    expect(getRenderWidget(GMAIL_TYPE)!.title).toBe("Gmail");
-    expect(getRenderWidget(CALENDAR_TYPE)!.title).toBe("Calendar");
-    expect(getRenderWidget(CHAT_DMS_TYPE)!.title).toBe("Unread DMs");
-    expect(getRenderWidget(CHAT_CHANNELS_TYPE)!.title).toBe("Chat Channels");
-    expect(getFetchWidget(GMAIL_TYPE)!.defaultConfig).toMatchObject({ query: "is:unread in:inbox", limit: 15 });
-    expect(getFetchWidget(CALENDAR_TYPE)!.defaultConfig).toMatchObject({ calendarId: "primary", limit: 15 });
-    expect(getFetchWidget(CHAT_DMS_TYPE)!.defaultConfig).toMatchObject({ limit: 15 });
-    expect(getFetchWidget(CHAT_CHANNELS_TYPE)!.defaultConfig).toMatchObject({ spaceIds: [] });
-    expect(getRenderWidget(DRIVE_TYPE)!.title).toBe("Starred files");
-    expect(getFetchWidget(DRIVE_TYPE)!.defaultConfig).toMatchObject({
+    expect(getRenderWidget(GMAIL_TYPE)!.manifest.title).toBe("Gmail");
+    expect(getRenderWidget(CALENDAR_TYPE)!.manifest.title).toBe("Calendar");
+    expect(getRenderWidget(CHAT_DMS_TYPE)!.manifest.title).toBe("Unread DMs");
+    expect(getRenderWidget(CHAT_CHANNELS_TYPE)!.manifest.title).toBe("Chat Channels");
+    expect(getFetchWidget(GMAIL_TYPE)!.manifest.defaultConfig).toMatchObject({ query: "is:unread in:inbox", limit: 15 });
+    expect(getFetchWidget(CALENDAR_TYPE)!.manifest.defaultConfig).toMatchObject({ calendarId: "primary", limit: 15 });
+    expect(getFetchWidget(CHAT_DMS_TYPE)!.manifest.defaultConfig).toMatchObject({ limit: 15 });
+    expect(getFetchWidget(CHAT_CHANNELS_TYPE)!.manifest.defaultConfig).toMatchObject({ spaceIds: [] });
+    expect(getRenderWidget(DRIVE_TYPE)!.manifest.title).toBe("Starred files");
+    expect(getFetchWidget(DRIVE_TYPE)!.manifest.defaultConfig).toMatchObject({
       showDocs: true, showSheets: true, showSlides: true, showOther: true, limit: 25,
     });
-    expect(getRenderWidget(TASKS_TYPE)!.title).toBe("Tasks");
-    expect(getFetchWidget(TASKS_TYPE)!.defaultConfig).toMatchObject({
+    expect(getRenderWidget(TASKS_TYPE)!.manifest.title).toBe("Tasks");
+    expect(getFetchWidget(TASKS_TYPE)!.manifest.defaultConfig).toMatchObject({
       tasklist: "@default", showCompleted: false, limit: 25,
     });
   });

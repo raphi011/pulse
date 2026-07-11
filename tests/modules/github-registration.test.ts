@@ -10,6 +10,7 @@ describe("github registration barrels", () => {
     for (const t of [PRS_TYPE, FAILING_ACTIONS_TYPE, DEPENDABOT_TYPE]) {
       expect(getFetchWidget(t), `server ${t}`).toBeDefined();
       expect(getRenderWidget(t), `client ${t}`).toBeDefined();
+      expect(getFetchWidget(t)!.manifest).toBe(getRenderWidget(t)!.manifest);
     }
   });
 

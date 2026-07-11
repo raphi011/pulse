@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { defineManifest } from "@/modules/contracts";
 
 export const GMAIL_TYPE = "gws.gmail";
 export const CALENDAR_TYPE = "gws.calendar";
@@ -140,3 +141,34 @@ export type TaskItem = {
   url: string; // webViewLink into Google Tasks
 };
 export type TasksData = { tasks: TaskItem[] };
+
+export const gmailManifest = defineManifest({
+  type: GMAIL_TYPE, title: "Gmail",
+  configSchema: gmailConfigSchema, defaultConfig: gmailDefaultConfig,
+  integration: "gws",
+});
+export const calendarManifest = defineManifest({
+  type: CALENDAR_TYPE, title: "Calendar",
+  configSchema: calendarConfigSchema, defaultConfig: calendarDefaultConfig,
+  integration: "gws",
+});
+export const chatDmsManifest = defineManifest({
+  type: CHAT_DMS_TYPE, title: "Unread DMs",
+  configSchema: chatDmsConfigSchema, defaultConfig: chatDmsDefaultConfig,
+  integration: "gws",
+});
+export const chatChannelsManifest = defineManifest({
+  type: CHAT_CHANNELS_TYPE, title: "Chat Channels",
+  configSchema: chatChannelsConfigSchema, defaultConfig: chatChannelsDefaultConfig,
+  integration: "gws",
+});
+export const driveManifest = defineManifest({
+  type: DRIVE_TYPE, title: "Starred files",
+  configSchema: driveConfigSchema, defaultConfig: driveDefaultConfig,
+  integration: "gws",
+});
+export const tasksManifest = defineManifest({
+  type: TASKS_TYPE, title: "Tasks",
+  configSchema: tasksConfigSchema, defaultConfig: tasksDefaultConfig,
+  integration: "gws",
+});

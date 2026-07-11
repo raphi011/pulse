@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { z } from "zod";
 import { useTempDb } from "../helpers/db";
 import * as repo from "@/server/config-repo";
-import { registerFetchWidget, __clearFetchRegistry } from "@/modules/fetch-registry";
+import { defineManifest } from "@/modules/contracts";
+import { registerFetch, __clearFetchRegistry } from "@/modules/fetch-registry";
 import { getWidgetData } from "@/server/widget-service";
 import { NotFoundError } from "@/server/errors";
 
@@ -11,14 +12,14 @@ beforeEach(() => {
   useTempDb();
   __clearFetchRegistry();
   calls = 0;
-  registerFetchWidget({
-    type: "test.count", configSchema: z.object({}), defaultConfig: {},
-    fetch: async () => ({ n: ++calls }),
-  });
-  registerFetchWidget({
-    type: "test.boom", configSchema: z.object({}), defaultConfig: {},
-    fetch: async () => { throw new Error("kaput"); },
-  });
+  registerFetch(
+    defineManifest({ type: "test.count", title: "Count", configSchema: z.object({}), defaultConfig: {} }),
+    { fetch: async () => ({ n: ++calls }) },
+  );
+  registerFetch(
+    defineManifest({ type: "test.boom", title: "Boom", configSchema: z.object({}), defaultConfig: {} }),
+    { fetch: async () => { throw new Error("kaput"); } },
+  );
 });
 
 describe("widget-service", () => {
@@ -55,12 +56,10 @@ describe("widget-service", () => {
 
   it("stores CliError.kind in the cache on failure", async () => {
     const { CliError } = await import("@/server/cli");
-    registerFetchWidget({
-      type: "fake.authfail",
-      configSchema: z.object({}),
-      defaultConfig: {},
-      fetch: async () => { throw new CliError("Not authenticated — run `gh auth login`", "auth"); },
-    });
+    registerFetch(
+      defineManifest({ type: "fake.authfail", title: "Auth", configSchema: z.object({}), defaultConfig: {} }),
+      { fetch: async () => { throw new CliError("Not authenticated — run `gh auth login`", "auth"); } },
+    );
     const w = await repo.addWidget("fake.authfail", {});
     const row = await getWidgetData(w.id, true);
     expect(row.status).toBe("error");

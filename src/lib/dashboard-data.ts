@@ -25,7 +25,7 @@ export async function fetchWidgetData(id: string, refresh: boolean): Promise<Cac
 export async function createWidget(type: string): Promise<Widget> {
   const def = getFetchWidget(type);
   if (!def) throw new Error(`Unknown widget type: ${type}`);
-  return repoAddWidget(type, def.defaultConfig as Record<string, unknown>);
+  return repoAddWidget(type, def.manifest.defaultConfig as Record<string, unknown>);
 }
 
 export type WidgetPatch = { hidden?: boolean; config?: Record<string, unknown>; title?: string | null };
@@ -38,7 +38,7 @@ export async function updateWidget(id: string, patch: WidgetPatch): Promise<{ co
   if (patch.title !== undefined) await setTitle(id, patch.title);
   if (patch.config !== undefined) {
     const def = getFetchWidget(widget.type);
-    const parsed = def?.configSchema.safeParse(patch.config);
+    const parsed = def?.manifest.configSchema.safeParse(patch.config);
     if (def && parsed && !parsed.success) throw new Error("Invalid config");
     await setConfig(id, (parsed?.success ? parsed.data : patch.config) as Record<string, unknown>);
   }

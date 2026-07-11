@@ -1,12 +1,10 @@
 import { SiJira } from "react-icons/si";
-import { registerRenderWidget } from "@/modules/render-registry";
-import { JQL_TYPE, jqlConfigSchema, jqlDefaultConfig } from "./manifest";
+import { registerRender } from "@/modules/render-registry";
+import { jqlManifest } from "./manifest";
 import { JqlWidget } from "./widgets/jql-widget";
 
-registerRenderWidget({
-  type: JQL_TYPE, title: "Jira Query", Component: JqlWidget,
-  configSchema: jqlConfigSchema, defaultConfig: jqlDefaultConfig,
+registerRender(jqlManifest, {
+  Component: JqlWidget,
   count: (d) => d.issues.length,
-  integration: "jira",
   icon: { Icon: SiJira, className: "text-[#0052CC]" },
 });
