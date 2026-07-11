@@ -20,7 +20,7 @@ export function WidgetCard({
   const { data, isLoading, refresh, isRefreshing } = useWidgetData(widget.id, refreshable);
 
   if (!def) {
-    return <WidgetShell title={widget.title ?? widget.type} state="error" error={`No renderer for ${widget.type}`} fetchedAt={null} onRefresh={() => {}} dragHandle={dragHandle} />;
+    return <WidgetShell title={widget.title ?? widget.type} state="error" error={`No renderer for ${widget.type}`} fetchedAt={null} onRefresh={() => {}} dragHandle={dragHandle} accent={widget.accent} />;
   }
 
   const hasData = data != null && data.payload != null;
@@ -63,6 +63,7 @@ export function WidgetCard({
       headerExtra={headerExtra}
       dragHandle={dragHandle}
       issue={errored ? { message: data?.error ?? "Refresh failed", kind: data?.errorKind } : null}
+      accent={widget.accent}
     >
       {hasData && (
         <WidgetErrorBoundary resetKey={data!.fetchedAt}>

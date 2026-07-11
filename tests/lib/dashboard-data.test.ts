@@ -132,4 +132,26 @@ describe("dashboard-data", () => {
     expect((row.payload as { platform: string }).platform).toBe("macos");
     expect(row.fetchedAt).toBeGreaterThan(0);
   });
+
+  it("stores a preset accent and clears it with null", async () => {
+    const w = await data.createWidget("core.status");
+    const res = await data.updateWidget(w.id, { accent: "violet" });
+    expect(res.accent).toBe("violet");
+    const cleared = await data.updateWidget(w.id, { accent: null });
+    expect(cleared.accent).toBeNull();
+  });
+
+  it("silently normalizes a non-preset accent to null", async () => {
+    const w = await data.createWidget("core.status");
+    await data.updateWidget(w.id, { accent: "violet" });
+    const res = await data.updateWidget(w.id, { accent: "magenta" });
+    expect(res.accent).toBeNull();
+  });
+
+  it("leaves accent untouched when the patch omits it", async () => {
+    const w = await data.createWidget("core.status");
+    await data.updateWidget(w.id, { accent: "teal" });
+    const res = await data.updateWidget(w.id, { title: "Renamed" });
+    expect(res.accent).toBe("teal");
+  });
 });

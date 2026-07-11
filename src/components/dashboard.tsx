@@ -129,8 +129,8 @@ export function Dashboard({ initialWidgets }: { initialWidgets: Widget[] }) {
     setWidgets(next);
     void persistPositions(next);
   }
-  function onConfigSaved(id: string, config: Record<string, unknown>, title: string | null) {
-    setWidgets((ws) => ws.map((w) => (w.id === id ? { ...w, config, title } : w)));
+  function onConfigSaved(id: string, config: Record<string, unknown>, title: string | null, accent: string | null) {
+    setWidgets((ws) => ws.map((w) => (w.id === id ? { ...w, config, title, accent } : w)));
   }
 
   return (

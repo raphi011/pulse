@@ -21,7 +21,7 @@ export async function addWidget(type: string, config: Record<string, unknown>): 
   const existing = await getWidgets();
   const order = existing.reduce((max, w) => Math.max(max, w.order + 1), 0);
   const row: Widget = {
-    id: crypto.randomUUID(), type, title: null, order, colSpan: 1, rowSpan: DEFAULT_ROW_SPAN,
+    id: crypto.randomUUID(), type, title: null, accent: null, order, colSpan: 1, rowSpan: DEFAULT_ROW_SPAN,
     hidden: false, config: validated,
   };
   await getDb().insert(widgets).values(row);
@@ -50,6 +50,11 @@ export async function setConfig(id: string, config: Record<string, unknown>): Pr
 /** Per-widget display title override; null/empty restores the definition default. */
 export async function setTitle(id: string, title: string | null): Promise<void> {
   await getDb().update(widgets).set({ title: title || null }).where(eq(widgets.id, id));
+}
+
+/** Per-widget accent color preset name (see src/lib/accents.ts); null = no accent. */
+export async function setAccent(id: string, accent: string | null): Promise<void> {
+  await getDb().update(widgets).set({ accent }).where(eq(widgets.id, id));
 }
 
 export async function removeWidget(id: string): Promise<void> {

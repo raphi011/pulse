@@ -25,7 +25,7 @@ describe("sqlite-proxy adapter", () => {
 
   it("decodes json columns and boolean columns", async () => {
     await getDb().insert(schema.widgets).values({
-      id: "w1", type: "core.status", title: null, order: 0, colSpan: 1, rowSpan: 6,
+      id: "w1", type: "core.status", title: null, accent: null, order: 0, colSpan: 1, rowSpan: 6,
       hidden: true, config: { a: 1 },
     });
     const row = await getDb().select().from(schema.widgets).where(eq(schema.widgets.id, "w1")).get();

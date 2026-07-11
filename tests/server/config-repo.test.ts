@@ -43,4 +43,13 @@ describe("config-repo", () => {
     await repo.setIntegrationOverride("github", true);
     expect(await repo.getIntegrationOverride("github")).toBe(true);
   });
+
+  it("defaults accent to null and round-trips setAccent", async () => {
+    const a = await repo.addWidget("core.status", {});
+    expect((await repo.getWidget(a.id))!.accent).toBeNull();
+    await repo.setAccent(a.id, "teal");
+    expect((await repo.getWidget(a.id))!.accent).toBe("teal");
+    await repo.setAccent(a.id, null);
+    expect((await repo.getWidget(a.id))!.accent).toBeNull();
+  });
 });

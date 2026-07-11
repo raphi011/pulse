@@ -69,3 +69,37 @@ describe("WidgetShell refreshable", () => {
     expect(screen.getByLabelText("Refresh")).toBeInTheDocument();
   });
 });
+
+describe("WidgetShell accent", () => {
+  it("renders a colored edge bar for a preset accent in every state", () => {
+    for (const state of ["loading", "error", "empty", "ok"] as const) {
+      const { container, unmount } = render(
+        <WidgetShell title="X" state={state} fetchedAt={null} onRefresh={() => {}} accent="teal">
+          <div>body</div>
+        </WidgetShell>,
+      );
+      const bar = container.querySelector("[data-accent]");
+      expect(bar, `state=${state}`).not.toBeNull();
+      expect(bar!.className).toContain("bg-teal-500");
+      unmount();
+    }
+  });
+
+  it("renders no bar when accent is absent", () => {
+    const { container } = render(
+      <WidgetShell title="X" state="ok" fetchedAt={null} onRefresh={() => {}}>
+        <div>body</div>
+      </WidgetShell>,
+    );
+    expect(container.querySelector("[data-accent]")).toBeNull();
+  });
+
+  it("renders no bar for an unknown accent name", () => {
+    const { container } = render(
+      <WidgetShell title="X" state="ok" fetchedAt={null} onRefresh={() => {}} accent="magenta">
+        <div>body</div>
+      </WidgetShell>,
+    );
+    expect(container.querySelector("[data-accent]")).toBeNull();
+  });
+});

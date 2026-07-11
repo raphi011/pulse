@@ -1,6 +1,7 @@
 "use client";
 import type { ReactNode } from "react";
 import type { DraggableAttributes, DraggableSyntheticListeners } from "@dnd-kit/core";
+import { accentClass } from "@/lib/accents";
 
 export type WidgetState = "loading" | "error" | "empty" | "ok";
 
@@ -37,7 +38,7 @@ function Skeleton() {
 }
 
 export function WidgetShell({
-  title, icon, count, state, error, fetchedAt, onRefresh, refreshing, refreshable = true, children, headerExtra, menu, dragHandle, issue,
+  title, icon, count, state, error, fetchedAt, onRefresh, refreshing, refreshable = true, children, headerExtra, menu, dragHandle, issue, accent,
 }: {
   title: string;
   icon?: ReactNode;
@@ -54,10 +55,14 @@ export function WidgetShell({
   menu?: ReactNode;
   dragHandle?: DragHandle;
   issue?: { message: string; kind?: string | null } | null;
+  /** Preset accent name (src/lib/accents.ts); null/unknown = no accent bar. */
+  accent?: string | null;
 }) {
   const { setRef, attributes, listeners } = dragHandle ?? {};
+  const bar = accentClass(accent);
   return (
-    <section className="group/card flex h-full flex-col overflow-hidden rounded-xl bg-card shadow-sm ring-1 ring-border transition-shadow duration-150 hover:shadow-md dark:bg-card-dark dark:shadow-none dark:ring-border-dark dark:hover:ring-white/15">
+    <section className="group/card relative flex h-full flex-col overflow-hidden rounded-xl bg-card shadow-sm ring-1 ring-border transition-shadow duration-150 hover:shadow-md dark:bg-card-dark dark:shadow-none dark:ring-border-dark dark:hover:ring-white/15">
+      {bar && <span aria-hidden data-accent className={`pointer-events-none absolute inset-y-0 left-0 w-[3px] ${bar}`} />}
       <header className="flex items-center justify-between gap-2 border-b border-border px-3.5 py-2.5 dark:border-border-dark">
         <div className="flex min-w-0 flex-1 items-center gap-1.5">
           {icon}
