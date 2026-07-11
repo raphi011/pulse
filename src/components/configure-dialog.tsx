@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { Widget } from "@/server/config-repo";
 import { getRenderWidget } from "@/modules/render-registry";
 import { updateWidget, fetchWidgetData } from "@/lib/dashboard-data";
+import { ACCENT_NAMES, accentClass } from "@/lib/accents";
 import { SchemaForm } from "./schema-form";
 
 export function ConfigureDialog({
@@ -11,12 +12,13 @@ export function ConfigureDialog({
 }: {
   widget: Widget;
   onClose: () => void;
-  onSaved: (id: string, config: Record<string, unknown>, title: string | null) => void;
+  onSaved: (id: string, config: Record<string, unknown>, title: string | null, accent: string | null) => void;
 }) {
   const def = getRenderWidget(widget.type);
   const qc = useQueryClient();
   const [values, setValues] = useState<Record<string, unknown>>(widget.config);
   const [title, setTitle] = useState(widget.title ?? "");
+  const [accent, setAccent] = useState<string | null>(widget.accent ?? null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -34,8 +36,10 @@ export function ConfigureDialog({
     const nextTitle = title.trim() || null;
     let stored: unknown;
     let storedTitle: string | null | undefined;
+    let storedAccent: string | null = null;
     try {
-      ({ config: stored, title: storedTitle } = await updateWidget(widget.id, { config: values, title: nextTitle }));
+      ({ config: stored, title: storedTitle, accent: storedAccent } =
+        await updateWidget(widget.id, { config: values, title: nextTitle, accent }));
     } catch {
       setError("Invalid configuration");
       setSaving(false);
@@ -43,7 +47,7 @@ export function ConfigureDialog({
     }
     const fresh = await fetchWidgetData(widget.id, true);
     qc.setQueryData(["widget", widget.id], fresh);
-    onSaved(widget.id, (stored ?? values) as Record<string, unknown>, storedTitle ?? nextTitle);
+    onSaved(widget.id, (stored ?? values) as Record<string, unknown>, storedTitle ?? nextTitle, storedAccent);
     setSaving(false);
     onClose();
   }
@@ -72,6 +76,34 @@ export function ConfigureDialog({
             onChange={(e) => setTitle(e.target.value)}
           />
           <p className="text-xs text-slate-500 dark:text-slate-400">Blank uses the default ({def.manifest.title}).</p>
+        </div>
+        <div className="mb-4 space-y-1.5">
+          <span className="block text-xs font-medium text-slate-600 dark:text-slate-300">Color</span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-label="No color"
+              aria-pressed={accent === null}
+              onClick={() => setAccent(null)}
+              className={`grid h-5 w-5 place-items-center rounded-full bg-surface text-[0.6rem] leading-none text-slate-400 ring-1 ring-border dark:bg-surface-dark dark:ring-border-dark ${
+                accent === null ? "ring-2 ring-primary-500" : ""
+              }`}
+            >
+              <span aria-hidden>✕</span>
+            </button>
+            {ACCENT_NAMES.map((name) => (
+              <button
+                key={name}
+                type="button"
+                aria-label={name}
+                aria-pressed={accent === name}
+                onClick={() => setAccent(name)}
+                className={`h-5 w-5 rounded-full ${accentClass(name)} ${
+                  accent === name ? "ring-2 ring-primary-500 ring-offset-1 dark:ring-offset-card-dark" : ""
+                }`}
+              />
+            ))}
+          </div>
         </div>
         {def.formEditable !== false && (
           <SchemaForm schema={def.manifest.configSchema} values={values} onChange={setValues} />
