@@ -33,3 +33,8 @@ export const widgetCache = sqliteTable("widget_cache", {
   error: text("error"),
   errorKind: text("error_kind"), // CliErrorKind on failure, null otherwise
 });
+
+export const pomodoroSessions = sqliteTable("pomodoro_sessions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  finishedAt: integer("finished_at").notNull(), // Date.now() ms of work-block completion
+});
