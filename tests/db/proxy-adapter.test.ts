@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { eq } from "drizzle-orm";
 import { useTempDb } from "../helpers/db";
+import { FIXTURE_TYPE } from "../helpers/fixture-widget";
 import { getDb, schema } from "@/db/client";
 
 beforeEach(() => useTempDb());
@@ -25,7 +26,7 @@ describe("sqlite-proxy adapter", () => {
 
   it("decodes json columns and boolean columns", async () => {
     await getDb().insert(schema.widgets).values({
-      id: "w1", type: "core.status", title: null, accent: null, order: 0, colSpan: 1, rowSpan: 6,
+      id: "w1", type: FIXTURE_TYPE, title: null, accent: null, order: 0, colSpan: 1, rowSpan: 6,
       hidden: true, config: { a: 1 },
     });
     const row = await getDb().select().from(schema.widgets).where(eq(schema.widgets.id, "w1")).get();

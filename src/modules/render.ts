@@ -1,4 +1,3 @@
-import "./core/render";
 import "./github/render";
 import "./github-stats/render";
 import "./jira/render";

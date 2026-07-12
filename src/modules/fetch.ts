@@ -1,4 +1,3 @@
-import "./core/fetch";
 import "./github/fetch";
 import "./github-stats/fetch";
 import "./jira/fetch";

@@ -11,10 +11,11 @@ vi.mock("@/lib/dashboard-data", () => ({
 import "@/modules/render";
 import { updateWidget } from "@/lib/dashboard-data";
 import { ConfigureDialog } from "@/components/configure-dialog";
+import { FIXTURE_TYPE } from "../helpers/fixture-widget";
 import type { Widget } from "@/server/config-repo";
 
 const widget: Widget = {
-  id: "w1", type: "core.status", title: null, accent: null,
+  id: "w1", type: FIXTURE_TYPE, title: null, accent: null,
   order: 0, colSpan: 1, rowSpan: 6, hidden: false, config: { label: "" },
 };
 

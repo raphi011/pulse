@@ -1,9 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { orderedWidgets, applyReorder, applyResize } from "@/components/dashboard-logic";
+import { FIXTURE_TYPE } from "../helpers/fixture-widget";
 import type { Widget } from "@/server/config-repo";
 
 const mk = (id: string, order: number, extra: Partial<Widget> = {}): Widget => ({
-  id, type: "core.status", title: null, accent: null, order, colSpan: 1, rowSpan: 6,
+  id, type: FIXTURE_TYPE, title: null, accent: null, order, colSpan: 1, rowSpan: 6,
   hidden: false, config: {}, ...extra,
 });
 

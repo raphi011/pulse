@@ -7,7 +7,7 @@ import { AutoRefreshProvider } from "@/components/auto-refresh-context";
 import { ToastProvider } from "@/components/toast-context";
 import { Dashboard } from "@/components/dashboard";
 import { IntegrationsPanel } from "@/components/integrations-panel";
-import { fetchLayout, createWidget, fetchIntegrations } from "@/lib/dashboard-data";
+import { fetchLayout, fetchIntegrations } from "@/lib/dashboard-data";
 import { ensureCacheVersion } from "@/server/cache-version";
 import { warmToolPath } from "@/server/cli";
 import type { Widget } from "@/server/config-repo";
@@ -27,11 +27,7 @@ function DashboardView() {
   const [widgets, setWidgets] = useState<Widget[] | null>(null);
   useEffect(() => {
     (async () => {
-      let layout = await fetchLayout();
-      if (layout.widgets.length === 0) {
-        await createWidget("core.status"); // seed, matches old page.tsx
-        layout = await fetchLayout();
-      }
+      const layout = await fetchLayout();
       setWidgets(layout.widgets);
     })();
   }, []);

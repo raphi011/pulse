@@ -48,6 +48,6 @@ describe("registries", () => {
     expect(byType["github.prs"]).toBe("github");
     expect(byType["jira.jql"]).toBe("jira");
     expect(byType["gws.gmail"]).toBe("gws");
-    expect(byType["core.status"]).toBeUndefined();
+    expect(byType["system.stats"]).toBeUndefined();
   });
 });

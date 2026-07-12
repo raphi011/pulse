@@ -9,7 +9,7 @@ vi.mock("@/modules/render-registry", () => ({
   listRenderWidgets: () => [
     { type: "github.prs", title: "Pull Requests", integration: "github" },
     { type: "jira.jql", title: "Jira Query", integration: "jira" },
-    { type: "core.status", title: "System Status" },
+    { type: "test.fixture", title: "Test Fixture" },
   ],
 }));
 
@@ -39,7 +39,7 @@ describe("AddWidgetDrawer", () => {
   it("shows widgets from enabled integrations and always-available widgets", async () => {
     open();
     expect(await screen.findByText("Pull Requests")).toBeInTheDocument(); // github enabled
-    expect(screen.getByText("System Status")).toBeInTheDocument();         // no integration
+    expect(screen.getByText("Test Fixture")).toBeInTheDocument();          // no integration
   });
   it("hides widgets from disabled integrations", async () => {
     open();

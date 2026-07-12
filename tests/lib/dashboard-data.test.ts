@@ -1,30 +1,24 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-
-// core.status fetch calls @tauri-apps/plugin-os, whose invoke() is unavailable in Node.
-vi.mock("@tauri-apps/plugin-os", () => ({
-  platform: () => "macos",
-  version: () => "15.0",
-  arch: () => "aarch64",
-}));
+import { describe, it, expect, beforeEach } from "vitest";
 
 import "@/modules/fetch";
 import "@/modules/render";
 import "@/modules/integrations";
 import { useTempDb } from "../helpers/db";
+import { FIXTURE_TYPE } from "../helpers/fixture-widget";
 import * as data from "@/lib/dashboard-data";
 
 beforeEach(() => useTempDb());
 
 describe("dashboard-data", () => {
   it("creates a widget and lists it", async () => {
-    const w = await data.createWidget("core.status");
+    const w = await data.createWidget(FIXTURE_TYPE);
     const layout = await data.fetchLayout();
     expect(layout.widgets.map((x) => x.id)).toContain(w.id);
     expect(layout.prefs.theme).toBe("dark");
   });
 
   it("updates title and rejects invalid config, accepts valid config", async () => {
-    const w = await data.createWidget("core.status");
+    const w = await data.createWidget(FIXTURE_TYPE);
 
     const res = await data.updateWidget(w.id, { title: "Hi" });
     expect(res.title).toBe("Hi");
@@ -32,7 +26,7 @@ describe("dashboard-data", () => {
     // Snapshot the stored config before the invalid write so we can prove validate-before-write.
     const before = (await data.fetchLayout()).widgets.find((x) => x.id === w.id)?.config;
 
-    // core.status's `label` field is typed as a string — a non-string value fails the schema.
+    // The fixture's `label` field is typed as a string — a non-string value fails the schema.
     await expect(data.updateWidget(w.id, { config: { label: 42 } })).rejects.toThrow("Invalid config");
 
     // The rejected write must NOT have touched the stored config.
@@ -59,22 +53,22 @@ describe("dashboard-data", () => {
   });
 
   it("hides a widget", async () => {
-    const w = await data.createWidget("core.status");
+    const w = await data.createWidget(FIXTURE_TYPE);
     await data.updateWidget(w.id, { hidden: true });
     const layout = await data.fetchLayout();
     expect(layout.widgets.find((x) => x.id === w.id)?.hidden).toBe(true);
   });
 
   it("deletes a widget", async () => {
-    const w = await data.createWidget("core.status");
+    const w = await data.createWidget(FIXTURE_TYPE);
     await data.deleteWidget(w.id);
     const layout = await data.fetchLayout();
     expect(layout.widgets.map((x) => x.id)).not.toContain(w.id);
   });
 
   it("saves positions", async () => {
-    const a = await data.createWidget("core.status");
-    const b = await data.createWidget("core.status");
+    const a = await data.createWidget(FIXTURE_TYPE);
+    const b = await data.createWidget(FIXTURE_TYPE);
     await data.savePositions([
       { id: a.id, order: 1, colSpan: 2, rowSpan: 3 },
       { id: b.id, order: 0, colSpan: 1, rowSpan: 1 },
@@ -115,7 +109,7 @@ describe("dashboard-data", () => {
   });
 
   it("updateWidget clears the title back to null when set blank", async () => {
-    const w = await data.createWidget("core.status");
+    const w = await data.createWidget(FIXTURE_TYPE);
     await data.updateWidget(w.id, { title: "Renamed" });
     const res = await data.updateWidget(w.id, { title: "" });
     expect(res.title).toBeNull();
@@ -126,7 +120,7 @@ describe("dashboard-data", () => {
   });
 
   it("fetchWidgetData returns cached data with status ok", async () => {
-    const w = await data.createWidget("core.status");
+    const w = await data.createWidget(FIXTURE_TYPE);
     const row = await data.fetchWidgetData(w.id, false);
     expect(row.status).toBe("ok");
     expect((row.payload as { platform: string }).platform).toBe("macos");
@@ -134,7 +128,7 @@ describe("dashboard-data", () => {
   });
 
   it("stores a preset accent and clears it with null", async () => {
-    const w = await data.createWidget("core.status");
+    const w = await data.createWidget(FIXTURE_TYPE);
     const res = await data.updateWidget(w.id, { accent: "violet" });
     expect(res.accent).toBe("violet");
     const cleared = await data.updateWidget(w.id, { accent: null });
@@ -142,14 +136,14 @@ describe("dashboard-data", () => {
   });
 
   it("silently normalizes a non-preset accent to null", async () => {
-    const w = await data.createWidget("core.status");
+    const w = await data.createWidget(FIXTURE_TYPE);
     await data.updateWidget(w.id, { accent: "violet" });
     const res = await data.updateWidget(w.id, { accent: "magenta" });
     expect(res.accent).toBeNull();
   });
 
   it("leaves accent untouched when the patch omits it", async () => {
-    const w = await data.createWidget("core.status");
+    const w = await data.createWidget(FIXTURE_TYPE);
     await data.updateWidget(w.id, { accent: "teal" });
     const res = await data.updateWidget(w.id, { title: "Renamed" });
     expect(res.accent).toBe("teal");
