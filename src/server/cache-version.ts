@@ -7,7 +7,7 @@ import { getPref, setPref } from "./config-repo";
  * disposable by design (everything is re-fetchable), so a mismatch wipes it —
  * no per-widget payload migrations.
  */
-export const CACHE_VERSION = 1;
+export const CACHE_VERSION = 2;
 
 export async function ensureCacheVersion(): Promise<void> {
   const stored = await getPref("cacheVersion", "");
