@@ -71,35 +71,38 @@ describe("WidgetShell refreshable", () => {
 });
 
 describe("WidgetShell accent", () => {
-  it("renders a colored edge bar for a preset accent in every state", () => {
+  it("colors the card border for a preset accent in every state", () => {
     for (const state of ["loading", "error", "empty", "ok"] as const) {
       const { container, unmount } = render(
         <WidgetShell title="X" state={state} fetchedAt={null} onRefresh={() => {}} accent="teal">
           <div>body</div>
         </WidgetShell>,
       );
-      const bar = container.querySelector("[data-accent]");
-      expect(bar, `state=${state}`).not.toBeNull();
-      expect(bar!.className).toContain("bg-teal-500");
+      const card = container.querySelector("[data-accent]");
+      expect(card, `state=${state}`).not.toBeNull();
+      expect(card!.className).toContain("border-teal-500");
+      expect(card!.className).not.toContain("border-border");
       unmount();
     }
   });
 
-  it("renders no bar when accent is absent", () => {
+  it("keeps the default border when accent is absent", () => {
     const { container } = render(
       <WidgetShell title="X" state="ok" fetchedAt={null} onRefresh={() => {}}>
         <div>body</div>
       </WidgetShell>,
     );
     expect(container.querySelector("[data-accent]")).toBeNull();
+    expect(container.querySelector("section")!.className).toContain("border-border");
   });
 
-  it("renders no bar for an unknown accent name", () => {
+  it("keeps the default border for an unknown accent name", () => {
     const { container } = render(
       <WidgetShell title="X" state="ok" fetchedAt={null} onRefresh={() => {}} accent="magenta">
         <div>body</div>
       </WidgetShell>,
     );
     expect(container.querySelector("[data-accent]")).toBeNull();
+    expect(container.querySelector("section")!.className).toContain("border-border");
   });
 });

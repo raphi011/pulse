@@ -1,7 +1,7 @@
 "use client";
 import type { ReactNode } from "react";
 import type { DraggableAttributes, DraggableSyntheticListeners } from "@dnd-kit/core";
-import { accentClass } from "@/lib/accents";
+import { accentBorderClass } from "@/lib/accents";
 
 export type WidgetState = "loading" | "error" | "empty" | "ok";
 
@@ -55,14 +55,18 @@ export function WidgetShell({
   menu?: ReactNode;
   dragHandle?: DragHandle;
   issue?: { message: string; kind?: string | null } | null;
-  /** Preset accent name (src/lib/accents.ts); null/unknown = no accent bar. */
+  /** Preset accent name (src/lib/accents.ts); null/unknown = default border. */
   accent?: string | null;
 }) {
   const { setRef, attributes, listeners } = dragHandle ?? {};
-  const bar = accentClass(accent);
+  const accentBorder = accentBorderClass(accent);
   return (
-    <section className="group/card relative flex h-full flex-col overflow-hidden rounded-xl bg-card shadow-sm ring-1 ring-border transition-shadow duration-150 hover:shadow-md dark:bg-card-dark dark:shadow-none dark:ring-border-dark dark:hover:ring-white/15">
-      {bar && <span aria-hidden data-accent className={`pointer-events-none absolute inset-y-0 left-0 w-[3px] ${bar}`} />}
+    <section
+      data-accent={accentBorder ? accent : undefined}
+      className={`group/card relative flex h-full flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-[box-shadow,border-color] duration-150 hover:shadow-md dark:bg-card-dark dark:shadow-none ${
+        accentBorder ?? "border-border dark:border-border-dark dark:hover:border-white/15"
+      }`}
+    >
       <header className="flex items-center justify-between gap-2 border-b border-border px-3.5 py-2.5 dark:border-border-dark">
         <div className="flex min-w-0 flex-1 items-center gap-1.5">
           {icon}

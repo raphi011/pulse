@@ -15,11 +15,30 @@ const CLASSES: Record<AccentName, string> = {
   pink: "bg-pink-500 dark:bg-pink-400",
 };
 
+// Real borders, not `ring` (box-shadow): a 1px shadow ring is drawn outside the
+// element and antialiases against the page background at rounded corners, so a
+// saturated ring looks thinner there. Borders paint with the card background.
+const BORDER_CLASSES: Record<AccentName, string> = {
+  red: "border-red-500 dark:border-red-400",
+  orange: "border-orange-500 dark:border-orange-400",
+  amber: "border-amber-500 dark:border-amber-400",
+  green: "border-green-500 dark:border-green-400",
+  teal: "border-teal-500 dark:border-teal-400",
+  blue: "border-blue-500 dark:border-blue-400",
+  violet: "border-violet-500 dark:border-violet-400",
+  pink: "border-pink-500 dark:border-pink-400",
+};
+
 export function isAccentName(v: unknown): v is AccentName {
   return typeof v === "string" && (ACCENT_NAMES as readonly string[]).includes(v);
 }
 
-/** Background classes for a preset; null for absent/unknown names so stale DB values degrade to no accent. */
+/** Background classes for a preset (color swatches); null for absent/unknown names so stale DB values degrade to no accent. */
 export function accentClass(name: string | null | undefined): string | null {
   return isAccentName(name) ? CLASSES[name] : null;
+}
+
+/** Border-color classes for a preset (card outline); null for absent/unknown names so stale DB values degrade to the default border. */
+export function accentBorderClass(name: string | null | undefined): string | null {
+  return isAccentName(name) ? BORDER_CLASSES[name] : null;
 }
