@@ -15,9 +15,16 @@ vi.mock("@/modules/system/sampler", () => ({
   },
 }));
 
+const layoutState = vi.hoisted(() => ({ height: 0 }));
+
+vi.mock("@/modules/system/use-element-height", () => ({
+  useElementHeight: () => ({ ref: () => {}, height: layoutState.height }),
+}));
+
 import { SystemStatsWidget } from "@/modules/system/widgets/system-stats-widget";
 import { systemStatsDefaultConfig } from "@/modules/system/manifest";
 import type { SystemStatsConfig } from "@/modules/system/manifest";
+import { FULL_MIN_PX, COMPACT_MAX_PX } from "@/modules/system/layout";
 
 const GIB = 1024 ** 3;
 const point = (t: number, cpu: number): SamplePoint => ({
@@ -34,6 +41,7 @@ describe("SystemStatsWidget", () => {
   beforeEach(() => {
     state.snapshot = { points: [], error: false };
     state.configure.mockReset();
+    layoutState.height = COMPACT_MAX_PX; // compact
   });
 
   it("shows a measuring state until two samples exist", () => {
@@ -73,5 +81,32 @@ describe("SystemStatsWidget", () => {
     const config: SystemStatsConfig = { sampleIntervalSeconds: 5, historySeconds: 300 };
     renderWidget(config);
     expect(state.configure).toHaveBeenCalledWith(config);
+  });
+
+  it("compact layout (short card) shows CPU and Memory meters and the network rates", () => {
+    layoutState.height = COMPACT_MAX_PX - 50;
+    state.snapshot = { points: [point(1000, 10), point(3000, 37.4)], error: false };
+    renderWidget();
+
+    const meters = screen.getAllByRole("meter");
+    expect(meters).toHaveLength(2);
+    expect(screen.getByRole("meter", { name: /cpu/i })).toHaveAttribute("aria-valuenow", "37");
+    expect(screen.getByText("37%")).toBeInTheDocument();
+    expect(screen.getByText("8.2 / 32.0 GB")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Network traffic" })).toHaveTextContent(
+      "↓ 1.5 MB/s ↑ 42.0 KB/s",
+    );
+    expect(screen.queryAllByTestId("system-chart-section")).toHaveLength(0);
+  });
+
+  it("full layout (tall card) shows three trend charts and no meters", () => {
+    layoutState.height = FULL_MIN_PX + 50;
+    state.snapshot = { points: [point(1000, 10), point(3000, 37.4)], error: false };
+    renderWidget();
+
+    expect(screen.getAllByTestId("system-chart-section")).toHaveLength(3);
+    expect(screen.queryAllByRole("meter")).toHaveLength(0);
+    expect(screen.getByText("CPU")).toBeInTheDocument();
+    expect(screen.getByText("37%")).toBeInTheDocument();
   });
 });
