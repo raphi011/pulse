@@ -3,11 +3,11 @@ import "@/modules/fetch";
 import "@/modules/render";
 import { getFetchWidget } from "@/modules/fetch-registry";
 import { getRenderWidget } from "@/modules/render-registry";
-import { GMAIL_TYPE, CALENDAR_TYPE, CHAT_DMS_TYPE, CHAT_CHANNELS_TYPE, DRIVE_TYPE, TASKS_TYPE } from "@/modules/gws/manifest";
+import { GMAIL_TYPE, CALENDAR_TYPE, CHAT_DMS_TYPE, CHAT_CHANNELS_TYPE, DRIVE_TYPE, TASKS_TYPE, NEXT_MEETING_TYPE } from "@/modules/gws/manifest";
 
 describe("gws registration barrels", () => {
   it("registers all gws widgets on both sides with defaults", () => {
-    for (const t of [GMAIL_TYPE, CALENDAR_TYPE, CHAT_DMS_TYPE, CHAT_CHANNELS_TYPE, DRIVE_TYPE, TASKS_TYPE]) {
+    for (const t of [GMAIL_TYPE, CALENDAR_TYPE, CHAT_DMS_TYPE, CHAT_CHANNELS_TYPE, DRIVE_TYPE, TASKS_TYPE, NEXT_MEETING_TYPE]) {
       expect(getFetchWidget(t), `server ${t}`).toBeDefined();
       expect(getRenderWidget(t), `client ${t}`).toBeDefined();
       expect(getFetchWidget(t)!.manifest).toBe(getRenderWidget(t)!.manifest);
@@ -27,6 +27,10 @@ describe("gws registration barrels", () => {
     expect(getRenderWidget(TASKS_TYPE)!.manifest.title).toBe("Tasks");
     expect(getFetchWidget(TASKS_TYPE)!.manifest.defaultConfig).toMatchObject({
       tasklist: "@default", showCompleted: false, limit: 25,
+    });
+    expect(getRenderWidget(NEXT_MEETING_TYPE)!.manifest.title).toBe("Next meeting");
+    expect(getFetchWidget(NEXT_MEETING_TYPE)!.manifest.defaultConfig).toMatchObject({
+      calendarId: "primary", includeSoloEvents: false,
     });
   });
 });
