@@ -142,6 +142,45 @@ export type TaskItem = {
 };
 export type TasksData = { tasks: TaskItem[] };
 
+// --- Next meeting (countdown) ---
+export const NEXT_MEETING_TYPE = "gws.nextMeeting";
+
+export const nextMeetingConfigSchema = z.object({
+  calendarId: z.string().default("primary").describe("Calendar ID"),
+  includeSoloEvents: z
+    .boolean()
+    .default(false)
+    .describe("Count solo events (no other attendees, no Meet link)"),
+});
+export type NextMeetingConfig = z.infer<typeof nextMeetingConfigSchema>;
+export const nextMeetingDefaultConfig: NextMeetingConfig = {
+  calendarId: "primary",
+  includeSoloEvents: false,
+};
+
+export type MeetingItem = {
+  id: string;
+  title: string;
+  start: string; // ISO datetime (timed events only — all-day is filtered out)
+  end: string;
+  meetUrl?: string;
+  url: string; // htmlLink
+};
+/** All in-progress or not-yet-started qualifying meetings today, sorted by start. */
+export type NextMeetingData = { meetings: MeetingItem[] };
+
+/** Derive the running and upcoming meeting at `now`. Pure — safe to import from client or server. */
+export function deriveMeetingState(
+  meetings: MeetingItem[],
+  now: Date,
+): { current: MeetingItem | null; next: MeetingItem | null } {
+  const t = now.getTime();
+  const current =
+    meetings.find((m) => new Date(m.start).getTime() <= t && t < new Date(m.end).getTime()) ?? null;
+  const next = meetings.find((m) => new Date(m.start).getTime() > t) ?? null;
+  return { current, next };
+}
+
 export const gmailManifest = defineManifest({
   type: GMAIL_TYPE, title: "Gmail",
   configSchema: gmailConfigSchema, defaultConfig: gmailDefaultConfig,
@@ -170,5 +209,10 @@ export const driveManifest = defineManifest({
 export const tasksManifest = defineManifest({
   type: TASKS_TYPE, title: "Tasks",
   configSchema: tasksConfigSchema, defaultConfig: tasksDefaultConfig,
+  integration: "gws",
+});
+export const nextMeetingManifest = defineManifest({
+  type: NEXT_MEETING_TYPE, title: "Next meeting",
+  configSchema: nextMeetingConfigSchema, defaultConfig: nextMeetingDefaultConfig,
   integration: "gws",
 });
