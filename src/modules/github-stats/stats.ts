@@ -1,4 +1,4 @@
-import type { Timeframe } from "./manifest";
+import type { Timeframe, StatsData, HeatmapData, HeatmapDay } from "./manifest";
 
 const DAY_MS = 86_400_000;
 
@@ -52,3 +52,32 @@ export type RawContributions = {
   totalIssueContributions: number;
   contributionCalendar: { totalContributions: number; weeks: RawWeek[] };
 };
+
+export function toStatsData(raw: RawContributions): StatsData {
+  const trend = raw.contributionCalendar.weeks.flatMap((w) =>
+    w.contributionDays.map((d) => ({ date: d.date, count: d.contributionCount })),
+  );
+  return {
+    commits: raw.totalCommitContributions,
+    prs: raw.totalPullRequestContributions,
+    reviews: raw.totalPullRequestReviewContributions,
+    issues: raw.totalIssueContributions,
+    total: raw.contributionCalendar.totalContributions,
+    trend,
+  };
+}
+
+const LEVELS: Record<ContributionLevel, HeatmapDay["level"]> = {
+  NONE: 0, FIRST_QUARTILE: 1, SECOND_QUARTILE: 2, THIRD_QUARTILE: 3, FOURTH_QUARTILE: 4,
+};
+
+export function toHeatmapData(raw: RawContributions): HeatmapData {
+  const weeks = raw.contributionCalendar.weeks.map((w) => ({
+    days: w.contributionDays.map((d) => ({
+      date: d.date,
+      count: d.contributionCount,
+      level: LEVELS[d.contributionLevel],
+    })),
+  }));
+  return { total: raw.contributionCalendar.totalContributions, weeks };
+}
