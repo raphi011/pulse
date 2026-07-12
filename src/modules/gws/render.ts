@@ -4,7 +4,7 @@ import {
 import { registerRender } from "@/modules/render-registry";
 import {
   gmailManifest, calendarManifest, chatDmsManifest, chatChannelsManifest, driveManifest, tasksManifest,
-  filterDriveFiles,
+  nextMeetingManifest, filterDriveFiles,
 } from "./manifest";
 import { GmailWidget } from "./widgets/gmail-widget";
 import { CalendarWidget } from "./widgets/calendar-widget";
@@ -12,6 +12,7 @@ import { ChatDmsWidget } from "./widgets/chat-dms-widget";
 import { ChatChannelsWidget } from "./widgets/chat-channels-widget";
 import { DriveWidget } from "./widgets/drive-widget";
 import { TasksWidget } from "./widgets/tasks-widget";
+import { NextMeetingWidget } from "./widgets/next-meeting-widget";
 
 registerRender(gmailManifest, {
   Component: GmailWidget,
@@ -42,4 +43,9 @@ registerRender(tasksManifest, {
   Component: TasksWidget,
   count: (d) => d.tasks.length,
   icon: { Icon: SiGoogletasks, className: "text-[#4285F4]" },
+});
+registerRender(nextMeetingManifest, {
+  Component: NextMeetingWidget,
+  count: (d) => d.meetings.length,
+  icon: { Icon: SiGooglecalendar, className: "text-[#4285F4]" },
 });
