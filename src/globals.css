@@ -58,12 +58,14 @@
     --chart-mem: #0d9488;
     --chart-net-rx: #0284c7;
     --chart-net-tx: #d97706;
+    --chart-contrib: #40c463;
   }
   .dark {
     --chart-cpu: #6366f1;
     --chart-mem: #0d9488;
     --chart-net-rx: #0284c7;
     --chart-net-tx: #d97706;
+    --chart-contrib: #39d353;
   }
 }
 
