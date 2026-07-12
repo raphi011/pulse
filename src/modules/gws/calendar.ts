@@ -1,7 +1,10 @@
 import { gwsJson } from "./gws";
-import type { CalendarConfig, CalendarData, CalendarEventItem } from "./manifest";
+import type {
+  CalendarConfig, CalendarData, CalendarEventItem,
+  NextMeetingConfig, NextMeetingData, MeetingItem,
+} from "./manifest";
 
-type GEvent = {
+export type GEvent = {
   id: string;
   status?: string;
   summary?: string;
@@ -10,6 +13,7 @@ type GEvent = {
   hangoutLink?: string;
   start?: { dateTime?: string; date?: string };
   end?: { dateTime?: string; date?: string };
+  attendees?: { self?: boolean; responseStatus?: string }[];
 };
 type EventsResp = { items?: GEvent[] };
 
@@ -51,4 +55,47 @@ export async function fetchCalendar(config: CalendarConfig): Promise<CalendarDat
     .filter((e) => e.status !== "cancelled")
     .map(normalizeEvent);
   return { events };
+}
+
+/** A "real meeting": timed, not cancelled, not declined by me, and not a solo
+ *  event (no other attendees and no Meet link) unless includeSoloEvents. */
+export function isMeetingEvent(e: GEvent, includeSoloEvents: boolean): boolean {
+  if (e.status === "cancelled") return false;
+  if (!e.start?.dateTime) return false; // all-day events carry `date`, not `dateTime`
+  if (e.attendees?.find((a) => a.self)?.responseStatus === "declined") return false;
+  if (!includeSoloEvents) {
+    const others = (e.attendees ?? []).filter((a) => !a.self);
+    if (others.length === 0 && !e.hangoutLink) return false;
+  }
+  return true;
+}
+
+export function normalizeMeeting(e: GEvent): MeetingItem {
+  return {
+    id: e.id,
+    title: e.summary || "(no title)",
+    start: e.start?.dateTime ?? "",
+    end: e.end?.dateTime ?? "",
+    meetUrl: e.hangoutLink,
+    url: e.htmlLink ?? "",
+  };
+}
+
+export async function fetchNextMeeting(config: NextMeetingConfig): Promise<NextMeetingData> {
+  const now = new Date();
+  const resp = await gwsJson<EventsResp>([
+    "calendar", "events", "list",
+    "--params", JSON.stringify({
+      calendarId: config.calendarId,
+      timeMin: now.toISOString(), // in-progress events end after now, so they're included
+      timeMax: dayWindow(now).timeMax,
+      singleEvents: true,
+      orderBy: "startTime",
+      maxResults: 20,
+    }),
+  ]);
+  const meetings = (resp.items ?? [])
+    .filter((e) => isMeetingEvent(e, config.includeSoloEvents))
+    .map(normalizeMeeting);
+  return { meetings };
 }

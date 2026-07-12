@@ -5,6 +5,7 @@ import {
   nextMeetingDefaultConfig,
   type MeetingItem,
 } from "@/modules/gws/manifest";
+import { isMeetingEvent, normalizeMeeting, type GEvent } from "@/modules/gws/calendar";
 
 const m = (id: string, start: string, end: string): MeetingItem => ({
   id,
@@ -51,5 +52,75 @@ describe("nextMeetingConfigSchema", () => {
   it("defaults calendarId to primary and includeSoloEvents to false", () => {
     expect(nextMeetingConfigSchema.parse({})).toEqual(nextMeetingDefaultConfig);
     expect(nextMeetingDefaultConfig).toEqual({ calendarId: "primary", includeSoloEvents: false });
+  });
+});
+
+describe("isMeetingEvent", () => {
+  const timed: GEvent = {
+    id: "e1",
+    summary: "1:1",
+    start: { dateTime: "2026-07-12T10:00:00Z" },
+    end: { dateTime: "2026-07-12T10:30:00Z" },
+    attendees: [{ self: true, responseStatus: "accepted" }, { responseStatus: "accepted" }],
+  };
+
+  it("accepts a timed event with other attendees", () => {
+    expect(isMeetingEvent(timed, false)).toBe(true);
+  });
+
+  it("rejects cancelled events", () => {
+    expect(isMeetingEvent({ ...timed, status: "cancelled" }, false)).toBe(false);
+  });
+
+  it("rejects all-day events (date, not dateTime)", () => {
+    expect(
+      isMeetingEvent({ ...timed, start: { date: "2026-07-12" }, end: { date: "2026-07-13" } }, false),
+    ).toBe(false);
+  });
+
+  it("rejects events I declined", () => {
+    expect(
+      isMeetingEvent(
+        { ...timed, attendees: [{ self: true, responseStatus: "declined" }, {}] },
+        false,
+      ),
+    ).toBe(false);
+  });
+
+  it("rejects solo events without a Meet link by default", () => {
+    expect(isMeetingEvent({ ...timed, attendees: undefined }, false)).toBe(false);
+    expect(isMeetingEvent({ ...timed, attendees: [{ self: true }] }, false)).toBe(false);
+  });
+
+  it("accepts solo events with a Meet link", () => {
+    expect(
+      isMeetingEvent({ ...timed, attendees: undefined, hangoutLink: "https://meet.google.com/x" }, false),
+    ).toBe(true);
+  });
+
+  it("accepts solo events when includeSoloEvents is on", () => {
+    expect(isMeetingEvent({ ...timed, attendees: undefined }, true)).toBe(true);
+  });
+});
+
+describe("normalizeMeeting", () => {
+  it("maps title, times, meet url, and html link with fallbacks", () => {
+    const item = normalizeMeeting({
+      id: "e9",
+      summary: "Design review",
+      htmlLink: "https://cal/e9",
+      hangoutLink: "https://meet.google.com/abc",
+      start: { dateTime: "2026-07-12T10:23:00Z" },
+      end: { dateTime: "2026-07-12T10:53:00Z" },
+    });
+    expect(item).toEqual({
+      id: "e9",
+      title: "Design review",
+      start: "2026-07-12T10:23:00Z",
+      end: "2026-07-12T10:53:00Z",
+      meetUrl: "https://meet.google.com/abc",
+      url: "https://cal/e9",
+    });
+    expect(normalizeMeeting({ id: "x" })).toMatchObject({ title: "(no title)", start: "", end: "", url: "" });
   });
 });
