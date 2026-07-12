@@ -1,8 +1,12 @@
 "use client";
+import { useState } from "react";
+import type { ReactNode } from "react";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { WidgetBodyProps } from "@/modules/contracts";
 import type { SamplePoint, SystemStatsConfig, SystemStatsData } from "../manifest";
 import { useSystemStats } from "../use-system-stats";
+import { useElementHeight } from "../use-element-height";
+import { nextLayout, type Layout } from "../layout";
 
 type Props = WidgetBodyProps<SystemStatsData, SystemStatsConfig>;
 
@@ -87,11 +91,11 @@ function NetTooltip({ active, payload }: { active?: boolean; payload?: TooltipPa
 }
 
 /** Both directions share one chart (and one auto y-domain) so relative volume reads at a glance. */
-function NetworkArea({ points }: { points: SamplePoint[] }) {
+function NetworkArea({ points, wrapperClass = "mt-1 h-16" }: { points: SamplePoint[]; wrapperClass?: string }) {
   const rxColor = "var(--chart-net-rx)";
   const txColor = "var(--chart-net-tx)";
   return (
-    <div className="mt-1 h-16">
+    <div className={wrapperClass}>
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={points} margin={{ top: 2, right: 0, bottom: 0, left: 0 }}>
           <defs>
@@ -127,18 +131,76 @@ function NetworkArea({ points }: { points: SamplePoint[] }) {
   );
 }
 
-const hintCls = "py-2 text-sm text-slate-500 dark:text-slate-400";
+/** Single-line bounded metric: label + track/fill bar + value. */
+function MeterRow({
+  label, ariaLabel, fraction, valueNow, valueMax, colorVar, value,
+}: {
+  label: string;
+  ariaLabel: string;
+  fraction: number;
+  valueNow: number;
+  valueMax: number;
+  colorVar: "--chart-cpu" | "--chart-mem";
+  value: string;
+}) {
+  const pct = Math.max(0, Math.min(1, fraction)) * 100;
+  return (
+    <div className="flex items-center gap-2">
+      <h3 className="w-14 shrink-0 text-xs font-medium uppercase tracking-wide text-muted">{label}</h3>
+      <div
+        role="meter"
+        aria-label={ariaLabel}
+        aria-valuenow={valueNow}
+        aria-valuemin={0}
+        aria-valuemax={valueMax}
+        className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-200/70 dark:bg-slate-700/50"
+      >
+        <div
+          className="h-full rounded-full"
+          style={{ width: `${pct}%`, backgroundColor: `var(${colorVar})` }}
+        />
+      </div>
+      <span className="w-24 shrink-0 whitespace-nowrap text-right text-sm font-semibold tabular-nums text-slate-900 dark:text-slate-100">
+        {value}
+      </span>
+    </div>
+  );
+}
 
-export function SystemStatsWidget({ config }: Props) {
-  const { points, error } = useSystemStats(config);
+function CompactLayout({ points, latest }: { points: SamplePoint[]; latest: SamplePoint }) {
+  return (
+    <div className="space-y-2 py-1">
+      <MeterRow
+        label="CPU" ariaLabel="CPU usage"
+        fraction={latest.cpu / 100} valueNow={Math.round(latest.cpu)} valueMax={100}
+        colorVar="--chart-cpu" value={`${latest.cpu.toFixed(0)}%`}
+      />
+      <MeterRow
+        label="Memory" ariaLabel="Memory usage"
+        fraction={latest.memTotal > 0 ? latest.memUsed / latest.memTotal : 0}
+        valueNow={Math.round(latest.memUsed / GIB)} valueMax={Math.round(latest.memTotal / GIB)}
+        colorVar="--chart-mem" value={`${gb(latest.memUsed)} / ${gb(latest.memTotal)} GB`}
+      />
+      <section aria-label="Network traffic" className="flex items-center gap-2">
+        <h3 className="w-14 shrink-0 text-xs font-medium uppercase tracking-wide text-muted">Network</h3>
+        <div className="flex-1">
+          <NetworkArea points={points} wrapperClass="h-6" />
+        </div>
+        <span className="shrink-0 whitespace-nowrap text-right text-sm font-semibold tabular-nums text-slate-900 dark:text-slate-100">
+          <span aria-hidden style={{ color: "var(--chart-net-rx)" }}>↓</span>
+          {` ${rate(latest.rx)} `}
+          <span aria-hidden style={{ color: "var(--chart-net-tx)" }}>↑</span>
+          {` ${rate(latest.tx)}`}
+        </span>
+      </section>
+    </div>
+  );
+}
 
-  if (error) return <p className={hintCls}>System stats unavailable.</p>;
-  const latest = points[points.length - 1];
-  if (points.length < 2 || !latest) return <p className={hintCls}>Measuring…</p>;
-
+function FullLayout({ points, latest }: { points: SamplePoint[]; latest: SamplePoint }) {
   return (
     <div className="space-y-4 py-1">
-      <section aria-label="CPU usage">
+      <section aria-label="CPU usage" data-testid="system-chart-section">
         <div className="flex items-baseline justify-between">
           <h3 className="text-xs font-medium uppercase tracking-wide text-muted">CPU</h3>
           <span className="text-sm font-semibold tabular-nums text-slate-900 dark:text-slate-100">
@@ -150,7 +212,7 @@ export function SystemStatsWidget({ config }: Props) {
           colorVar="--chart-cpu" gradientId="sys-cpu-fill" format={(v) => `${v.toFixed(0)}%`}
         />
       </section>
-      <section aria-label="Memory usage">
+      <section aria-label="Memory usage" data-testid="system-chart-section">
         <div className="flex items-baseline justify-between">
           <h3 className="text-xs font-medium uppercase tracking-wide text-muted">Memory</h3>
           <span className="text-sm font-semibold tabular-nums text-slate-900 dark:text-slate-100">
@@ -162,7 +224,7 @@ export function SystemStatsWidget({ config }: Props) {
           colorVar="--chart-mem" gradientId="sys-mem-fill" format={(v) => `${gb(v)} GB`}
         />
       </section>
-      <section aria-label="Network traffic">
+      <section aria-label="Network traffic" data-testid="system-chart-section">
         <div className="flex items-baseline justify-between">
           <h3 className="text-xs font-medium uppercase tracking-wide text-muted">Network</h3>
           <span className="text-sm font-semibold tabular-nums text-slate-900 dark:text-slate-100">
@@ -176,4 +238,31 @@ export function SystemStatsWidget({ config }: Props) {
       </section>
     </div>
   );
+}
+
+const hintCls = "py-2 text-sm text-slate-500 dark:text-slate-400";
+
+export function SystemStatsWidget({ config }: Props) {
+  const { points, error } = useSystemStats(config);
+  const { ref, height } = useElementHeight();
+  const [layout, setLayout] = useState<Layout>("compact");
+
+  // Storing-info-from-previous-render pattern: recompute on every render, persist
+  // for the next height change (hysteresis), and render from the fresh value.
+  const resolved = nextLayout(height, layout);
+  if (resolved !== layout) setLayout(resolved);
+
+  const latest = points[points.length - 1];
+  let body: ReactNode;
+  if (error) {
+    body = <p className={hintCls}>System stats unavailable.</p>;
+  } else if (points.length < 2 || !latest) {
+    body = <p className={hintCls}>Measuring…</p>;
+  } else if (resolved === "full") {
+    body = <FullLayout points={points} latest={latest} />;
+  } else {
+    body = <CompactLayout points={points} latest={latest} />;
+  }
+
+  return <div ref={ref} className="h-full">{body}</div>;
 }
