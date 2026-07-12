@@ -1,4 +1,6 @@
-import type { Timeframe, StatsData, HeatmapData, HeatmapDay } from "./manifest";
+import type { Timeframe, StatsData, HeatmapData, HeatmapDay, SummaryConfig, HeatmapConfig } from "./manifest";
+import { runGh } from "@/modules/github/gh";
+import { CliError } from "@/server/cli";
 
 const DAY_MS = 86_400_000;
 
@@ -80,4 +82,40 @@ export function toHeatmapData(raw: RawContributions): HeatmapData {
     })),
   }));
   return { total: raw.contributionCalendar.totalContributions, weeks };
+}
+
+type GraphqlResponse = {
+  data?: { viewer?: { contributionsCollection?: RawContributions } };
+  errors?: { message: string }[];
+};
+
+/** Runs the contributions query for a window; surfaces GraphQL `errors[]` (HTTP-200 case). */
+export async function fetchContributions(from: string, to: string): Promise<RawContributions> {
+  const stdout = await runGh([
+    "api", "graphql",
+    "-f", `query=${CONTRIB_QUERY}`,
+    "-f", `from=${from}`,
+    "-f", `to=${to}`,
+  ]);
+  let body: GraphqlResponse;
+  try {
+    body = JSON.parse(stdout);
+  } catch {
+    throw new CliError("GitHub returned non-JSON output", "failed");
+  }
+  if (body.errors?.length) throw new CliError(body.errors[0].message, "failed");
+  const cc = body.data?.viewer?.contributionsCollection;
+  if (!cc) throw new CliError("No contributions data in response", "failed");
+  return cc;
+}
+
+export async function fetchSummary(config: SummaryConfig): Promise<StatsData> {
+  const { from, to } = windowFor(config.timeframe, new Date());
+  return toStatsData(await fetchContributions(from, to));
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- config kept to match the registerFetch(config) => Promise<Data> shape
+export async function fetchHeatmap(_config: HeatmapConfig): Promise<HeatmapData> {
+  const { from, to } = yearWindow(new Date());
+  return toHeatmapData(await fetchContributions(from, to));
 }
