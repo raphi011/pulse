@@ -6,7 +6,10 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke: invokeMock }));
 import { systemSampler, __resetSamplerForTests } from "@/modules/system/sampler";
 
 const GIB = 1024 ** 3;
-const payload = { cpuPercent: 12.5, memUsedBytes: 8 * GIB, memTotalBytes: 32 * GIB };
+const payload = {
+  cpuPercent: 12.5, memUsedBytes: 8 * GIB, memTotalBytes: 32 * GIB,
+  netRxBytesPerSec: 125_000, netTxBytesPerSec: 40_000,
+};
 const config = (over: Partial<{ sampleIntervalSeconds: number; historySeconds: number }> = {}) => ({
   sampleIntervalSeconds: 2, historySeconds: 120, ...over,
 });
@@ -34,7 +37,9 @@ describe("system sampler", () => {
     const unsub = systemSampler.subscribe(() => {});
     await vi.advanceTimersByTimeAsync(0); // flush the immediate tick's promise
     expect(systemSampler.getSnapshot().points).toHaveLength(1);
-    expect(systemSampler.getSnapshot().points[0]).toMatchObject({ cpu: 12.5, memUsed: 8 * GIB, memTotal: 32 * GIB });
+    expect(systemSampler.getSnapshot().points[0]).toMatchObject({
+      cpu: 12.5, memUsed: 8 * GIB, memTotal: 32 * GIB, rx: 125_000, tx: 40_000,
+    });
 
     await vi.advanceTimersByTimeAsync(4000); // two more 2s ticks
     expect(systemSampler.getSnapshot().points).toHaveLength(3);

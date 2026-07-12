@@ -32,6 +32,6 @@ tauri-plugin-fs = "2"
 # Pool<Sqlite> types unify in db_batch. `runtime-tokio` matches the plugin's
 # sqlite runtime feature.
 sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio"] }
-# CPU/memory sampling for the system module's `system_stats` command.
-sysinfo = { version = "0.35", default-features = false, features = ["system"] }
+# CPU/memory/network sampling for the system module's `system_stats` command.
+sysinfo = { version = "0.35", default-features = false, features = ["system", "network"] }
 tauri-plugin-notification = "2.3.3"

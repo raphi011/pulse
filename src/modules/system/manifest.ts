@@ -12,10 +12,16 @@ export type SystemStatsConfig = z.infer<typeof systemStatsConfigSchema>;
 export const systemStatsDefaultConfig: SystemStatsConfig = { sampleIntervalSeconds: 2, historySeconds: 120 };
 
 /** Raw payload of the `system_stats` Tauri command (serde camelCase). */
-export type SystemStatsPayload = { cpuPercent: number; memUsedBytes: number; memTotalBytes: number };
+export type SystemStatsPayload = {
+  cpuPercent: number;
+  memUsedBytes: number;
+  memTotalBytes: number;
+  netRxBytesPerSec: number;
+  netTxBytesPerSec: number;
+};
 
 /** One sampler tick in the rolling history. `t` is Date.now() ms. */
-export type SamplePoint = { t: number; cpu: number; memUsed: number; memTotal: number };
+export type SamplePoint = { t: number; cpu: number; memUsed: number; memTotal: number; rx: number; tx: number };
 
 /**
  * The cache pipeline carries no data for this widget — it renders from the

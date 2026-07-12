@@ -20,7 +20,9 @@ import { systemStatsDefaultConfig } from "@/modules/system/manifest";
 import type { SystemStatsConfig } from "@/modules/system/manifest";
 
 const GIB = 1024 ** 3;
-const point = (t: number, cpu: number): SamplePoint => ({ t, cpu, memUsed: 8.2 * GIB, memTotal: 32 * GIB });
+const point = (t: number, cpu: number): SamplePoint => ({
+  t, cpu, memUsed: 8.2 * GIB, memTotal: 32 * GIB, rx: 1.5 * 1024 ** 2, tx: 42 * 1024,
+});
 
 function renderWidget(config: SystemStatsConfig = systemStatsDefaultConfig) {
   return render(
@@ -47,6 +49,13 @@ describe("SystemStatsWidget", () => {
     expect(screen.getByText("37%")).toBeInTheDocument();
     expect(screen.getByText("Memory")).toBeInTheDocument();
     expect(screen.getByText("8.2 / 32.0 GB")).toBeInTheDocument();
+  });
+
+  it("renders the network section with current download/upload rates", () => {
+    state.snapshot = { points: [point(1000, 10), point(3000, 37.4)], error: false };
+    renderWidget();
+    expect(screen.getByText("Network")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Network traffic" })).toHaveTextContent("↓ 1.5 MB/s ↑ 42.0 KB/s");
   });
 
   it("shows the error state when the sampler reports failure", () => {

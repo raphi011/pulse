@@ -37,7 +37,10 @@ async function tick() {
   try {
     const p = await invoke<SystemStatsPayload>("system_stats");
     failures = 0;
-    points = [...points, { t: Date.now(), cpu: p.cpuPercent, memUsed: p.memUsedBytes, memTotal: p.memTotalBytes }].slice(-capacity());
+    points = [
+      ...points,
+      { t: Date.now(), cpu: p.cpuPercent, memUsed: p.memUsedBytes, memTotal: p.memTotalBytes, rx: p.netRxBytesPerSec, tx: p.netTxBytesPerSec },
+    ].slice(-capacity());
     snapshot = { points, error: false };
   } catch {
     // Single hiccups shouldn't flicker the card into an error state.
