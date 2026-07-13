@@ -53,7 +53,13 @@ pub async fn db_batch(
             } else if value.is_string() {
                 query = query.bind(value.as_str().unwrap().to_owned());
             } else if let Some(number) = value.as_number() {
-                query = query.bind(number.as_f64().unwrap_or_default());
+                // Bind integers as i64 so values above 2^53 (and ordinary IDs/counts) round-trip
+                // losslessly; only genuinely fractional numbers fall back to f64.
+                if let Some(int) = number.as_i64() {
+                    query = query.bind(int);
+                } else {
+                    query = query.bind(number.as_f64().unwrap_or_default());
+                }
             } else {
                 query = query.bind(value);
             }

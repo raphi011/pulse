@@ -1,5 +1,5 @@
 "use client";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { DraggableAttributes, DraggableSyntheticListeners } from "@dnd-kit/core";
 import { accentBorderClass } from "@/lib/accents";
 
@@ -16,6 +16,16 @@ function ago(ts: number): string {
   if (m < 1) return "just now";
   if (m < 60) return `${m}m ago`;
   return `${Math.floor(m / 60)}h ago`;
+}
+
+/** Re-render once a minute so a rendered `ago()` label stays current without a data refresh. */
+function useMinuteTick(active: boolean): void {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!active) return;
+    const t = setInterval(() => setTick((n) => n + 1), 60_000);
+    return () => clearInterval(t);
+  }, [active]);
 }
 
 function issueStyle(kind?: string | null): { colorClass: string; label: string } {
@@ -60,6 +70,7 @@ export function WidgetShell({
 }) {
   const { setRef, attributes, listeners } = dragHandle ?? {};
   const accentBorder = accentBorderClass(accent);
+  useMinuteTick(refreshable && fetchedAt != null);
   return (
     <section
       data-accent={accentBorder ? accent : undefined}

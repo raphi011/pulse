@@ -176,6 +176,14 @@ export async function runJsonCli<T>(
     throw new CliError(`${bin} returned non-JSON output`, "failed");
   }
 
+  // A primitive/null body (e.g. literal `null`) would make extractors throw a TypeError on
+  // `body.error`. Such a body is never a valid API response, so treat it like unparseable output:
+  // a preceding process failure is more informative, otherwise surface it as a failure.
+  if (body === null || typeof body !== "object") {
+    if (processError) throw processError;
+    throw new CliError(`${bin} returned unexpected output`, "failed");
+  }
+
   const apiError = extractError(body);
   if (apiError) {
     if (apiError.code === 401 || apiError.code === 403) {

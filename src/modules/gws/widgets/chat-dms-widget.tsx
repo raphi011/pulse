@@ -1,6 +1,7 @@
 "use client";
 import type { WidgetBodyProps } from "@/modules/contracts";
 import { Avatar } from "@/components/avatar";
+import { PartialFailure } from "@/components/partial-failure";
 import type { ChatDmsData, ChatDmsConfig } from "../manifest";
 
 function shortDate(iso: string): string {
@@ -13,9 +14,15 @@ function shortDate(iso: string): string {
 }
 
 export function ChatDmsWidget({ data }: WidgetBodyProps<ChatDmsData, ChatDmsConfig>) {
+  const errors = data.errors ?? [];
   if (data.dms.length === 0)
-    return <p className="text-sm text-slate-500 dark:text-slate-400">No unread DMs.</p>;
+    return errors.length ? (
+      <PartialFailure items={errors} noun="DM" />
+    ) : (
+      <p className="text-sm text-slate-500 dark:text-slate-400">No unread DMs.</p>
+    );
   return (
+    <>
     <ul className="divide-y divide-border dark:divide-border-dark">
       {data.dms.map((dm) => (
         <li key={dm.spaceId} className="flex items-center gap-2.5 py-2">
@@ -29,5 +36,7 @@ export function ChatDmsWidget({ data }: WidgetBodyProps<ChatDmsData, ChatDmsConf
         </li>
       ))}
     </ul>
+    {errors.length > 0 && <PartialFailure items={errors} noun="DM" />}
+    </>
   );
 }

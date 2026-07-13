@@ -1,7 +1,8 @@
 "use client";
 import type { WidgetBodyProps } from "@/modules/contracts";
 import type { DependabotData, DependabotConfig, Severity } from "../manifest";
-import { NotConfigured, PartialFailure } from "./notices";
+import { NotConfigured } from "./notices";
+import { PartialFailure } from "@/components/partial-failure";
 
 const sevCls: Record<Severity, string> = {
   low: "text-slate-500 dark:text-slate-400", medium: "text-warn", high: "text-danger", critical: "text-danger font-semibold",
@@ -26,7 +27,7 @@ export function DependabotWidget({ data, config }: WidgetBodyProps<DependabotDat
           ))}
         </ul>
       )}
-      {data.errors?.length ? <PartialFailure repos={data.errors} /> : null}
+      {data.errors?.length ? <PartialFailure items={data.errors} noun="repo" /> : null}
     </>
   );
 }

@@ -29,7 +29,8 @@ export type EmailItem = {
   unread: boolean;
   url: string; // Gmail deep link
 };
-export type GmailData = { emails: EmailItem[] };
+/** `errors`: labels of messages whose per-item fetch failed (N+1 enrichment). Optional/additive. */
+export type GmailData = { emails: EmailItem[]; errors?: string[] };
 
 export type CalendarEventItem = {
   id: string;
@@ -89,7 +90,7 @@ export type ChatDm = {
   time: string;    // ISO createTime of latest message
   url: string;     // Space.spaceUri
 };
-export type ChatDmsData = { dms: ChatDm[] };
+export type ChatDmsData = { dms: ChatDm[]; errors?: string[] };
 
 export type ChatChannel = {
   spaceId: string;
@@ -99,7 +100,7 @@ export type ChatChannel = {
   unread: boolean;
   url: string;     // Space.spaceUri
 };
-export type ChatChannelsData = { channels: ChatChannel[] };
+export type ChatChannelsData = { channels: ChatChannel[]; errors?: string[] };
 
 // --- Drive (starred files) ---
 export const DRIVE_TYPE = "gws.drive";

@@ -265,7 +265,10 @@ export function SchemaForm({
                 id={id}
                 type="number"
                 className={inputCls}
-                value={String(values[f.key] ?? f.def ?? "")}
+                // Show empty (not the schema default) when cleared — the default surfaces as a
+                // placeholder and is re-applied by Zod on save, so the field stays clearable.
+                value={values[f.key] == null ? "" : String(values[f.key])}
+                placeholder={f.def != null ? String(f.def) : undefined}
                 onChange={(e) => set(f.key, e.target.value === "" ? undefined : Number(e.target.value))}
               />
             )}

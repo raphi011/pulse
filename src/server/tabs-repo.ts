@@ -1,7 +1,7 @@
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, inArray } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { getDb } from "@/db/client";
-import { tabs, widgets } from "@/db/schema";
+import { tabs, widgets, widgetCache } from "@/db/schema";
 
 export type Tab = typeof tabs.$inferSelect;
 
@@ -21,13 +21,20 @@ export async function renameTab(id: string, name: string): Promise<void> {
   await getDb().update(tabs).set({ name }).where(eq(tabs.id, id));
 }
 
-/** Delete the tab and all its widgets in one atomic batch. */
+/** Delete the tab and all its widgets in one atomic batch. Refuses to delete the last tab. */
 export async function deleteTab(id: string): Promise<void> {
+  const all = await getTabs();
+  if (all.length <= 1) throw new Error("Cannot delete the last remaining tab");
   const db = getDb();
-  await db.batch([
+  // Drop the cache rows for this tab's widgets in the same batch (widget_cache has no cascade).
+  const victims = await db.select({ id: widgets.id }).from(widgets).where(eq(widgets.tabId, id));
+  const ids = victims.map((w) => w.id);
+  const stmts: BatchItem<"sqlite">[] = [
+    ...(ids.length ? [db.delete(widgetCache).where(inArray(widgetCache.widgetId, ids))] : []),
     db.delete(widgets).where(eq(widgets.tabId, id)),
     db.delete(tabs).where(eq(tabs.id, id)),
-  ] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
+  ];
+  await db.batch(stmts as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
 }
 
 export async function setTabOrder(orders: { id: string; order: number }[]): Promise<void> {

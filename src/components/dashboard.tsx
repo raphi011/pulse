@@ -1,6 +1,6 @@
 "use client";
 import { AppLink as Link } from "@/components/app-link";
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import {
   DndContext, DragOverlay, pointerWithin, closestCenter,
   PointerSensor, useSensor, useSensors,
@@ -25,6 +25,7 @@ import { ConfigureDialog } from "./configure-dialog";
 import { ConfirmDialog } from "./confirm-dialog";
 import { TabBar } from "./tab-bar";
 import { useAutoRefresh } from "./auto-refresh-context";
+import { useToast } from "./toast-context";
 
 function AutoRefreshControls() {
   const { enabled, toggle, refreshAll } = useAutoRefresh();
@@ -115,8 +116,25 @@ export function Dashboard({
   const [width, setWidth] = useState(0);
   const gridRef = useRef<HTMLDivElement | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const { toast } = useToast();
+  // Serialize DB writes so rapid drags/resizes commit in the order they happened (fire-and-forget
+  // persists could otherwise land out of order and leave the DB on a stale layout).
+  const writeQueue = useRef<Promise<unknown>>(Promise.resolve());
 
-  useEffect(() => {
+  /** Run a persistence op after any prior one; on failure, roll the optimistic state back and warn. */
+  function persist(op: () => Promise<unknown>, rollback: () => void, message: string) {
+    const run = writeQueue.current.then(op, op);
+    writeQueue.current = run.catch(() => {});
+    run.catch((err) => {
+      console.error(message, err);
+      rollback();
+      toast(message);
+    });
+  }
+
+  // useLayoutEffect (not useEffect): measure the grid width before paint so the first frame renders
+  // at the real column count instead of flashing a single column.
+  useLayoutEffect(() => {
     const el = gridRef.current;
     if (!el) return;
     const update = () => setWidth(el.clientWidth);
@@ -141,13 +159,15 @@ export function Dashboard({
       console.error("Failed to add widget", err);
     }
   }
-  async function onRemove(id: string) {
-    await deleteWidget(id);
+  function onRemove(id: string) {
+    const prev = widgets;
     setWidgets((w) => w.filter((x) => x.id !== id));
+    persist(() => deleteWidget(id), () => setWidgets(prev), "Couldn't delete widget");
   }
-  async function onMoveWidgetToTab(widgetId: string, tabId: string) {
+  function onMoveWidgetToTab(widgetId: string, tabId: string) {
+    const prev = widgets;
     setWidgets((w) => assignWidgetToTab(w, widgetId, tabId));
-    await moveWidgetToTab(widgetId, tabId);
+    persist(() => moveWidgetToTab(widgetId, tabId), () => setWidgets(prev), "Couldn't move widget");
   }
 
   function onDragStart(e: DragStartEvent) {
@@ -160,21 +180,24 @@ export function Dashboard({
       e.over ? { id: String(e.over.id), type: e.over.data.current?.type as string | undefined } : null,
     );
     if (action.kind === "reorder-widgets") {
+      const prev = widgets;
       const next = applyReorder(widgets, action.activeId, action.overId);
       setWidgets(next);
-      void persistPositions(next);
+      persist(() => persistPositions(next), () => setWidgets(prev), "Couldn't save layout");
     } else if (action.kind === "reorder-tabs") {
+      const prev = tabs;
       const next = applyReorderTabs(tabs, action.activeTabId, action.overTabId);
       setTabs(next);
-      void reorderTabs(next.map((t) => ({ id: t.id, order: t.order })));
+      persist(() => reorderTabs(next.map((t) => ({ id: t.id, order: t.order }))), () => setTabs(prev), "Couldn't reorder tabs");
     } else if (action.kind === "move-widget-to-tab") {
-      void onMoveWidgetToTab(action.widgetId, action.tabId);
+      onMoveWidgetToTab(action.widgetId, action.tabId);
     }
   }
   function onResize(id: string, colSpan: number, rowSpan: number) {
+    const prev = widgets;
     const next = applyResize(widgets, id, colSpan, rowSpan);
     setWidgets(next);
-    void persistPositions(next);
+    persist(() => persistPositions(next), () => setWidgets(prev), "Couldn't save size");
   }
   function onConfigSaved(id: string, config: Record<string, unknown>, title: string | null, accent: string | null) {
     setWidgets((ws) => ws.map((w) => (w.id === id ? { ...w, config, title, accent } : w)));

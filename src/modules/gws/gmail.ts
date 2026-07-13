@@ -27,7 +27,9 @@ export function normalizeMessage(msg: MsgResp): EmailItem {
     from: parseFrom(header(msg, "From")),
     date: msg.internalDate ? new Date(Number(msg.internalDate)).toISOString() : "",
     unread: msg.labelIds?.includes("UNREAD") ?? false,
-    url: `https://mail.google.com/mail/u/0/#inbox/${msg.id}`,
+    // `#all/` opens the message regardless of which folder/label it lives in; `#inbox/`
+    // 404s for any query that surfaces mail outside the inbox (e.g. `is:starred`).
+    url: `https://mail.google.com/mail/u/0/#all/${msg.id}`,
   };
 }
 
@@ -49,10 +51,13 @@ export async function fetchGmail(config: GmailConfig): Promise<GmailData> {
       ]),
     ),
   );
-  const emails = settled
-    .filter((r): r is PromiseFulfilledResult<MsgResp> => r.status === "fulfilled")
-    .map((r) => normalizeMessage(r.value));
-  return { emails };
+  const emails: EmailItem[] = [];
+  const errors: string[] = [];
+  settled.forEach((r, i) => {
+    if (r.status === "fulfilled") emails.push(normalizeMessage(r.value));
+    else errors.push(ids[i]); // surface the count of messages that couldn't load, don't drop silently
+  });
+  return errors.length ? { emails, errors } : { emails };
 }
 
 /** Archive: remove the INBOX label (message stays searchable, leaves the inbox). */

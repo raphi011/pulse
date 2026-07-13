@@ -24,11 +24,11 @@ const email = (id: string, unread: boolean): EmailItem => ({
   url: `https://mail/${id}`,
 });
 
-function renderWidget(emails: EmailItem[]) {
+function renderWidget(emails: EmailItem[], errors?: string[]) {
   const refresh = vi.fn().mockResolvedValue(undefined);
   render(
     <ToastProvider>
-      <GmailWidget data={{ emails }} config={gmailDefaultConfig} refresh={refresh} />
+      <GmailWidget data={{ emails, errors }} config={gmailDefaultConfig} refresh={refresh} />
     </ToastProvider>,
   );
   return { refresh };
@@ -44,6 +44,17 @@ describe("GmailWidget actions", () => {
   it("shows an empty message when there are no emails", () => {
     renderWidget([]);
     expect(screen.getByText("No emails.")).toBeInTheDocument();
+  });
+
+  it("surfaces a partial-failure note when some messages failed to load", () => {
+    renderWidget([email("a", true)], ["m1", "m2"]);
+    expect(screen.getByText(/2 emails failed to load/i)).toBeInTheDocument();
+  });
+
+  it("shows the partial-failure note even when every message failed (no 'No emails')", () => {
+    renderWidget([], ["m1"]);
+    expect(screen.getByText(/1 email failed to load/i)).toBeInTheDocument();
+    expect(screen.queryByText("No emails.")).toBeNull();
   });
 
   it("shows Mark as read only on unread rows", () => {

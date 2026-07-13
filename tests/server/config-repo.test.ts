@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { useTempDb } from "../helpers/db";
 import { FIXTURE_TYPE } from "../helpers/fixture-widget";
 import * as repo from "@/server/config-repo";
+import * as cache from "@/server/cache-repo";
 
 beforeEach(() => useTempDb());
 
@@ -29,6 +30,14 @@ describe("config-repo", () => {
     expect((await repo.getWidget(a.id))!.hidden).toBe(true);
     await repo.removeWidget(a.id);
     expect(await repo.getWidget(a.id)).toBeUndefined();
+  });
+
+  it("removeWidget also drops the widget's cache row", async () => {
+    const a = await repo.addWidget(FIXTURE_TYPE, {});
+    await cache.set(a.id, { status: "ok", payload: { n: 1 }, error: null });
+    expect(await cache.get(a.id)).toBeDefined();
+    await repo.removeWidget(a.id);
+    expect(await cache.get(a.id)).toBeUndefined();
   });
 
   it("reads and writes prefs with defaults", async () => {

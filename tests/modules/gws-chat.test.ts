@@ -88,7 +88,13 @@ function router(opts: {
     if (args[0] === "chat" && args[1] === "spaces" && args[2] === "list") return Promise.resolve(opts.spaces);
     if (args.includes("getSpaceReadState")) return Promise.resolve(opts.readStateByName[params.name]);
     if (args[0] === "chat" && args[2] === "messages" && args[3] === "list") return Promise.resolve(opts.msgByParent[params.parent]);
-    if (args[0] === "people" && args[2] === "get") return Promise.resolve((opts.peopleByResource ?? {})[params.resourceName]);
+    if (args[0] === "people" && args[2] === "getBatchGet") {
+      const people = opts.peopleByResource ?? {};
+      const responses = (params.resourceNames as string[])
+        .filter((rn) => rn in people)
+        .map((rn) => ({ requestedResourceName: rn, person: people[rn] }));
+      return Promise.resolve({ responses });
+    }
     throw new Error(`unexpected args: ${args.join(" ")}`);
   };
 }
@@ -138,6 +144,64 @@ describe("fetchChatDms", () => {
     expect(scanned).toEqual(["users/me/spaces/S4/spaceReadState", "users/me/spaces/S3/spaceReadState"]);
   });
 
+  it("resolves all partner names in a single People getBatchGet call (N+1 → 1)", async () => {
+    const spaces = {
+      spaces: [
+        { name: "spaces/A", spaceUri: "u/A", lastActiveTime: "2026-07-10T10:00:00Z" },
+        { name: "spaces/B", spaceUri: "u/B", lastActiveTime: "2026-07-10T09:00:00Z" },
+      ],
+    };
+    mockJson.mockImplementation(
+      router({
+        spaces,
+        readStateByName: {
+          "users/me/spaces/A/spaceReadState": { name: "users/1/spaces/A/spaceReadState", lastReadTime: "2026-07-10T00:00:00Z" },
+          "users/me/spaces/B/spaceReadState": { name: "users/1/spaces/B/spaceReadState", lastReadTime: "2026-07-10T00:00:00Z" },
+        },
+        msgByParent: {
+          "spaces/A": { messages: [{ name: "spaces/A/messages/m", text: "a", createTime: "2026-07-10T10:00:00Z", sender: { name: "users/2" } }] },
+          "spaces/B": { messages: [{ name: "spaces/B/messages/m", text: "b", createTime: "2026-07-10T09:00:00Z", sender: { name: "users/3" } }] },
+        },
+        peopleByResource: {
+          "people/2": { names: [{ displayName: "Bob" }] },
+          "people/3": { names: [{ displayName: "Cara" }] },
+        },
+      }),
+    );
+    const { dms } = await fetchChatDms({ limit: 15 });
+    expect(dms.map((d) => d.partner)).toEqual(["Bob", "Cara"]);
+    // Exactly one People call, and it carries both resource names.
+    const peopleCalls = mockJson.mock.calls.filter((c) => c[0][0] === "people");
+    expect(peopleCalls).toHaveLength(1);
+    expect(peopleCalls[0][0]).toContain("getBatchGet");
+    const params = JSON.parse(peopleCalls[0][0][peopleCalls[0][0].indexOf("--params") + 1]);
+    expect(params.resourceNames).toEqual(["people/2", "people/3"]);
+  });
+
+  it("surfaces DMs whose latest-message fetch failed as errors, without dropping the rest silently", async () => {
+    const spaces = {
+      spaces: [
+        { name: "spaces/OK", spaceUri: "u/OK", lastActiveTime: "2026-07-10T10:00:00Z" },
+        { name: "spaces/BAD", spaceUri: "u/BAD", lastActiveTime: "2026-07-10T09:00:00Z" },
+      ],
+    };
+    mockJson.mockImplementation((args: string[]) => {
+      const params = JSON.parse(args[args.indexOf("--params") + 1]);
+      if (args[2] === "list" && args[1] === "spaces") return Promise.resolve(spaces);
+      if (args.includes("getSpaceReadState"))
+        return Promise.resolve({ name: "users/1/x/spaceReadState", lastReadTime: "2026-07-10T00:00:00Z" });
+      if (args[2] === "messages" && args[3] === "list") {
+        if (params.parent === "spaces/BAD") return Promise.reject(new Error("boom"));
+        return Promise.resolve({ messages: [{ name: "m", text: "ok", createTime: "2026-07-10T10:00:00Z", sender: { name: "users/2" } }] });
+      }
+      if (args[2] === "getBatchGet") return Promise.resolve({ responses: [{ requestedResourceName: "people/2", person: { names: [{ displayName: "Bob" }] } }] });
+      throw new Error(`unexpected: ${args.join(" ")}`);
+    });
+    const res = await fetchChatDms({ limit: 15 });
+    expect(res.dms.map((d) => d.spaceId)).toEqual(["spaces/OK"]);
+    expect(res.errors).toEqual(["spaces/BAD"]);
+  });
+
   it("returns empty when nothing is unread", async () => {
     mockJson.mockImplementation(
       router({
@@ -177,10 +241,12 @@ describe("fetchChatChannels", () => {
         { "spaces/OK": { messages: [{ name: "spaces/OK/messages/m", text: "deploy done", createTime: "2026-07-10T12:00:00Z" }] } },
       ),
     );
-    const { channels } = await fetchChatChannels({ spaceIds: ["spaces/OK", "spaces/GONE"] });
+    const { channels, errors } = await fetchChatChannels({ spaceIds: ["spaces/OK", "spaces/GONE"] });
     expect(channels).toEqual([
       { spaceId: "spaces/OK", name: "Ops", snippet: "deploy done", time: "2026-07-10T12:00:00Z", unread: true, url: "https://chat.google.com/room/OK?cls=11" },
     ]);
+    // The dropped space is surfaced, not silently missing.
+    expect(errors).toEqual(["spaces/GONE"]);
   });
 
   it("returns empty for empty config", async () => {

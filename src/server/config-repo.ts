@@ -1,7 +1,7 @@
 import { eq, asc } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { getDb } from "@/db/client";
-import { widgets, prefs } from "@/db/schema";
+import { widgets, prefs, widgetCache } from "@/db/schema";
 import { getFetchWidget } from "@/modules/fetch-registry";
 import { DEFAULT_ROW_SPAN } from "@/lib/grid";
 
@@ -64,7 +64,13 @@ export async function setAccent(id: string, accent: string | null): Promise<void
 }
 
 export async function removeWidget(id: string): Promise<void> {
-  await getDb().delete(widgets).where(eq(widgets.id, id));
+  // widget_cache has no FK/cascade (bare widget_id text PK), so drop the cached payload in the
+  // same atomic batch — otherwise a stale row survives until the next CACHE_VERSION bump.
+  const db = getDb();
+  await db.batch([
+    db.delete(widgets).where(eq(widgets.id, id)),
+    db.delete(widgetCache).where(eq(widgetCache.widgetId, id)),
+  ] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
 }
 
 export async function getPref(key: string, fallback: string): Promise<string> {

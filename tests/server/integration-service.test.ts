@@ -20,6 +20,7 @@ vi.mock("@/modules/render-registry", () => ({
 
 import * as reg from "@/modules/integration-registry";
 import { addWidget } from "@/server/config-repo";
+import * as cache from "@/server/cache-repo";
 import {
   resolveEnabled, getIntegrationStatuses, disableIntegration, enableIntegration,
   ConfirmRequiredError, __resetHealthCache,
@@ -84,6 +85,13 @@ describe("disable/enable", () => {
     const statuses = await getIntegrationStatuses(true);
     expect(statuses.find((s) => s.id === "toolful")!.enabled).toBe(false);
   });
+
+  it("drops the deleted widgets' cache rows on confirmed disable", async () => {
+    const w = await addWidget("t.a", {});
+    await cache.set(w.id, { status: "ok", payload: { n: 1 }, error: null });
+    await disableIntegration("toolful", true);
+    expect(await cache.get(w.id)).toBeUndefined();
+  });
   it("enable sets the override to true", async () => {
     await enableIntegration("missing");
     const statuses = await getIntegrationStatuses(true);
@@ -100,5 +108,18 @@ describe("health cache", () => {
     await getIntegrationStatuses();      // hit  -> still 1
     await getIntegrationStatuses(true);  // forced -> 2
     expect(calls).toBe(2);
+  });
+
+  it("dedupes concurrent probes of the same integration into one health CLI call", async () => {
+    let calls = 0;
+    let release!: () => void;
+    const gate = new Promise<void>((r) => { release = r; });
+    seed([{ id: "spy", name: "Spy", tool: { bin: "x", installHint: "i", authHint: "a" },
+      checkHealth: async () => { calls++; await gate; return { installed: true, authed: true }; } }]);
+    const both = Promise.all([getIntegrationStatuses(true), getIntegrationStatuses(true)]);
+    await new Promise((r) => setTimeout(r, 10)); // let both callers reach the in-flight probe
+    release();
+    await both;
+    expect(calls).toBe(1);
   });
 });

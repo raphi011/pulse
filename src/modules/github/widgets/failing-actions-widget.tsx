@@ -1,7 +1,8 @@
 "use client";
 import type { WidgetBodyProps } from "@/modules/contracts";
 import type { FailingActionsData, FailingActionsConfig } from "../manifest";
-import { NotConfigured, PartialFailure } from "./notices";
+import { NotConfigured } from "./notices";
+import { PartialFailure } from "@/components/partial-failure";
 
 export function FailingActionsWidget({ data, config }: WidgetBodyProps<FailingActionsData, FailingActionsConfig>) {
   if (config.repos.length === 0) return <NotConfigured />;
@@ -22,7 +23,7 @@ export function FailingActionsWidget({ data, config }: WidgetBodyProps<FailingAc
           ))}
         </ul>
       )}
-      {data.errors?.length ? <PartialFailure repos={data.errors} /> : null}
+      {data.errors?.length ? <PartialFailure items={data.errors} noun="repo" /> : null}
     </>
   );
 }

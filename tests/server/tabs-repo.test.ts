@@ -3,6 +3,7 @@ import { useTempDb } from "../helpers/db";
 import { FIXTURE_TYPE } from "../helpers/fixture-widget";
 import * as tabs from "@/server/tabs-repo";
 import * as widgetsRepo from "@/server/config-repo";
+import * as cache from "@/server/cache-repo";
 
 beforeEach(() => useTempDb());
 
@@ -44,6 +45,20 @@ describe("tabs-repo", () => {
     expect((await tabs.getTabs()).some((t) => t.id === a.id)).toBe(false);
     expect(await widgetsRepo.getWidget(w.id)).toBeUndefined();
     expect(await widgetsRepo.getWidget(other.id)).toBeDefined();
+  });
+
+  it("deleting a tab also drops its widgets' cache rows", async () => {
+    const a = await tabs.addTab("Work");
+    const w = await widgetsRepo.addWidget(FIXTURE_TYPE, {}, a.id);
+    await cache.set(w.id, { status: "ok", payload: { n: 1 }, error: null });
+    await tabs.deleteTab(a.id);
+    expect(await cache.get(w.id)).toBeUndefined();
+  });
+
+  it("refuses to delete the last remaining tab", async () => {
+    // Only the seeded "default" tab exists.
+    await expect(tabs.deleteTab("default")).rejects.toThrow(/last remaining tab/);
+    expect(await tabs.getTabs()).toHaveLength(1);
   });
 
   it("addWidget assigns the given tab and setWidgetTab moves it", async () => {

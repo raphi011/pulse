@@ -14,6 +14,8 @@ type Person = {
   names?: { displayName?: string }[];
   photos?: { url?: string; default?: boolean }[];
 };
+type PersonResponse = { requestedResourceName?: string; person?: Person };
+type BatchGetResp = { responses?: PersonResponse[] };
 
 /** A space is unread when its last message is newer than the caller's last read time. */
 export function isUnread(lastActiveTime?: string, lastReadTime?: string): boolean {
@@ -81,7 +83,8 @@ export async function fetchChatDms(config: ChatDmsConfig): Promise<ChatDmsData> 
     .filter(({ space, rs }) => isUnread(space.lastActiveTime, rs.lastReadTime))
     .map(({ space, rs }) => ({ space, me: callerUserId(rs.name) }));
 
-  // For each unread DM: latest message (snippet/time/partner id), then resolve the name via People API.
+  // For each unread DM: fetch the latest message (snippet/time/partner id). Partner-name resolution
+  // is deferred and batched below — one People call for all DMs instead of one per DM (N+1 → 1).
   const settled = await Promise.allSettled(
     unread.map(async ({ space, me }) => {
       const resp = await gwsJson<MessagesResp>([
@@ -91,16 +94,23 @@ export async function fetchChatDms(config: ChatDmsConfig): Promise<ChatDmsData> 
       const msg = resp.messages?.[0];
       if (!msg) return null;
       if (me && msg.sender?.name === me) return null; // self-sent — best-effort (skipped if read-state name lacked a user id); real API always provides it
-      const partner = await resolvePartner(msg.sender?.name);
-      return normalizeDm(space, msg, partner.name, partner.photo);
+      return { space, msg };
     }),
   );
-  const dms = settled
-    .filter((r): r is PromiseFulfilledResult<ChatDm | null> => r.status === "fulfilled")
-    .map((r) => r.value)
-    .filter((d): d is ChatDm => d !== null);
+  const enriched: { space: Space; msg: Message }[] = [];
+  const errors: string[] = [];
+  settled.forEach((r, i) => {
+    if (r.status === "fulfilled") { if (r.value) enriched.push(r.value); }
+    else errors.push(unread[i].space.name); // couldn't load this DM's latest message — surface, don't drop silently
+  });
 
-  return { dms };
+  const partners = await resolvePartners(enriched.map((e) => e.msg.sender?.name));
+  const dms = enriched.map(({ space, msg }) => {
+    const p = partners.get(msg.sender?.name ?? "") ?? { name: null, photo: null };
+    return normalizeDm(space, msg, p.name, p.photo);
+  });
+
+  return errors.length ? { dms, errors } : { dms };
 }
 
 export async function fetchChatChannels(config: ChatChannelsConfig): Promise<ChatChannelsData> {
@@ -121,25 +131,52 @@ export async function fetchChatChannels(config: ChatChannelsConfig): Promise<Cha
       return normalizeChannel(spaceId, space, rs, msgs.messages?.[0]);
     }),
   );
-  const channels = results
-    .filter((r): r is PromiseFulfilledResult<ChatChannel> => r.status === "fulfilled")
-    .map((r) => r.value);
-  return { channels };
+  const channels: ChatChannel[] = [];
+  const errors: string[] = [];
+  results.forEach((r, i) => {
+    if (r.status === "fulfilled") channels.push(r.value);
+    else errors.push(config.spaceIds[i]); // a stale/404 space id: surface which one, don't drop silently
+  });
+  return errors.length ? { channels, errors } : { channels };
 }
 
-/** Resolve a Chat sender id ("users/<id>") to a display name + avatar via the People API. */
-async function resolvePartner(userName?: string): Promise<{ name: string | null; photo: string | null }> {
-  const resourceName = peopleResourceName(userName);
-  if (!resourceName) return { name: null, photo: null };
+type Partner = { name: string | null; photo: string | null };
+
+function personToPartner(person?: Person): Partner {
+  // Skip Google's generic silhouette (`default: true`) so the widget falls back to initials.
+  const photo = person?.photos?.find((p) => p.url && !p.default)?.url ?? null;
+  return { name: person?.names?.[0]?.displayName ?? null, photo };
+}
+
+/**
+ * Resolve many Chat sender ids ("users/<id>") to display names + avatars in ONE People
+ * `getBatchGet` call (up to 200 resource names) instead of one `people.get` per DM. Returns a map
+ * keyed by the original sender id; a whole-call failure or a missing person falls back to null,
+ * so normalizeDm degrades to "Direct message" exactly as the per-call version did.
+ */
+async function resolvePartners(senderNames: (string | undefined)[]): Promise<Map<string, Partner>> {
+  const map = new Map<string, Partner>();
+  // sender "users/123" -> People resource "people/123"; drop unresolvable/duplicate ids.
+  const pairs = senderNames
+    .map((sender) => ({ sender, resource: peopleResourceName(sender) }))
+    .filter((p): p is { sender: string; resource: string } => !!p.sender && !!p.resource);
+  const resources = [...new Set(pairs.map((p) => p.resource))];
+  if (!resources.length) return map;
+
+  const byResource = new Map<string, Partner>();
   try {
-    const person = await gwsJson<Person>([
-      "people", "people", "get",
-      "--params", JSON.stringify({ resourceName, personFields: "names,photos" }),
+    const resp = await gwsJson<BatchGetResp>([
+      "people", "people", "getBatchGet",
+      "--params", JSON.stringify({ resourceNames: resources, personFields: "names,photos" }),
     ]);
-    // Skip Google's generic silhouette (`default: true`) so the widget falls back to initials.
-    const photo = person.photos?.find((p) => p.url && !p.default)?.url ?? null;
-    return { name: person.names?.[0]?.displayName ?? null, photo };
+    for (const r of resp.responses ?? []) {
+      if (r.requestedResourceName) byResource.set(r.requestedResourceName, personToPartner(r.person));
+    }
   } catch {
-    return { name: null, photo: null }; // lookup failed — normalizeDm falls back to "Direct message"
+    // Whole batch failed — every partner falls back to null (widget shows "Direct message").
   }
+  for (const { sender, resource } of pairs) {
+    map.set(sender, byResource.get(resource) ?? { name: null, photo: null });
+  }
+  return map;
 }

@@ -33,7 +33,7 @@ describe("normalizeMessage", () => {
       subject: "Hello",
       from: "Jane",
       unread: true,
-      url: "https://mail.google.com/mail/u/0/#inbox/abc123",
+      url: "https://mail.google.com/mail/u/0/#all/abc123",
     });
     expect(item.date).toBe(new Date(1783656740000).toISOString());
   });

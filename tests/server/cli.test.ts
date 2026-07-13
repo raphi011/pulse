@@ -272,6 +272,17 @@ describe("runJsonCli (driven through the mocked runCli/Command)", () => {
     expect(err.message).toBe("Not authenticated — run `gws auth login`");
   });
 
+  it("throws failed (not a TypeError) when the body is literal null", async () => {
+    const cmd = nextCommand();
+    const promise = runJsonCli("gws", ["x"], extractApiError);
+    cmd.emitStdout("null"); // parses to null; a naive `body.error` would throw a TypeError
+    cmd.emitClose({ code: 0, signal: null });
+    const err = (await promise.catch((e) => e)) as CliError;
+    expect(err).toBeInstanceOf(CliError);
+    expect(err.kind).toBe("failed");
+    expect(err.message).toMatch(/unexpected output/);
+  });
+
   it("surfaces a non-zero exit as failure even when its JSON body carries no embedded error", async () => {
     const cmd = nextCommand();
     const promise = runJsonCli("gws", ["x"], extractApiError);

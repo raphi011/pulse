@@ -40,8 +40,11 @@ export function ConfigureDialog({
     try {
       ({ config: stored, title: storedTitle, accent: storedAccent } =
         await updateWidget(widget.id, { config: values, title: nextTitle, accent }));
-    } catch {
-      setError("Invalid configuration");
+    } catch (err) {
+      // Distinguish a schema-validation failure from a save/DB failure — labelling every failure
+      // "Invalid configuration" hides the real cause (e.g. a locked DB).
+      const m = err instanceof Error ? err.message : "";
+      setError(m === "Invalid config" ? "Invalid configuration" : `Couldn't save: ${m || "unknown error"}`);
       setSaving(false);
       return;
     }

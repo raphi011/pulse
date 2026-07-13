@@ -9,11 +9,3 @@ export function NotConfigured() {
   );
 }
 
-/** Non-fatal footer note when some repos failed to load but others succeeded. */
-export function PartialFailure({ repos }: { repos: string[] }) {
-  return (
-    <p title={repos.join(", ")} className="mt-2 text-xs text-warn">
-      {repos.length} repo{repos.length === 1 ? "" : "s"} failed to load
-    </p>
-  );
-}

@@ -6,6 +6,10 @@ let db: SqliteRemoteDatabase<typeof schema> | null = null;
 
 const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
+// Connection string for the SQL plugin. MUST stay in sync with DB_URL in src-tauri/src/db_batch.rs,
+// which reaches for the same pool by this key.
+const DB_URL = "sqlite:dashboard.db";
+
 type Transport = {
   query: (sql: string, params: unknown[], method: string) => Promise<{ rows: unknown[] }>;
   batch: (queries: { sql: string; params: unknown[]; method: string }[]) => Promise<{ rows: unknown[] }[]>;
@@ -23,7 +27,7 @@ function makeTauriTransport(): Transport {
   const load = async () => {
     const { default: Database } = await import("@tauri-apps/plugin-sql");
     // WAL parity with the Node transport; runs exactly once on first load.
-    return (loading ??= Database.load("sqlite:dashboard.db").then(async (sqlDb) => {
+    return (loading ??= Database.load(DB_URL).then(async (sqlDb) => {
       await sqlDb.execute("PRAGMA journal_mode=WAL", []);
       return sqlDb;
     }));
@@ -53,6 +57,10 @@ function makeTauriTransport(): Transport {
       // must fail loudly, not silently return [].
       const bad = queries.find((q) => q.method !== "run");
       if (bad) throw new Error(`db_batch supports only write ("run") statements; got method "${bad.method}"`);
+      // db_batch reaches into the SQL plugin's pool by DB_URL — ensure Database.load() has registered
+      // it first. Query paths call load() implicitly, but a batch-first path would otherwise fail
+      // "pool not loaded".
+      await load();
       await invoke("db_batch", { statements: queries.map((q) => ({ sql: q.sql, params: q.params })) });
       return queries.map(() => ({ rows: [] as unknown[] })); // drizzle batch expects one result per query
     },

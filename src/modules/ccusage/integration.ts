@@ -10,5 +10,6 @@ registerIntegration({
     installHint: "Install ccusage — `npm i -g ccusage`.",
     authHint: "No authentication needed — ccusage reads local ~/.claude logs.",
   },
-  checkHealth: () => probeHealth(() => runCcusage(["--version"])),
+  // ccusage reads local ~/.claude logs — no auth concept, so report authed: "n/a".
+  checkHealth: () => probeHealth(() => runCcusage(["--version"]), { noAuth: true }),
 });

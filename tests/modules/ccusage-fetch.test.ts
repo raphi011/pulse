@@ -31,4 +31,9 @@ describe("fetchCcusage", () => {
     const data = await fetchCcusage(cfg);
     expect(data.costUsd).toBe(0);
   });
+
+  it("throws a classified CliError (not a raw SyntaxError) on non-JSON output", async () => {
+    mockRun.mockResolvedValueOnce({ stdout: "npm warn ...\n{not json", stderr: "" });
+    await expect(fetchCcusage(cfg)).rejects.toMatchObject({ kind: "failed" });
+  });
 });

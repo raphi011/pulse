@@ -33,15 +33,33 @@ describe("gws option providers", () => {
     expect(mockJson).toHaveBeenCalledWith(["calendar", "calendarList", "list"]);
   });
 
-  it("maps chat spaces to name/displayName, falling back to the id", async () => {
+  it("maps chat spaces to name/displayName, labeling DMs and falling back to the id", async () => {
     mockJson.mockResolvedValue({ spaces: [
       { name: "spaces/AAA", displayName: "Team" },
       { name: "spaces/BBB" },
+      { name: "spaces/CCC", spaceType: "DIRECT_MESSAGE" },
     ] });
     await expect(fetchChatSpaceOptions()).resolves.toEqual([
       { value: "spaces/AAA", label: "Team" },
       { value: "spaces/BBB", label: "spaces/BBB" },
+      { value: "spaces/CCC", label: "Direct message" },
     ]);
-    expect(mockJson).toHaveBeenCalledWith(["chat", "spaces", "list"]);
+    expect(mockJson).toHaveBeenCalledWith([
+      "chat", "spaces", "list", "--params", JSON.stringify({ pageSize: 1000 }),
+    ]);
+  });
+
+  it("pages through chat spaces until nextPageToken is exhausted", async () => {
+    mockJson
+      .mockResolvedValueOnce({ spaces: [{ name: "spaces/AAA", displayName: "A" }], nextPageToken: "tok" })
+      .mockResolvedValueOnce({ spaces: [{ name: "spaces/BBB", displayName: "B" }] });
+    await expect(fetchChatSpaceOptions()).resolves.toEqual([
+      { value: "spaces/AAA", label: "A" },
+      { value: "spaces/BBB", label: "B" },
+    ]);
+    expect(mockJson).toHaveBeenCalledTimes(2);
+    expect(mockJson).toHaveBeenLastCalledWith([
+      "chat", "spaces", "list", "--params", JSON.stringify({ pageSize: 1000, pageToken: "tok" }),
+    ]);
   });
 });

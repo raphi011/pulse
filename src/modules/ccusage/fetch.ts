@@ -1,4 +1,5 @@
 import { registerFetch } from "@/modules/fetch-registry";
+import { CliError } from "@/server/cli";
 import { ccusageSpendManifest, type CcusageSpendConfig, type CcusageSpendData } from "./manifest";
 import { runCcusage } from "./ccusage";
 
@@ -15,7 +16,14 @@ function today(): { compact: string; iso: string } {
 export async function fetchCcusage(_config: CcusageSpendConfig): Promise<CcusageSpendData> {
   const { compact, iso } = today();
   const { stdout } = await runCcusage(["daily", "--json", "--since", compact, "--until", compact]);
-  const body = JSON.parse(stdout) as { totals?: { totalCost?: number } };
+  let body: { totals?: { totalCost?: number } };
+  try {
+    body = JSON.parse(stdout);
+  } catch {
+    // A non-JSON preamble (e.g. an npx install banner) shouldn't surface as a raw
+    // SyntaxError — classify it like the other CLI modules do.
+    throw new CliError("ccusage returned non-JSON output", "failed");
+  }
   return { costUsd: body.totals?.totalCost ?? 0, date: iso };
 }
 

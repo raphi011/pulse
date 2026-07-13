@@ -102,6 +102,12 @@ function expire() {
   deadline = null;
   const ended = phase;
   if (ended === "work") {
+    // A work block that spanned local midnight belongs to the new day — drop yesterday's optimistic
+    // base so the notification numbers this as today's block, not a continuation of yesterday's count.
+    if (countDayStart !== null && localDayStart() !== countDayStart) {
+      completedToday = 0;
+      countDayStart = localDayStart();
+    }
     workBlocksSinceLongBreak += 1;
     completedToday += 1; // optimistic; reconciled by persistSession
     phase = workBlocksSinceLongBreak % config.pomodorosPerLongBreak === 0 ? "longBreak" : "shortBreak";
@@ -142,12 +148,16 @@ async function sendPhaseEndNotification(ended: PomodoroPhase) {
 }
 
 async function loadCount() {
+  // Record the day we (attempted to) count for even on failure — otherwise countDayStart stays null
+  // and the start()/expire() rollover reconciliation never fires for the rest of the session.
+  const dayStart = localDayStart();
   try {
     completedToday = await countSessionsToday();
-    countDayStart = localDayStart();
-    publish();
   } catch {
-    // Card renders with 0 until a session completes; not worth an error state.
+    // Card renders with the last-known count until a session completes; not worth an error state.
+  } finally {
+    countDayStart = dayStart;
+    publish();
   }
 }
 

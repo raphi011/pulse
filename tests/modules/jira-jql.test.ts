@@ -5,7 +5,7 @@ vi.mock("@/modules/jira/jira", () => ({
 }));
 import { jiraJson } from "@/modules/jira/jira";
 import { CliError } from "@/server/cli";
-import { normalizeIssue, fetchJql, type JiraRawIssue } from "@/modules/jira/jql";
+import { normalizeIssue, fetchJql, stripTrailingOrderBy, type JiraRawIssue } from "@/modules/jira/jql";
 import fixture from "../fixtures/jira/jql.json";
 
 const mockJson = jiraJson as unknown as ReturnType<typeof vi.fn>;
@@ -28,6 +28,37 @@ describe("normalizeIssue", () => {
 
   it("normalizes a null assignee to null", () => {
     expect(normalizeIssue(fixture[2] as JiraRawIssue, "https://x.atlassian.net").assignee).toBeNull();
+  });
+});
+
+describe("stripTrailingOrderBy", () => {
+  it("strips a trailing ORDER BY clause", () => {
+    expect(stripTrailingOrderBy("project = CORE ORDER BY updated DESC")).toBe("project = CORE");
+  });
+
+  it("is case-insensitive and trims", () => {
+    expect(stripTrailingOrderBy("project = CORE order by created")).toBe("project = CORE");
+  });
+
+  it("leaves JQL without an ORDER BY untouched", () => {
+    expect(stripTrailingOrderBy("project = CORE AND status = Open")).toBe("project = CORE AND status = Open");
+  });
+
+  it("does NOT strip an 'order by' inside a double-quoted literal", () => {
+    expect(stripTrailingOrderBy('summary ~ "sort order by date"')).toBe('summary ~ "sort order by date"');
+  });
+
+  it("does NOT strip an 'order by' inside a single-quoted literal", () => {
+    expect(stripTrailingOrderBy("summary ~ 'order by clause'")).toBe("summary ~ 'order by clause'");
+  });
+
+  it("strips the real trailing clause but keeps a quoted one", () => {
+    expect(stripTrailingOrderBy('summary ~ "order by date" ORDER BY updated')).toBe('summary ~ "order by date"');
+  });
+
+  it("handles an escaped quote inside a literal without ending the string early", () => {
+    expect(stripTrailingOrderBy('summary ~ "a \\" order by b" ORDER BY updated'))
+      .toBe('summary ~ "a \\" order by b"');
   });
 });
 

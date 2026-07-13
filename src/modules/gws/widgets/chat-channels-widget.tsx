@@ -1,5 +1,6 @@
 "use client";
 import type { WidgetBodyProps } from "@/modules/contracts";
+import { PartialFailure } from "@/components/partial-failure";
 import type { ChatChannelsData, ChatChannelsConfig } from "../manifest";
 
 function shortDate(iso: string): string {
@@ -12,11 +13,15 @@ function shortDate(iso: string): string {
 }
 
 export function ChatChannelsWidget({ data }: WidgetBodyProps<ChatChannelsData, ChatChannelsConfig>) {
+  const errors = data.errors ?? [];
   if (data.channels.length === 0)
-    return (
+    return errors.length ? (
+      <PartialFailure items={errors} noun="channel" />
+    ) : (
       <p className="text-sm text-slate-500 dark:text-slate-400">No channels configured.</p>
     );
   return (
+    <>
     <ul className="divide-y divide-border dark:divide-border-dark">
       {data.channels.map((c) => (
         <li key={c.spaceId} className="flex items-center gap-2.5 py-2">
@@ -32,5 +37,7 @@ export function ChatChannelsWidget({ data }: WidgetBodyProps<ChatChannelsData, C
         </li>
       ))}
     </ul>
+    {errors.length > 0 && <PartialFailure items={errors} noun="channel" />}
+    </>
   );
 }

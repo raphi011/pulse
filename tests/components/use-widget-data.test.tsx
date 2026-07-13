@@ -18,6 +18,14 @@ function Probe() {
   return <span>ready</span>;
 }
 
+// Exposes refresh() so a test can fire overlapping calls.
+let probeRefresh: () => Promise<unknown> = async () => undefined;
+function RefreshProbe() {
+  const { refresh } = useWidgetData("w1");
+  probeRefresh = refresh;
+  return <span>ready</span>;
+}
+
 function StaticProbe() {
   const { refresh } = useWidgetData("w1", false);
   void refresh;
@@ -125,6 +133,27 @@ test("stops auto-refreshing after toggling off", async () => {
   await act(async () => { screen.getByText("toggle").click(); }); // disable
   await act(async () => { await vi.advanceTimersByTimeAsync(10 * 60 * 1000); });
   expect(refreshCallCount()).toBe(1); // no further refreshes after disabling
+});
+
+test("overlapping refreshes collapse to a single upstream fetch (dedup)", async () => {
+  // Hold the forced fetch open so a second refresh() overlaps the first.
+  let release!: (row: typeof okRow) => void;
+  mockFetchWidgetData.mockImplementation(async (_id, refresh) =>
+    refresh ? new Promise((res) => { release = res; }) : okRow,
+  );
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={client}>
+      <AutoRefreshProvider><ToastProvider><RefreshProbe /></ToastProvider></AutoRefreshProvider>
+    </QueryClientProvider>,
+  );
+  await act(async () => { await vi.advanceTimersByTimeAsync(0); }); // flush cache-first load
+
+  // Two overlapping refreshes while the first forced fetch is still pending.
+  await act(async () => { void probeRefresh(); void probeRefresh(); await vi.advanceTimersByTimeAsync(0); });
+  expect(refreshCallCount()).toBe(1); // deduped — only one forced fetch
+
+  await act(async () => { release(okRow); await vi.advanceTimersByTimeAsync(0); });
 });
 
 test("refreshable=false ignores auto-refresh interval and refreshAll", async () => {

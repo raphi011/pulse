@@ -17,14 +17,19 @@ export async function jiraJson<T>(args: string[]): Promise<T> {
 }
 
 let cachedServer: string | null = null;
+let cachedAt = 0;
+// Cache with a TTL rather than for the whole process lifetime: a `jira init` to a different server
+// then self-heals within a few minutes instead of requiring an app restart.
+const SERVER_TTL_MS = 5 * 60_000;
 
-/** Base URL of the Jira instance, read from jira-cli's config (`server:`). Cached. */
+/** Base URL of the Jira instance, read from jira-cli's config (`server:`). Cached (TTL). */
 export async function jiraServerUrl(): Promise<string> {
-  if (cachedServer) return cachedServer;
+  if (cachedServer && Date.now() - cachedAt < SERVER_TTL_MS) return cachedServer;
   const path = await join(await homeDir(), ".config", ".jira", ".config.yml");
   const text = await readTextFile(path);
   const match = text.match(/^server:\s*(\S+)/m);
   if (!match) throw new Error("Could not find `server:` in jira-cli config — run `jira init`");
   cachedServer = match[1].replace(/^["']|["']$/g, "").replace(/\/$/, "");
+  cachedAt = Date.now();
   return cachedServer;
 }

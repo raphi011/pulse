@@ -6,6 +6,7 @@ import type { WidgetBodyProps } from "@/modules/contracts";
 import type { GmailData, GmailConfig, EmailItem } from "../manifest";
 import { archiveEmail, markEmailRead, trashEmail } from "../gmail";
 import { useToast } from "@/components/toast-context";
+import { PartialFailure } from "@/components/partial-failure";
 import { CliError } from "@/server/cli";
 
 function shortDate(iso: string): string {
@@ -55,10 +56,17 @@ export function GmailWidget({ data, refresh }: WidgetBodyProps<GmailData, GmailC
     }
   }
 
+  const errors = data.errors ?? [];
+
   if (data.emails.length === 0)
-    return <p className="text-sm text-slate-500 dark:text-slate-400">No emails.</p>;
+    return errors.length ? (
+      <PartialFailure items={errors} noun="email" />
+    ) : (
+      <p className="text-sm text-slate-500 dark:text-slate-400">No emails.</p>
+    );
 
   return (
+    <>
     <ul className="divide-y divide-border dark:divide-border-dark">
       {data.emails.map((m) => {
         const busy = Boolean(pending[m.id]);
@@ -99,5 +107,7 @@ export function GmailWidget({ data, refresh }: WidgetBodyProps<GmailData, GmailC
         );
       })}
     </ul>
+    {errors.length > 0 && <PartialFailure items={errors} noun="email" />}
+    </>
   );
 }

@@ -22,9 +22,39 @@ export function normalizeIssue(raw: JiraRawIssue, serverUrl: string): JiraIssue 
   };
 }
 
+/**
+ * Strip a trailing `ORDER BY` clause. jira-cli appends its own ORDER BY, so a trailing one
+ * in the user's JQL is a syntax error. The match must ignore `order by` inside quoted string
+ * literals (e.g. `summary ~ "sort order by date"`), so we blank quoted spans to a non-whitespace
+ * sentinel (\0) — preserving indices, and non-whitespace so the clause's leading `\s+` can't span
+ * across a blanked literal — before locating the clause, then cut the original at that index.
+ */
+export function stripTrailingOrderBy(jql: string): string {
+  let masked = "";
+  let quote: '"' | "'" | null = null;
+  for (let i = 0; i < jql.length; i++) {
+    const ch = jql[i];
+    if (quote) {
+      if (ch === "\\" && i + 1 < jql.length) {
+        masked += "\0\0"; // blank the backslash and the char it escapes
+        i++;
+        continue;
+      }
+      masked += "\0";
+      if (ch === quote) quote = null;
+    } else if (ch === '"' || ch === "'") {
+      masked += "\0";
+      quote = ch;
+    } else {
+      masked += ch;
+    }
+  }
+  const m = masked.match(/\s+order\s+by\s+[\s\S]+$/i);
+  return (m ? jql.slice(0, m.index) : jql).trim();
+}
+
 export async function fetchJql(config: JqlConfig): Promise<JqlData> {
-  // jira-cli appends its own ORDER BY, so a trailing ORDER BY in the JQL is a syntax error.
-  const jql = config.jql.replace(/\s+order\s+by\s+[\s\S]+$/i, "").trim();
+  const jql = stripTrailingOrderBy(config.jql);
   try {
     const raw = await jiraJson<JiraRawIssue[]>([
       "issue", "list", "-q", jql, "--order-by", "updated", "--paginate", `0:${config.limit}`,

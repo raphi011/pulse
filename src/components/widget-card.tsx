@@ -57,7 +57,11 @@ export function WidgetCard({
   const HeaderControls = def.HeaderControls;
   const headerExtra =
     HeaderControls && hasData ? (
-      <HeaderControls data={data!.payload} config={widget.config} refresh={refresh} />
+      // HeaderControls render in the header, outside the Body boundary below — give them their own
+      // so a throw there can't unmount the whole dashboard. Fail silently (no error block in the header).
+      <WidgetErrorBoundary resetKey={data!.fetchedAt} fallback={null}>
+        <HeaderControls data={data!.payload} config={widget.config} refresh={refresh} />
+      </WidgetErrorBoundary>
     ) : undefined;
 
   return (
