@@ -7,10 +7,11 @@ import { AutoRefreshProvider } from "@/components/auto-refresh-context";
 import { ToastProvider } from "@/components/toast-context";
 import { Dashboard } from "@/components/dashboard";
 import { IntegrationsPanel } from "@/components/integrations-panel";
+import { LoadError } from "@/components/load-error";
+import { useAsyncResource } from "@/components/use-async-resource";
 import { fetchLayout, fetchIntegrations } from "@/lib/dashboard-data";
 import { ensureCacheVersion } from "@/server/cache-version";
 import { warmToolPath } from "@/server/cli";
-import type { IntegrationStatus } from "@/modules/integration-contracts";
 
 function useHashRoute(): string {
   const [route, setRoute] = useState(() => window.location.hash.replace(/^#/, "") || "/");
@@ -23,10 +24,8 @@ function useHashRoute(): string {
 }
 
 function DashboardView() {
-  const [layout, setLayout] = useState<Awaited<ReturnType<typeof fetchLayout>> | null>(null);
-  useEffect(() => {
-    (async () => setLayout(await fetchLayout()))();
-  }, []);
+  const { data: layout, error, reload } = useAsyncResource(fetchLayout);
+  if (error) return <LoadError error={error} onRetry={reload} />;
   if (!layout) return null;
   return (
     <Dashboard
@@ -38,10 +37,8 @@ function DashboardView() {
 }
 
 function IntegrationsView() {
-  const [initial, setInitial] = useState<IntegrationStatus[] | null>(null);
-  useEffect(() => {
-    fetchIntegrations().then(setInitial);
-  }, []);
+  const { data: initial, error, reload } = useAsyncResource(fetchIntegrations);
+  if (error) return <LoadError error={error} onRetry={reload} />;
   if (!initial) return null;
   return <IntegrationsPanel initial={initial} />;
 }
