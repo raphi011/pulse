@@ -17,7 +17,8 @@
       "allow": [
         { "name": "gh", "cmd": "gh", "args": true },
         { "name": "jira", "cmd": "jira", "args": true },
-        { "name": "gws", "cmd": "gws", "args": true }
+        { "name": "gws", "cmd": "gws", "args": true },
+        { "name": "ccusage", "cmd": "ccusage", "args": true }
       ]
     },
     {
@@ -25,7 +26,8 @@
       "allow": [
         { "name": "gh", "cmd": "gh", "args": true },
         { "name": "jira", "cmd": "jira", "args": true },
-        { "name": "gws", "cmd": "gws", "args": true }
+        { "name": "gws", "cmd": "gws", "args": true },
+        { "name": "ccusage", "cmd": "ccusage", "args": true }
       ]
     },
     "os:default",
