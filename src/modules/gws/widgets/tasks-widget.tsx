@@ -9,6 +9,8 @@ import {
   type TaskItem,
 } from "../manifest";
 import { setTaskCompleted } from "../tasks";
+import { useToast } from "@/components/toast-context";
+import { CliError } from "@/server/cli";
 
 // Google Tasks due dates are date-only at UTC midnight — format in UTC to avoid a day shift.
 function dueLabel(due: string): string {
@@ -25,7 +27,7 @@ function TaskRow({
   onToggle: (t: TaskItem) => void;
 }) {
   return (
-    <li className="py-2">
+    <li className={`py-2 ${pending ? "opacity-60" : ""}`}>
       <div className="flex items-center gap-2.5">
         <button
           type="button"
@@ -64,37 +66,32 @@ function TaskRow({
 }
 
 export function TasksWidget({ data, config, refresh }: WidgetBodyProps<TasksData, TasksConfig>) {
-  // Optimistic completion overrides keyed by task id, layered over fetched data
-  // until refresh() brings reality back. `pending` disables a row mid-flight.
-  const [overrides, setOverrides] = useState<Record<string, boolean>>({});
+  // While a toggle is in flight the row is disabled and dimmed. Completion is never
+  // changed optimistically — it updates only when refresh() brings server-confirmed
+  // data, so a rejected toggle (e.g. read-only Tasks scope) leaves the row untouched
+  // and surfaces an error toast.
   const [pending, setPending] = useState<Record<string, boolean>>({});
-
-  const clear = (setter: typeof setOverrides, id: string) =>
-    setter((m) => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars -- destructured only to drop it from `rest`
-      const { [id]: _drop, ...rest } = m;
-      return rest;
-    });
+  const { toast } = useToast();
 
   async function toggle(t: TaskItem) {
     const next = !t.completed;
-    setOverrides((o) => ({ ...o, [t.id]: next }));
     setPending((p) => ({ ...p, [t.id]: true }));
     try {
       await setTaskCompleted(config.tasklist, t.id, next);
-      await refresh(); // fetched data now reflects the change
-      clear(setOverrides, t.id);
-    } catch {
-      clear(setOverrides, t.id); // roll back the optimistic flip
+      await refresh(); // the row's new state comes only from server data
+    } catch (err) {
+      const message = err instanceof CliError ? err.message : "please try again.";
+      toast(`Couldn't update task: ${message}`, "error");
     } finally {
-      clear(setPending, t.id);
+      setPending((p) => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars -- destructured only to drop it from `rest`
+        const { [t.id]: _drop, ...rest } = p;
+        return rest;
+      });
     }
   }
 
-  const merged: TaskItem[] = data.tasks.map((t) =>
-    t.id in overrides ? { ...t, completed: overrides[t.id] } : t,
-  );
-  const visible = sortTasks(filterTasksByAge(merged, config.completedMaxAge, new Date()));
+  const visible = sortTasks(filterTasksByAge(data.tasks, config.completedMaxAge, new Date()));
 
   if (visible.length === 0)
     return <p className="text-sm text-slate-500 dark:text-slate-400">No tasks.</p>;

@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, act } from "@testing-library/react";
 import { TasksWidget } from "@/modules/gws/widgets/tasks-widget";
+import { ToastProvider } from "@/components/toast-context";
 import { tasksDefaultConfig, type TaskItem } from "@/modules/gws/manifest";
 import { setTaskCompleted } from "@/modules/gws/tasks";
+import { CliError } from "@/server/cli";
 
 vi.mock("@/modules/gws/tasks", () => ({ setTaskCompleted: vi.fn().mockResolvedValue(undefined) }));
 const mockSet = setTaskCompleted as unknown as ReturnType<typeof vi.fn>;
@@ -19,16 +21,21 @@ const task = (id: string, completed: boolean): TaskItem => ({
 function renderWidget(tasks: TaskItem[]) {
   const refresh = vi.fn().mockResolvedValue(undefined);
   render(
-    <TasksWidget
-      data={{ tasks }}
-      config={{ ...tasksDefaultConfig, showCompleted: true }}
-      refresh={refresh}
-    />,
+    <ToastProvider>
+      <TasksWidget
+        data={{ tasks }}
+        config={{ ...tasksDefaultConfig, showCompleted: true }}
+        refresh={refresh}
+      />
+    </ToastProvider>,
   );
   return { refresh };
 }
 
-beforeEach(() => mockSet.mockClear());
+beforeEach(() => {
+  mockSet.mockReset();
+  mockSet.mockResolvedValue(undefined);
+});
 
 describe("TasksWidget", () => {
   it("shows an empty message when there are no tasks", () => {
@@ -42,13 +49,37 @@ describe("TasksWidget", () => {
     expect(links.map((l) => l.textContent)).toEqual(["todo", "done"]);
   });
 
-  it("optimistically completes a task, then syncs via CLI + refresh", async () => {
+  it("does not flip optimistically; updates only after the CLI resolves + refresh", async () => {
+    let resolveSet: () => void = () => {};
+    mockSet.mockImplementationOnce(() => new Promise<void>((r) => { resolveSet = () => r(); }));
     const { refresh } = renderWidget([task("todo", false)]);
     const btn = screen.getByRole("button", { name: 'Mark "todo" complete' });
     await act(async () => {
       btn.click();
     });
+    // In flight: no optimistic flip, button disabled, refresh not yet called.
+    expect(btn.textContent).toBe("○");
+    expect(btn).toBeDisabled();
+    expect(refresh).not.toHaveBeenCalled();
+    await act(async () => {
+      resolveSet();
+    });
     expect(mockSet).toHaveBeenCalledWith("@default", "todo", true);
     expect(refresh).toHaveBeenCalled();
+  });
+
+  it("shows an error toast and does not refresh when the toggle fails", async () => {
+    mockSet.mockRejectedValueOnce(
+      new CliError("Request had insufficient authentication scopes.", "failed"),
+    );
+    const { refresh } = renderWidget([task("todo", false)]);
+    const btn = screen.getByRole("button", { name: 'Mark "todo" complete' });
+    await act(async () => {
+      btn.click();
+    });
+    expect(refresh).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Couldn't update task: Request had insufficient authentication scopes.",
+    );
   });
 });
