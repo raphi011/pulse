@@ -88,7 +88,7 @@ export function GmailWidget({ data, refresh }: WidgetBodyProps<GmailData, GmailC
                   title={a.label}
                   aria-label={a.label}
                   className={`grid h-7 w-7 place-items-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 disabled:opacity-50 dark:text-slate-500 dark:hover:bg-white/10 ${
-                    a.danger ? "hover:text-[var(--color-danger)]" : "hover:text-slate-700 dark:hover:text-slate-200"
+                    a.danger ? "hover:text-danger" : "hover:text-slate-700 dark:hover:text-slate-200"
                   }`}
                 >
                   <a.Icon className="h-4 w-4" />
