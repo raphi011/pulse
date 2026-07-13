@@ -7,7 +7,9 @@ const NODE_API_MESSAGE =
 export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
-  { ignores: ["dist", "src-tauri/target", "drizzle"] },
+  // `dist` at any depth (incl. build bundles inside .claude/worktrees checkouts),
+  // plus the worktrees scratch dir itself (separate checkouts, not this tree's source).
+  { ignores: ["**/dist", "src-tauri/target", "drizzle", ".claude/worktrees"] },
   {
     // Webview code cannot reach Node builtins/globals — they throw at runtime.
     // Scoped to src/ only; tests legitimately run on Node.
