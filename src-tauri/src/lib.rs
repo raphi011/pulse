@@ -11,6 +11,7 @@ fn migrations() -> Vec<Migration> {
         Migration { version: 1, description: "baseline", sql: include_str!("../../drizzle/0000_silky_bromley.sql"), kind: MigrationKind::Up },
         Migration { version: 2, description: "widget accent", sql: include_str!("../../drizzle/0001_ambiguous_jean_grey.sql"), kind: MigrationKind::Up },
         Migration { version: 3, description: "pomodoro sessions", sql: include_str!("../../drizzle/0002_equal_gorilla_man.sql"), kind: MigrationKind::Up },
+        Migration { version: 4, description: "widget tabs", sql: include_str!("../../drizzle/0003_colossal_devos.sql"), kind: MigrationKind::Up },
     ]
 }
 

@@ -16,7 +16,7 @@ import type { Widget } from "@/server/config-repo";
 
 const widget: Widget = {
   id: "w1", type: FIXTURE_TYPE, title: null, accent: null,
-  order: 0, colSpan: 1, rowSpan: 6, hidden: false, config: { label: "" },
+  order: 0, colSpan: 1, rowSpan: 6, hidden: false, tabId: "default", config: { label: "" },
 };
 
 function renderDialog(onSaved = vi.fn()) {

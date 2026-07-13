@@ -9,7 +9,14 @@ export const widgets = sqliteTable("widgets", {
   colSpan: integer("col_span").notNull().default(1),
   rowSpan: integer("row_span").notNull().default(6),
   hidden: integer("hidden", { mode: "boolean" }).notNull().default(false),
+  tabId: text("tab_id").notNull().default("default"),
   config: text("config", { mode: "json" }).notNull().$type<Record<string, unknown>>(),
+});
+
+export const tabs = sqliteTable("tabs", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  order: integer("order").notNull().default(0),
 });
 
 export const bookmarks = sqliteTable("bookmarks", {

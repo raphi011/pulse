@@ -15,14 +15,16 @@ export async function getWidget(id: string): Promise<Widget | undefined> {
   return getDb().select().from(widgets).where(eq(widgets.id, id)).get();
 }
 
-export async function addWidget(type: string, config: Record<string, unknown>): Promise<Widget> {
+export async function addWidget(
+  type: string, config: Record<string, unknown>, tabId = "default",
+): Promise<Widget> {
   const def = getFetchWidget(type);
   const validated = def ? (def.manifest.configSchema.parse(config) as Record<string, unknown>) : config;
   const existing = await getWidgets();
   const order = existing.reduce((max, w) => Math.max(max, w.order + 1), 0);
   const row: Widget = {
     id: crypto.randomUUID(), type, title: null, accent: null, order, colSpan: 1, rowSpan: DEFAULT_ROW_SPAN,
-    hidden: false, config: validated,
+    hidden: false, tabId, config: validated,
   };
   await getDb().insert(widgets).values(row);
   return row;
@@ -41,6 +43,10 @@ export async function setPositions(
 
 export async function setHidden(id: string, hidden: boolean): Promise<void> {
   await getDb().update(widgets).set({ hidden }).where(eq(widgets.id, id));
+}
+
+export async function setWidgetTab(id: string, tabId: string): Promise<void> {
+  await getDb().update(widgets).set({ tabId }).where(eq(widgets.id, id));
 }
 
 export async function setConfig(id: string, config: Record<string, unknown>): Promise<void> {
