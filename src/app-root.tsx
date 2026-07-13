@@ -8,6 +8,7 @@ import { ToastProvider } from "@/components/toast-context";
 import { Dashboard } from "@/components/dashboard";
 import { IntegrationsPanel } from "@/components/integrations-panel";
 import { fetchLayout, fetchIntegrations } from "@/lib/dashboard-data";
+import { useExternalLinks } from "@/lib/external-links";
 import { ensureCacheVersion } from "@/server/cache-version";
 import { warmToolPath } from "@/server/cli";
 import type { Widget } from "@/server/config-repo";
@@ -53,6 +54,7 @@ export function AppRoot() {
   );
   const [dbReady, setDbReady] = useState(false);
   const route = useHashRoute();
+  useExternalLinks();
   useEffect(() => {
     // Best-effort startup, gated before any widget fetch: a failed cache wipe must not blank the
     // app (widgets surface DB errors themselves), and warmToolPath folds home-relative CLI dirs
