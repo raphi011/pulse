@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { costColor, CcusageWidget } from "@/modules/ccusage/widgets/ccusage-widget";
+import { costColor, formatDate, CcusageWidget } from "@/modules/ccusage/widgets/ccusage-widget";
 
 const noop = async () => {};
 
@@ -14,9 +14,18 @@ describe("costColor", () => {
   });
 });
 
+describe("formatDate", () => {
+  it("formats an ISO day as 'Mon D' without timezone drift", () => {
+    expect(formatDate("2026-07-13")).toBe("Jul 13");
+    expect(formatDate("2026-01-01")).toBe("Jan 1");
+    expect(formatDate("2026-12-09")).toBe("Dec 9");
+  });
+});
+
 describe("CcusageWidget", () => {
-  it("shows cost, limit and percent, with a bar filled to the fraction", () => {
+  it("shows the date caption, cost, limit and percent, with a bar filled to the fraction", () => {
     render(<CcusageWidget data={{ costUsd: 2.65, date: "2026-07-13" }} config={{ dailyLimitUsd: 20 }} refresh={noop} />);
+    expect(screen.getByText("Today · Jul 13")).toBeInTheDocument();
     expect(screen.getByText("$2.65")).toBeInTheDocument();
     expect(screen.getByText(/of \$20\.00 · 13%/)).toBeInTheDocument();
     expect(screen.getByTestId("ccusage-bar").style.width).toBe("13.25%");

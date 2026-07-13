@@ -8,6 +8,13 @@ export function costColor(pct: number): string {
   return `hsl(${hue} 70% 45%)`;
 }
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+/** "2026-07-13" → "Jul 13". Pure + timezone-safe (no Date parsing). */
+export function formatDate(iso: string): string {
+  const [, m, d] = iso.split("-");
+  return `${MONTHS[Number(m) - 1] ?? m} ${Number(d)}`;
+}
+
 export function CcusageWidget({ data, config }: WidgetBodyProps<CcusageSpendData, CcusageSpendConfig>) {
   const limit = config.dailyLimitUsd;
   const pct = limit > 0 ? data.costUsd / limit : 0;
@@ -15,6 +22,7 @@ export function CcusageWidget({ data, config }: WidgetBodyProps<CcusageSpendData
 
   return (
     <div className="flex flex-col gap-2">
+      <div className="text-xs text-slate-500 dark:text-slate-400">Today · {formatDate(data.date)}</div>
       <div
         className={`text-3xl font-semibold tabular-nums ${
           over ? "text-danger" : "text-slate-900 dark:text-slate-100"
