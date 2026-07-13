@@ -30,6 +30,17 @@ describe("fetchFailingActions", () => {
     expect((mockJson.mock.calls[0][0] as string[]).join(" ")).toContain("-R o/r");
   });
 
+  it("sorts merged runs newest-first (before the widget slices)", async () => {
+    const older: GhRun = { ...rawRun, url: "https://github.com/o/a/actions/runs/1", createdAt: "2026-07-01T00:00:00Z" };
+    const newer: GhRun = { ...rawRun, url: "https://github.com/o/b/actions/runs/2", createdAt: "2026-07-09T00:00:00Z" };
+    mockJson.mockResolvedValueOnce([older]).mockResolvedValueOnce([newer]);
+    const data = await fetchFailingActions({ repos: ["o/a", "o/b"], limit: 10 });
+    expect(data.runs.map((r) => r.createdAt)).toEqual([
+      "2026-07-09T00:00:00Z",
+      "2026-07-01T00:00:00Z",
+    ]);
+  });
+
   it("keeps successful repos when one repo errors and reports the failed repo", async () => {
     mockJson.mockResolvedValueOnce([rawRun]).mockRejectedValueOnce(new Error("boom"));
     const data = await fetchFailingActions({ repos: ["o/r", "o/bad"], limit: 10 });

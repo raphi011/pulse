@@ -29,7 +29,11 @@ export async function fetchFailingActions(config: FailingActionsConfig): Promise
   if (results.every((r) => r.status === "rejected")) {
     throw (results[0] as PromiseRejectedResult).reason;
   }
-  const runs = results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
+  // Sort newest-first across repos before the widget slices, so an older run from the first
+  // repo can't permanently mask a fresher failure from a later one.
+  const runs = results
+    .flatMap((r) => (r.status === "fulfilled" ? r.value : []))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const errors = config.repos.filter((_, i) => results[i].status === "rejected");
   return errors.length ? { runs, errors } : { runs };
 }

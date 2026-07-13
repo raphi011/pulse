@@ -13,6 +13,12 @@ const rawAlert: GhAlert = {
   security_vulnerability: { package: { name: "foo", ecosystem: "npm" } },
 };
 
+const alertOf = (severity: GhAlert["security_advisory"]["severity"], n: number): GhAlert => ({
+  html_url: `https://github.com/o/r/security/dependabot/${n}`,
+  security_advisory: { summary: `adv ${n}`, severity },
+  security_vulnerability: { package: { name: `pkg${n}`, ecosystem: "npm" } },
+});
+
 describe("normalizeAlert", () => {
   it("maps a REST alert to AlertItem", () => {
     expect(normalizeAlert("o/r", rawAlert)).toEqual({
@@ -31,10 +37,20 @@ describe("fetchDependabot", () => {
     expect((mockJson.mock.calls[0][0] as string[]).join(" ")).toContain("state=open");
   });
 
-  it("passes severity filter when set", async () => {
-    mockJson.mockResolvedValueOnce([]);
-    await fetchDependabot({ repos: ["o/r"], severity: "critical", limit: 10 });
-    expect((mockJson.mock.calls[0][0] as string[]).join(" ")).toContain("severity=critical");
+  it("treats configured severity as a floor, keeping equal-or-higher alerts", async () => {
+    // The REST severity param is exact-match, so we fetch all and filter client-side.
+    mockJson.mockResolvedValueOnce([alertOf("low", 1), alertOf("high", 2), alertOf("critical", 3)]);
+    const data = await fetchDependabot({ repos: ["o/r"], severity: "high", limit: 10 });
+    expect(data.alerts.map((a) => a.severity).sort()).toEqual(["critical", "high"]);
+    expect((mockJson.mock.calls[0][0] as string[]).join(" ")).not.toContain("severity=");
+  });
+
+  it("sorts merged alerts most-severe first (before the widget slices)", async () => {
+    mockJson
+      .mockResolvedValueOnce([alertOf("medium", 1), alertOf("critical", 2)])
+      .mockResolvedValueOnce([alertOf("high", 3), alertOf("low", 4)]);
+    const data = await fetchDependabot({ repos: ["o/a", "o/b"], limit: 10 });
+    expect(data.alerts.map((a) => a.severity)).toEqual(["critical", "high", "medium", "low"]);
   });
 
   it("returns empty when no repos configured", async () => {
