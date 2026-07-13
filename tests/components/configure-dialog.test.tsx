@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -9,7 +9,7 @@ vi.mock("@/lib/dashboard-data", () => ({
 }));
 
 import "@/modules/render";
-import { updateWidget } from "@/lib/dashboard-data";
+import { updateWidget, fetchWidgetData } from "@/lib/dashboard-data";
 import { ConfigureDialog } from "@/components/configure-dialog";
 import { FIXTURE_TYPE } from "../helpers/fixture-widget";
 import type { Widget } from "@/server/config-repo";
@@ -45,6 +45,16 @@ describe("ConfigureDialog accent picker", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(vi.mocked(updateWidget)).toHaveBeenCalledWith("w1", expect.objectContaining({ accent: "teal" }));
     expect(onSaved).toHaveBeenCalledWith("w1", expect.anything(), null, "teal");
+  });
+
+  it("completes the save instead of hanging on Saving… when the post-save refresh fails (F7)", async () => {
+    vi.mocked(fetchWidgetData).mockRejectedValueOnce(new Error("db locked"));
+    const onSaved = renderDialog();
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    // The button must return to its idle label, not stay disabled on "Saving…".
+    expect(screen.queryByRole("button", { name: "Saving…" })).not.toBeInTheDocument();
+    expect(vi.mocked(updateWidget)).toHaveBeenCalled();
   });
 
   it("marks the current selection with aria-pressed", async () => {

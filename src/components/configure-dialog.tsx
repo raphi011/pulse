@@ -45,8 +45,14 @@ export function ConfigureDialog({
       setSaving(false);
       return;
     }
-    const fresh = await fetchWidgetData(widget.id, true);
-    qc.setQueryData(["widget", widget.id], fresh);
+    // The config is already persisted; refreshing the widget's cache is best-effort. A rejection
+    // here must not strand the dialog on "Saving…" — the widget card surfaces its own load error.
+    try {
+      const fresh = await fetchWidgetData(widget.id, true);
+      qc.setQueryData(["widget", widget.id], fresh);
+    } catch (err) {
+      console.error(`Widget ${widget.id} post-save refresh failed`, err);
+    }
     onSaved(widget.id, (stored ?? values) as Record<string, unknown>, storedTitle ?? nextTitle, storedAccent);
     setSaving(false);
     onClose();
