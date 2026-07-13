@@ -19,7 +19,7 @@ export function WidgetCard({
 }) {
   const def = getRenderWidget(widget.type);
   const refreshable = def?.manifest.refreshable !== false;
-  const { data, isLoading, refresh, isRefreshing } = useWidgetData(widget.id, refreshable);
+  const { data, isLoading, isError, error: queryError, refresh, isRefreshing } = useWidgetData(widget.id, refreshable);
 
   if (!def) {
     return <WidgetShell title={widget.title ?? widget.type} state="error" error={`No renderer for ${widget.type}`} fetchedAt={null} onRefresh={() => {}} dragHandle={dragHandle} accent={widget.accent} />;
@@ -27,9 +27,14 @@ export function WidgetCard({
 
   const hasData = data != null && data.payload != null;
   const errored = data?.status === "error";
+  // A rejected useQuery (e.g. DB read failed) leaves `data` undefined; without this it would
+  // fall through to the "empty" state and read as "nothing here" rather than a failure.
+  const loadFailed = isError && !hasData;
+  const errorText =
+    data?.error ?? (loadFailed ? (queryError instanceof Error ? queryError.message : "Failed to load") : undefined);
   // Keep showing last-good data on error (per spec); only blank to an error state
   // when there's nothing cached to fall back to.
-  const state: WidgetState = isLoading ? "loading" : hasData ? "ok" : errored ? "error" : "empty";
+  const state: WidgetState = isLoading ? "loading" : hasData ? "ok" : errored || loadFailed ? "error" : "empty";
   // count() runs outside the body's ErrorBoundary — a stale config/payload combo must not crash the card.
   let count: number | null = null;
   if (def.count && hasData) {
@@ -61,7 +66,7 @@ export function WidgetCard({
       icon={def.icon && <BrandIcon mark={def.icon} />}
       count={count}
       state={state}
-      error={data?.error}
+      error={errorText}
       fetchedAt={data?.fetchedAt ?? null}
       onRefresh={refresh}
       refreshing={isRefreshing}
@@ -69,7 +74,7 @@ export function WidgetCard({
       menu={menu}
       headerExtra={headerExtra}
       dragHandle={dragHandle}
-      issue={errored ? { message: data?.error ?? "Refresh failed", kind: data?.errorKind } : null}
+      issue={errored || loadFailed ? { message: errorText ?? "Refresh failed", kind: data?.errorKind } : null}
       accent={widget.accent}
     >
       {hasData && (

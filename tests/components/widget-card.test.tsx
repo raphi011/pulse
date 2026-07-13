@@ -3,6 +3,40 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { WidgetShell } from "@/components/widget-shell";
 import { CardMenu } from "@/components/card-menu";
 
+vi.mock("@/components/use-widget-data", () => ({ useWidgetData: vi.fn() }));
+import { useWidgetData } from "@/components/use-widget-data";
+import { WidgetCard } from "@/components/widget-card";
+import { registerFixtureWidget, FIXTURE_TYPE } from "../helpers/fixture-widget";
+import type { Widget } from "@/server/config-repo";
+
+registerFixtureWidget();
+const mockUseWidgetData = useWidgetData as unknown as ReturnType<typeof vi.fn>;
+const fixtureWidget: Widget = {
+  id: "w1", type: FIXTURE_TYPE, title: null, accent: null,
+  order: 0, colSpan: 1, rowSpan: 6, hidden: false, tabId: "default", config: { label: "" },
+};
+
+describe("WidgetCard load-failure state (F6)", () => {
+  it("renders an error state, not the empty state, when the query rejects with no cached data", () => {
+    mockUseWidgetData.mockReturnValue({
+      data: undefined, isLoading: false, isError: true,
+      error: new Error("database is locked"), refresh: vi.fn(), isRefreshing: false,
+    });
+    render(<WidgetCard widget={fixtureWidget} />);
+    expect(screen.getByText("database is locked")).toBeInTheDocument();
+    expect(screen.queryByText("Nothing here yet.")).not.toBeInTheDocument();
+  });
+
+  it("still shows the empty state when the query succeeds with no rows", () => {
+    mockUseWidgetData.mockReturnValue({
+      data: undefined, isLoading: false, isError: false,
+      error: null, refresh: vi.fn(), isRefreshing: false,
+    });
+    render(<WidgetCard widget={fixtureWidget} />);
+    expect(screen.getByText("Nothing here yet.")).toBeInTheDocument();
+  });
+});
+
 describe("WidgetShell issue indicator", () => {
   it("renders a warning marker with the message as its title when issue is set", () => {
     render(
