@@ -1,6 +1,5 @@
 import type { Widget } from "@/server/config-repo";
 import type { Tab } from "@/server/tabs-repo";
-import type { DragEndEvent } from "@dnd-kit/core";
 import { savePositions } from "@/lib/dashboard-data";
 
 /** Visible widgets in global flow order. */
@@ -29,11 +28,6 @@ export function applyReorder(widgets: Widget[], activeId: string, overId: string
 /** Set one widget's spans. */
 export function applyResize(widgets: Widget[], id: string, colSpan: number, rowSpan: number): Widget[] {
   return widgets.map((w) => (w.id === id ? { ...w, colSpan, rowSpan } : w));
-}
-
-export function applyDragEnd(widgets: Widget[], e: DragEndEvent): Widget[] | null {
-  if (!e.over || e.active.id === e.over.id) return null;
-  return applyReorder(widgets, String(e.active.id), String(e.over.id));
 }
 
 export async function persistPositions(widgets: Widget[]): Promise<void> {
