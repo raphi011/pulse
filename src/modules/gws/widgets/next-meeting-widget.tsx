@@ -25,6 +25,13 @@ function minutesLeft(m: MeetingItem, now: Date): number {
   return Math.max(1, Math.ceil((new Date(m.end).getTime() - now.getTime()) / 60_000));
 }
 
+function hhmm(iso: string): string {
+  return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+
+const LABEL = "text-[0.625rem] font-semibold uppercase tracking-[0.09em] text-slate-500 dark:text-slate-400";
+const HERO = "text-3xl font-semibold leading-none tracking-tight tabular-nums";
+
 export function NextMeetingWidget({ data }: WidgetBodyProps<NextMeetingData, NextMeetingConfig>) {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -33,42 +40,57 @@ export function NextMeetingWidget({ data }: WidgetBodyProps<NextMeetingData, Nex
   }, []);
 
   const { current, next } = deriveMeetingState(data.meetings ?? [], now);
-  if (!current && !next)
-    return <p className="text-sm text-slate-500 dark:text-slate-400">No more meetings today.</p>;
 
-  const msUntilNext = next ? new Date(next.start).getTime() - now.getTime() : 0;
+  if (!current && !next)
+    return (
+      <div className="flex h-full items-center justify-center">
+        <p className="text-sm text-slate-500 dark:text-slate-400">No more meetings today.</p>
+      </div>
+    );
+
+  // The upcoming meeting is the hero; with nothing upcoming, the one in progress takes the spotlight.
+  const hero = next ?? current!;
+  const isCurrentHero = !next;
+  const msUntil = new Date(hero.start).getTime() - now.getTime();
+
   return (
-    <div className="space-y-1.5">
-      {current && (
-        <p className="text-xs text-slate-500 dark:text-slate-400">
-          In: {current.title} — {minutesLeft(current, now)} min left
-        </p>
-      )}
-      {next && (
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <a
-              href={next.url}
-              target="_blank"
-              rel="noreferrer"
-              className="block truncate text-sm font-medium hover:underline"
-            >
-              {next.title}
-            </a>
-            <p className={`text-2xl font-semibold tabular-nums ${urgencyClass(msUntilNext)}`}>
-              {formatCountdown(msUntilNext)}
-            </p>
-          </div>
-          {next.meetUrl && (
-            <a
-              href={next.meetUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="shrink-0 rounded-md bg-primary-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-primary-700"
-            >
-              Join
-            </a>
-          )}
+    <div className="flex h-full flex-col">
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-1.5 text-center">
+        <span className={LABEL}>
+          {isCurrentHero ? "Now" : "Next"} · {hhmm(hero.start)}–{hhmm(hero.end)}
+        </span>
+        <span
+          className={`${HERO} ${isCurrentHero ? "text-slate-900 dark:text-slate-100" : urgencyClass(msUntil)}`}
+        >
+          {isCurrentHero ? `${minutesLeft(hero, now)} min left` : formatCountdown(msUntil)}
+        </span>
+        <a
+          href={hero.url}
+          target="_blank"
+          rel="noreferrer"
+          className="block max-w-full truncate text-sm font-medium hover:underline"
+        >
+          {hero.title}
+        </a>
+        {hero.meetUrl && (
+          <a
+            href={hero.meetUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-1 rounded-lg bg-primary-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-500"
+          >
+            Join
+          </a>
+        )}
+      </div>
+
+      {/* A meeting already running, kept as a quiet footer while the hero counts down to the next one. */}
+      {current && next && (
+        <div className="flex shrink-0 items-center gap-1.5 border-t border-border pt-2 dark:border-border-dark">
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
+          <span className="min-w-0 truncate text-xs text-slate-500 dark:text-slate-400">
+            {current.title} · {minutesLeft(current, now)} min left
+          </span>
         </div>
       )}
     </div>

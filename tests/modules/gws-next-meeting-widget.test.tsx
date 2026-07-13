@@ -61,13 +61,13 @@ describe("NextMeetingWidget", () => {
         meeting("review", "2026-07-12T10:30:00Z", "2026-07-12T11:00:00Z"),
       ],
     });
-    expect(screen.getByText("In: standup — 15 min left")).toBeInTheDocument();
+    expect(screen.getByText("standup · 15 min left")).toBeInTheDocument();
     expect(screen.getByText("in 30 min")).toBeInTheDocument();
   });
 
   it("shows only the running meeting when nothing follows", () => {
     renderWidget({ meetings: [meeting("standup", "2026-07-12T09:45:00Z", "2026-07-12T10:15:00Z")] });
-    expect(screen.getByText("In: standup — 15 min left")).toBeInTheDocument();
+    expect(screen.getByText("15 min left")).toBeInTheDocument();
     expect(screen.queryByText(/^in /)).not.toBeInTheDocument();
   });
 
