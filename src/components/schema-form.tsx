@@ -1,6 +1,8 @@
 "use client";
+import type { ReactNode } from "react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { FiChevronDown } from "react-icons/fi";
 import { z, type ZodType } from "zod";
 import { getFieldOptionsProvider, type FieldOption } from "@/modules/field-options";
 
@@ -45,6 +47,41 @@ export function describeSchema(schema: ZodType): Field[] {
 
 const inputCls =
   "w-full rounded-lg bg-surface px-2.5 py-1.5 text-sm ring-1 ring-border focus:outline-none focus:ring-2 focus:ring-primary-500/50 dark:bg-surface-dark dark:ring-border-dark";
+
+// `appearance-none` strips the native control chrome so a <select> matches the text
+// inputs (surface fill + ring); the chevron is drawn by SelectControl instead.
+const selectCls = `${inputCls} appearance-none pr-8 disabled:opacity-60`;
+
+/** A <select> styled to match the form's inputs, with a custom chevron. */
+function SelectControl({
+  id, ariaLabel, value, disabled, onChange, children,
+}: {
+  id: string;
+  ariaLabel?: string;
+  value: string;
+  disabled?: boolean;
+  onChange: (value: string) => void;
+  children: ReactNode;
+}) {
+  return (
+    <div className="relative">
+      <select
+        id={id}
+        aria-label={ariaLabel}
+        className={selectCls}
+        disabled={disabled}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      >
+        {children}
+      </select>
+      <FiChevronDown
+        aria-hidden
+        className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-slate-400"
+      />
+    </div>
+  );
+}
 
 function StringListEditor({ id, value, onChange }: { id: string; value: string[]; onChange: (v: string[]) => void }) {
   // Keep the raw typed text local so blank/intermediate lines survive editing;
@@ -106,20 +143,19 @@ function AsyncEnumField({
   const hasCurrent = value === "" || options.some((o) => o.value === value);
 
   return (
-    <select
+    <SelectControl
       id={id}
-      aria-label={label}
-      className={inputCls}
+      ariaLabel={label}
       disabled={isLoading}
       value={value}
-      onChange={(e) => onChange(e.target.value || undefined)}
+      onChange={(v) => onChange(v || undefined)}
     >
       <option value="">Default</option>
       {!hasCurrent && <option value={value}>{value}</option>}
       {options.map((o) => (
         <option key={o.value} value={o.value}>{o.label}</option>
       ))}
-    </select>
+    </SelectControl>
   );
 }
 
@@ -203,15 +239,14 @@ export function SchemaForm({
               />
             )}
             {f.kind === "enum" && (
-              <select
+              <SelectControl
                 id={id}
-                className={inputCls}
                 value={String(values[f.key] ?? "")}
-                onChange={(e) => set(f.key, e.target.value || undefined)}
+                onChange={(v) => set(f.key, v || undefined)}
               >
                 <option value="">Any</option>
                 {f.options!.map((o) => <option key={o} value={o}>{o}</option>)}
-              </select>
+              </SelectControl>
             )}
             {f.kind === "stringList" && (
               <StringListEditor id={id} value={(values[f.key] as string[]) ?? []} onChange={(v) => set(f.key, v)} />
