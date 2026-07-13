@@ -75,6 +75,7 @@ function useFieldOptions(optionsKey: string) {
     queryFn: () => provider!(),
     enabled: Boolean(provider),
     staleTime: 5 * 60_000,
+    retry: false,
   });
 }
 

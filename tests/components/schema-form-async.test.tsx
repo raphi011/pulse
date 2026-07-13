@@ -13,12 +13,27 @@ const schema = z.object({
   tasklist: z.string().default("@default").meta({ optionsKey: "test.lists" }).describe("Task list"),
 });
 
+const multiSchema = z.object({
+  spaceIds: z.array(z.string()).default([]).meta({ optionsKey: "test.spaces" }).describe("Spaces"),
+});
+
 function renderForm(values: Record<string, unknown>) {
   const onChange = vi.fn();
   render(
     // retry:false so an erroring provider settles immediately in the test
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <SchemaForm schema={schema} values={values} onChange={onChange} />
+    </QueryClientProvider>,
+  );
+  return onChange;
+}
+
+function renderMultiForm(values: Record<string, unknown>) {
+  const onChange = vi.fn();
+  render(
+    // retry:false so an erroring provider settles immediately in the test
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <SchemaForm schema={multiSchema} values={values} onChange={onChange} />
     </QueryClientProvider>,
   );
   return onChange;
@@ -56,5 +71,46 @@ describe("SchemaForm asyncEnum", () => {
       expect(screen.getByRole("textbox", { name: "Task list" })).toBeInTheDocument(),
     );
     expect(screen.getByRole("textbox", { name: "Task list" })).toHaveValue("id1");
+  });
+});
+
+describe("SchemaForm asyncMultiEnum", () => {
+  it("renders fetched options as checkboxes, with the selected value checked", async () => {
+    const opts: FieldOption[] = [
+      { value: "spaces/A", label: "Team A" },
+      { value: "spaces/B", label: "Team B" },
+    ];
+    registerFieldOptions("test.spaces", async () => opts);
+    renderMultiForm({ spaceIds: ["spaces/A"] });
+
+    const group = await screen.findByRole("group", { name: "Spaces" });
+    expect(group).toBeInTheDocument();
+
+    const checkboxA = await screen.findByRole("checkbox", { name: "Team A" });
+    const checkboxB = screen.getByRole("checkbox", { name: "Team B" });
+    expect(checkboxA).toBeChecked();
+    expect(checkboxB).not.toBeChecked();
+  });
+
+  it("keeps a selected value missing from the fetch as a checked extra option", async () => {
+    registerFieldOptions("test.spaces", async () => [{ value: "spaces/A", label: "Team A" }]);
+    renderMultiForm({ spaceIds: ["spaces/GONE"] });
+
+    await waitFor(() =>
+      expect(screen.getByRole("checkbox", { name: "spaces/GONE" })).toBeInTheDocument(),
+    );
+    expect(screen.getByRole("checkbox", { name: "spaces/GONE" })).toBeChecked();
+  });
+
+  it("falls back to the string-list editor when the provider errors", async () => {
+    registerFieldOptions("test.spaces", async () => {
+      throw new Error("403 insufficient scopes");
+    });
+    renderMultiForm({ spaceIds: ["spaces/A"] });
+
+    await waitFor(() =>
+      expect(screen.getByRole("textbox", { name: "Spaces" })).toBeInTheDocument(),
+    );
+    expect(screen.getByRole("textbox", { name: "Spaces" })).toHaveValue("spaces/A");
   });
 });
