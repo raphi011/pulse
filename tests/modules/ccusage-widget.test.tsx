@@ -23,24 +23,27 @@ describe("formatDate", () => {
 });
 
 describe("CcusageWidget", () => {
-  it("shows the date caption, cost, limit and percent, with a bar filled to the fraction", () => {
+  it("shows the date caption, cost, limit and percent, with the ring arc filled to the fraction", () => {
     render(<CcusageWidget data={{ costUsd: 2.65, date: "2026-07-13" }} config={{ dailyLimitUsd: 20 }} refresh={noop} />);
     expect(screen.getByText("Today · Jul 13")).toBeInTheDocument();
     expect(screen.getByText("$2.65")).toBeInTheDocument();
     expect(screen.getByText(/of \$20\.00 · 13%/)).toBeInTheDocument();
-    expect(screen.getByTestId("ccusage-bar").style.width).toBe("13.25%");
+    const arc = screen.getByTestId("ccusage-arc");
+    // dashoffset = circumference * (1 - 0.1325); circumference = 2π·42
+    const circ = 2 * Math.PI * 42;
+    expect(Number(arc.getAttribute("stroke-dashoffset"))).toBeCloseTo(circ * (1 - 0.1325), 3);
   });
 
-  it("caps the bar at 100% and reddens the cost when over the limit", () => {
+  it("caps the arc at the full circle and reddens the cost when over the limit", () => {
     render(<CcusageWidget data={{ costUsd: 25, date: "2026-07-13" }} config={{ dailyLimitUsd: 20 }} refresh={noop} />);
     expect(screen.getByText(/· 125%/)).toBeInTheDocument();
-    expect(screen.getByTestId("ccusage-bar").style.width).toBe("100%");
+    expect(Number(screen.getByTestId("ccusage-arc").getAttribute("stroke-dashoffset"))).toBeCloseTo(0, 3);
     expect(screen.getByText("$25.00").className).toContain("text-danger");
   });
 
-  it("hides the bar and shows 'No limit set' when the limit is 0", () => {
+  it("draws no arc and shows 'No limit set' when the limit is 0", () => {
     render(<CcusageWidget data={{ costUsd: 2.65, date: "2026-07-13" }} config={{ dailyLimitUsd: 0 }} refresh={noop} />);
     expect(screen.getByText("No limit set")).toBeInTheDocument();
-    expect(screen.queryByTestId("ccusage-bar")).toBeNull();
+    expect(screen.queryByTestId("ccusage-arc")).toBeNull();
   });
 });

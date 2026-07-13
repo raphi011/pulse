@@ -2,6 +2,7 @@ import type { WidgetBodyProps } from "@/modules/contracts";
 import type { PomodoroConfig, PomodoroData } from "../manifest";
 import { pomodoroEngine, type PomodoroPhase, type PomodoroSnapshot } from "../engine";
 import { usePomodoro } from "../use-pomodoro";
+import { Ring } from "@/components/ring";
 
 type Props = WidgetBodyProps<PomodoroData, PomodoroConfig>;
 
@@ -9,6 +10,13 @@ const PHASE_LABEL: Record<PomodoroPhase, string> = {
   work: "Focus",
   shortBreak: "Short break",
   longBreak: "Long break",
+};
+
+/** Work is indigo (the app accent); breaks are teal so the phase reads at a glance. */
+const PHASE_COLOR: Record<PomodoroPhase, string> = {
+  work: "var(--color-primary-500)",
+  shortBreak: "#14b8a6",
+  longBreak: "#14b8a6",
 };
 
 function formatRemaining(ms: number): string {
@@ -22,7 +30,7 @@ function CompletedDots({ count }: { count: number }) {
   if (count === 0) return null;
   const dots = Math.min(count, 8);
   return (
-    <span className="flex items-center gap-1" title={`${count} pomodoros completed today`}>
+    <span className="mt-0.5 flex items-center gap-1" title={`${count} pomodoros completed today`}>
       {Array.from({ length: dots }, (_, i) => (
         <span key={i} className="h-1.5 w-1.5 rounded-full bg-primary-500" />
       ))}
@@ -50,34 +58,36 @@ function controls(snap: PomodoroSnapshot): { label: string; action: () => void; 
 export function PomodoroWidget({ config }: Props) {
   const snap = usePomodoro(config);
   const progress = snap.durationMs > 0 ? 1 - snap.remainingMs / snap.durationMs : 0;
+  const finished = snap.status === "finished";
+  const isBreak = snap.phase !== "work";
 
   return (
-    <div className="flex flex-col items-center gap-3 py-2">
-      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-        <span>{PHASE_LABEL[snap.phase]}</span>
-        {snap.status === "finished" && <span className="text-warn">— time's up</span>}
+    <div className="relative flex h-full flex-col">
+      <div className="flex min-h-0 flex-1 items-center justify-center">
+        <Ring progress={progress} color={PHASE_COLOR[snap.phase]}>
+          <span className="text-3xl font-semibold leading-none tracking-tight tabular-nums text-slate-800 dark:text-slate-100">
+            {formatRemaining(snap.remainingMs)}
+          </span>
+          <span
+            className="text-[0.625rem] font-semibold uppercase tracking-[0.09em] text-slate-500 dark:text-slate-400"
+            style={finished ? { color: "var(--color-warn)" } : isBreak ? { color: PHASE_COLOR[snap.phase] } : undefined}
+          >
+            {finished ? "Time's up" : PHASE_LABEL[snap.phase]}
+          </span>
+          <CompletedDots count={snap.completedToday} />
+        </Ring>
       </div>
 
-      <div className="font-mono text-4xl tabular-nums text-slate-800 dark:text-slate-100">
-        {formatRemaining(snap.remainingMs)}
-      </div>
-
-      <div className="h-1 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
-        <div
-          className="h-full rounded-full bg-primary-500 transition-[width]"
-          style={{ width: `${Math.round(progress * 100)}%` }}
-        />
-      </div>
-
-      <div className="flex items-center gap-2">
+      {/* Controls stay out of the way until the card is hovered or focused. */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex translate-y-1.5 justify-center gap-2 bg-gradient-to-t from-card via-card to-transparent px-3 pb-2 pt-8 opacity-0 transition-[opacity,transform] duration-150 ease-out focus-within:pointer-events-auto focus-within:translate-y-0 focus-within:opacity-100 group-hover/card:pointer-events-auto group-hover/card:translate-y-0 group-hover/card:opacity-100 dark:from-card-dark dark:via-card-dark">
         {controls(snap).map((b) => (
           <button
             key={b.label}
             onClick={b.action}
             className={
               b.primary
-                ? "rounded-md bg-primary-600 px-3 py-1 text-sm font-medium text-white hover:bg-primary-500"
-                : "rounded-md px-3 py-1 text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/5"
+                ? "rounded-lg bg-primary-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-500"
+                : "rounded-lg bg-slate-100 px-4 py-1.5 text-sm text-slate-600 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
             }
           >
             {b.label}
@@ -85,10 +95,8 @@ export function PomodoroWidget({ config }: Props) {
         ))}
       </div>
 
-      <CompletedDots count={snap.completedToday} />
-
       {snap.notifyBlocked && (
-        <p className="text-center text-xs text-slate-500 dark:text-slate-400">
+        <p className="shrink-0 pt-1 text-center text-xs text-slate-500 dark:text-slate-400">
           Notifications blocked — enable them for this app in System Settings.
         </p>
       )}
