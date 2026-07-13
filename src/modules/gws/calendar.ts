@@ -15,7 +15,28 @@ export type GEvent = {
   end?: { dateTime?: string; date?: string };
   attendees?: { self?: boolean; responseStatus?: string }[];
 };
-type EventsResp = { items?: GEvent[] };
+type EventsResp = { items?: GEvent[]; nextPageToken?: string };
+
+/**
+ * Page through Calendar events for a window. `maxResults` caps *raw* events per page (all-day,
+ * declined, and solo events all count against it), so on a busy day the real next meeting can sit
+ * past the first page — follow `nextPageToken` to collect the whole window. Bounded against a
+ * misbehaving token; the day window keeps the real page count tiny.
+ */
+async function listEvents(params: Record<string, unknown>): Promise<GEvent[]> {
+  const items: GEvent[] = [];
+  let pageToken: string | undefined;
+  for (let page = 0; page < 20; page++) {
+    const resp = await gwsJson<EventsResp>([
+      "calendar", "events", "list",
+      "--params", JSON.stringify(pageToken ? { ...params, pageToken } : params),
+    ]);
+    items.push(...(resp.items ?? []));
+    if (!resp.nextPageToken) break;
+    pageToken = resp.nextPageToken;
+  }
+  return items;
+}
 
 export function normalizeEvent(e: GEvent): CalendarEventItem {
   return {
@@ -83,18 +104,15 @@ export function normalizeMeeting(e: GEvent): MeetingItem {
 
 export async function fetchNextMeeting(config: NextMeetingConfig): Promise<NextMeetingData> {
   const now = new Date();
-  const resp = await gwsJson<EventsResp>([
-    "calendar", "events", "list",
-    "--params", JSON.stringify({
-      calendarId: config.calendarId,
-      timeMin: now.toISOString(), // in-progress events end after now, so they're included
-      timeMax: dayWindow(now).timeMax,
-      singleEvents: true,
-      orderBy: "startTime",
-      maxResults: 20,
-    }),
-  ]);
-  const meetings = (resp.items ?? [])
+  const events = await listEvents({
+    calendarId: config.calendarId,
+    timeMin: now.toISOString(), // in-progress events end after now, so they're included
+    timeMax: dayWindow(now).timeMax,
+    singleEvents: true,
+    orderBy: "startTime",
+    maxResults: 250,
+  });
+  const meetings = events
     .filter((e) => isMeetingEvent(e, config.includeSoloEvents))
     .map(normalizeMeeting);
   return { meetings };

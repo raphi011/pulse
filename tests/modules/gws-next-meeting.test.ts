@@ -1,11 +1,43 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   deriveMeetingState,
   nextMeetingConfigSchema,
   nextMeetingDefaultConfig,
   type MeetingItem,
 } from "@/modules/gws/manifest";
-import { isMeetingEvent, normalizeMeeting, type GEvent } from "@/modules/gws/calendar";
+
+vi.mock("@/modules/gws/gws", () => ({ gwsJson: vi.fn() }));
+import { gwsJson } from "@/modules/gws/gws";
+import { isMeetingEvent, normalizeMeeting, fetchNextMeeting, type GEvent } from "@/modules/gws/calendar";
+
+const mockGws = gwsJson as unknown as ReturnType<typeof vi.fn>;
+beforeEach(() => mockGws.mockReset());
+
+const meetingEvt = (id: string, start: string, end: string): GEvent => ({
+  id, summary: id,
+  start: { dateTime: start }, end: { dateTime: end },
+  attendees: [{ self: true, responseStatus: "accepted" }, { responseStatus: "accepted" }],
+});
+const allDayEvt = (id: string): GEvent => ({ id, start: { date: "2026-07-12" }, end: { date: "2026-07-13" } });
+
+describe("fetchNextMeeting pagination (F3)", () => {
+  it("follows nextPageToken so a meeting past the first page isn't missed", async () => {
+    mockGws
+      .mockResolvedValueOnce({ items: [allDayEvt("a1")], nextPageToken: "PAGE2" })
+      .mockResolvedValueOnce({ items: [meetingEvt("m1", "2026-07-12T15:00:00Z", "2026-07-12T15:30:00Z")] });
+    const data = await fetchNextMeeting({ calendarId: "primary", includeSoloEvents: false });
+    expect(data.meetings.map((m) => m.id)).toEqual(["m1"]);
+    expect(mockGws).toHaveBeenCalledTimes(2);
+    expect((mockGws.mock.calls[1][0] as string[]).join(" ")).toContain("PAGE2");
+  });
+
+  it("stops after one page when there is no nextPageToken", async () => {
+    mockGws.mockResolvedValueOnce({ items: [meetingEvt("m1", "2026-07-12T15:00:00Z", "2026-07-12T15:30:00Z")] });
+    const data = await fetchNextMeeting({ calendarId: "primary", includeSoloEvents: false });
+    expect(data.meetings).toHaveLength(1);
+    expect(mockGws).toHaveBeenCalledTimes(1);
+  });
+});
 
 const m = (id: string, start: string, end: string): MeetingItem => ({
   id,
