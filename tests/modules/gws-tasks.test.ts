@@ -1,6 +1,10 @@
-import { describe, it, expect } from "vitest";
-import { normalizeTask } from "@/modules/gws/tasks";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+vi.mock("@/modules/gws/gws", () => ({ gwsJson: vi.fn() }));
+import { normalizeTask, setTaskCompleted } from "@/modules/gws/tasks";
+import { gwsJson } from "@/modules/gws/gws";
 import { filterTasksByAge, sortTasks, type TaskItem } from "@/modules/gws/manifest";
+
+const mockJson = gwsJson as unknown as ReturnType<typeof vi.fn>;
 
 describe("normalizeTask", () => {
   it("maps a pending task with notes and a due date", () => {
@@ -90,5 +94,27 @@ describe("filterTasksByAge", () => {
     const ids = filterTasksByAge(tasks, "Last 30 days", now).map((t) => t.id);
     expect(ids).not.toContain("longAgo");
     expect(ids).toContain("threeDaysAgo");
+  });
+});
+
+describe("setTaskCompleted", () => {
+  beforeEach(() => mockJson.mockReset());
+
+  it("patches status=completed when completing", async () => {
+    mockJson.mockResolvedValue({});
+    await setTaskCompleted("@default", "t1", true);
+    const [args] = mockJson.mock.calls[0];
+    expect(args.slice(0, 3)).toEqual(["tasks", "tasks", "patch"]);
+    expect(args[3]).toBe("--params");
+    expect(JSON.parse(args[4])).toEqual({ tasklist: "@default", task: "t1" });
+    expect(args[5]).toBe("--json");
+    expect(JSON.parse(args[6])).toEqual({ status: "completed" });
+  });
+
+  it("clears the completion timestamp when un-completing", async () => {
+    mockJson.mockResolvedValue({});
+    await setTaskCompleted("listB", "t2", false);
+    const [args] = mockJson.mock.calls[0];
+    expect(JSON.parse(args[6])).toEqual({ status: "needsAction", completed: null });
   });
 });

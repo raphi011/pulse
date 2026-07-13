@@ -38,3 +38,22 @@ export async function fetchTasks(config: TasksConfig): Promise<TasksData> {
   const tasks = (resp.items ?? []).map(normalizeTask);
   return { tasks };
 }
+
+/**
+ * Flip a task's completion via `gws tasks tasks patch`. Un-completing sends
+ * `completed: null` so the timestamp clears under patch semantics.
+ */
+export async function setTaskCompleted(
+  tasklist: string,
+  taskId: string,
+  completed: boolean,
+): Promise<void> {
+  const body = completed
+    ? { status: "completed" }
+    : { status: "needsAction", completed: null };
+  await gwsJson<GTask>([
+    "tasks", "tasks", "patch",
+    "--params", JSON.stringify({ tasklist, task: taskId }),
+    "--json", JSON.stringify(body),
+  ]);
+}
