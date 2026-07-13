@@ -54,3 +54,29 @@ export async function fetchGmail(config: GmailConfig): Promise<GmailData> {
     .map((r) => normalizeMessage(r.value));
   return { emails };
 }
+
+/** Archive: remove the INBOX label (message stays searchable, leaves the inbox). */
+export async function archiveEmail(id: string): Promise<void> {
+  await gwsJson<unknown>([
+    "gmail", "users", "messages", "modify",
+    "--params", JSON.stringify({ userId: "me", id }),
+    "--json", JSON.stringify({ removeLabelIds: ["INBOX"] }),
+  ]);
+}
+
+/** Mark read: remove the UNREAD label. */
+export async function markEmailRead(id: string): Promise<void> {
+  await gwsJson<unknown>([
+    "gmail", "users", "messages", "modify",
+    "--params", JSON.stringify({ userId: "me", id }),
+    "--json", JSON.stringify({ removeLabelIds: ["UNREAD"] }),
+  ]);
+}
+
+/** Trash: move to Trash (reversible in Gmail for 30 days). */
+export async function trashEmail(id: string): Promise<void> {
+  await gwsJson<unknown>([
+    "gmail", "users", "messages", "trash",
+    "--params", JSON.stringify({ userId: "me", id }),
+  ]);
+}
