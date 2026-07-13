@@ -5,4 +5,5 @@ import "./gws/fetch";
 import "./bookmarks/fetch";
 import "./system/fetch";
 import "./pomodoro/fetch";
+import "./ccusage/fetch";
 // Register future modules' fetch side here.

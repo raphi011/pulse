@@ -94,7 +94,7 @@ describe("dashboard-data", () => {
 
   it("fetchIntegrations lists a status per registered integration", async () => {
     const statuses = await data.fetchIntegrations();
-    expect(statuses.map((s) => s.id).sort()).toEqual(["github", "gws", "jira"]);
+    expect(statuses.map((s) => s.id).sort()).toEqual(["ccusage", "github", "gws", "jira"]);
   });
 
   it("createWidget rejects an unknown widget type", async () => {
