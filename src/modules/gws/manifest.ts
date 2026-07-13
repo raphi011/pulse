@@ -129,10 +129,19 @@ export const TASKS_TYPE = "gws.tasks";
 export const tasksConfigSchema = z.object({
   tasklist: z.string().default("@default").meta({ optionsKey: TASK_LISTS_KEY }).describe("Task list"),
   showCompleted: z.boolean().default(false).describe("Show completed tasks"),
+  completedMaxAge: z
+    .enum(["Today", "Last 7 days", "Last 30 days", "All time"])
+    .default("All time")
+    .describe("Show completed up to (only when completed shown)"),
   limit: z.number().int().min(1).max(100).default(25).describe("Max tasks"),
 });
 export type TasksConfig = z.infer<typeof tasksConfigSchema>;
-export const tasksDefaultConfig: TasksConfig = { tasklist: "@default", showCompleted: false, limit: 25 };
+export const tasksDefaultConfig: TasksConfig = {
+  tasklist: "@default",
+  showCompleted: false,
+  completedMaxAge: "All time",
+  limit: 25,
+};
 
 export type TaskItem = {
   id: string;
@@ -144,6 +153,44 @@ export type TaskItem = {
   url: string; // webViewLink into Google Tasks
 };
 export type TasksData = { tasks: TaskItem[] };
+
+export type CompletedMaxAge = TasksConfig["completedMaxAge"];
+
+/** Millisecond cutoff for a completed-age bucket, or null for "All time". Pure. */
+function ageCutoff(maxAge: CompletedMaxAge, now: Date): number | null {
+  switch (maxAge) {
+    case "All time":
+      return null;
+    case "Today": {
+      const midnight = new Date(now);
+      midnight.setHours(0, 0, 0, 0);
+      return midnight.getTime();
+    }
+    case "Last 7 days":
+      return now.getTime() - 7 * 24 * 60 * 60 * 1000;
+    case "Last 30 days":
+      return now.getTime() - 30 * 24 * 60 * 60 * 1000;
+  }
+}
+
+/**
+ * Drop completed tasks older than the configured age. Incomplete tasks are always
+ * kept; a completed task with no timestamp is kept (fail-open, so nothing silently
+ * vanishes). Pure — safe to import from client or server.
+ */
+export function filterTasksByAge(tasks: TaskItem[], maxAge: CompletedMaxAge, now: Date): TaskItem[] {
+  const cutoff = ageCutoff(maxAge, now);
+  if (cutoff === null) return tasks;
+  return tasks.filter((t) => {
+    if (!t.completed || !t.completedAt) return true;
+    return new Date(t.completedAt).getTime() >= cutoff;
+  });
+}
+
+/** Incomplete tasks first (preserving order), completed tasks last. Stable. Pure. */
+export function sortTasks(tasks: TaskItem[]): TaskItem[] {
+  return [...tasks].sort((a, b) => Number(a.completed) - Number(b.completed));
+}
 
 // --- Next meeting (countdown) ---
 export const NEXT_MEETING_TYPE = "gws.nextMeeting";
