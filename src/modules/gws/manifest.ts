@@ -140,6 +140,7 @@ export type TaskItem = {
   notes?: string; // free-text note (often a Jira/GitHub URL)
   due: string; // ISO date ("" if none)
   completed: boolean;
+  completedAt?: string; // RFC3339 completion timestamp ("" if not completed)
   url: string; // webViewLink into Google Tasks
 };
 export type TasksData = { tasks: TaskItem[] };

@@ -26,4 +26,20 @@ describe("normalizeTask", () => {
     expect(t).toMatchObject({ title: "(no title)", due: "", completed: true, url: "" });
     expect(t.notes).toBeUndefined();
   });
+
+  it("captures the completion timestamp on completed tasks", () => {
+    const t = normalizeTask({
+      id: "t3",
+      title: "shipped",
+      status: "completed",
+      completed: "2026-07-13T09:30:00.000Z",
+      webViewLink: "https://tasks.google.com/task/xyz",
+    });
+    expect(t.completed).toBe(true);
+    expect(t.completedAt).toBe("2026-07-13T09:30:00.000Z");
+  });
+
+  it("leaves completedAt empty when there is no timestamp", () => {
+    expect(normalizeTask({ id: "t4", status: "needsAction" }).completedAt).toBe("");
+  });
 });

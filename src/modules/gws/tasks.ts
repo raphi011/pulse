@@ -7,6 +7,7 @@ type GTask = {
   notes?: string;
   status?: string; // "needsAction" | "completed"
   due?: string;
+  completed?: string; // RFC3339 timestamp, present only on completed tasks
   webViewLink?: string;
 };
 type TasksResp = { items?: GTask[] };
@@ -18,6 +19,7 @@ export function normalizeTask(t: GTask): TaskItem {
     notes: t.notes,
     due: t.due ?? "",
     completed: t.status === "completed",
+    completedAt: t.completed ?? "",
     url: t.webViewLink ?? "",
   };
 }
