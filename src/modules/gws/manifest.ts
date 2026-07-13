@@ -43,6 +43,25 @@ export type CalendarEventItem = {
 };
 export type CalendarData = { events: CalendarEventItem[] };
 
+/** Which events to dim (already over) and which single event to highlight
+ *  (in progress, else next upcoming). All-day events are never dimmed or
+ *  highlighted. Pure — safe to import from client or server. */
+export function deriveEventEmphasis(
+  events: CalendarEventItem[],
+  now: Date,
+): { pastIds: Set<string>; highlightId: string | null } {
+  const t = now.getTime();
+  const timed = events.filter((e) => !e.allDay);
+  const pastIds = new Set(
+    timed.filter((e) => new Date(e.end || e.start).getTime() <= t).map((e) => e.id),
+  );
+  const current = timed.find(
+    (e) => new Date(e.start).getTime() <= t && t < new Date(e.end || e.start).getTime(),
+  );
+  const next = timed.find((e) => new Date(e.start).getTime() > t);
+  return { pastIds, highlightId: current?.id ?? next?.id ?? null };
+}
+
 export const CHAT_DMS_TYPE = "gws.chatDms";
 export const CHAT_CHANNELS_TYPE = "gws.chatChannels";
 
