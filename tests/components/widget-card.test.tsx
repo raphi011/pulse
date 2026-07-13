@@ -1,6 +1,7 @@
-import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { WidgetShell } from "@/components/widget-shell";
+import { CardMenu } from "@/components/card-menu";
 
 describe("WidgetShell issue indicator", () => {
   it("renders a warning marker with the message as its title when issue is set", () => {
@@ -41,5 +42,23 @@ describe("WidgetShell issue indicator", () => {
     render(<WidgetShell title="PRs" state="ok" fetchedAt={null} onRefresh={() => {}}><div>ok</div></WidgetShell>);
     expect(screen.queryByLabelText("Authentication issue")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Error")).not.toBeInTheDocument();
+  });
+});
+
+describe("CardMenu move-to-tab", () => {
+  it("lists other tabs and moves on click", async () => {
+    const onMove = vi.fn();
+    render(
+      <CardMenu
+        onConfigure={() => {}}
+        onRemove={() => {}}
+        moveTargets={[{ id: "t2", name: "Personal" }]}
+        onMove={onMove}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /widget menu/i }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /move to tab/i }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Personal" }));
+    expect(onMove).toHaveBeenCalledWith("t2");
   });
 });

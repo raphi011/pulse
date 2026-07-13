@@ -7,7 +7,7 @@ import { WidgetCard } from "./widget-card";
 import { ResizeHandle } from "./resize-handle";
 
 export function SortableCard({
-  widget, cols, cellWidth, onRemove, onConfigure, onResize,
+  widget, cols, cellWidth, onRemove, onConfigure, onResize, moveTargets, onMoveToTab,
 }: {
   widget: Widget;
   cols: number;
@@ -15,6 +15,8 @@ export function SortableCard({
   onRemove: (id: string) => void;
   onConfigure: (w: Widget) => void;
   onResize: (id: string, colSpan: number, rowSpan: number) => void;
+  moveTargets?: { id: string; name: string }[];
+  onMoveToTab?: (widgetId: string, tabId: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
     useSortable({ id: widget.id });
@@ -32,6 +34,8 @@ export function SortableCard({
         widget={widget}
         onRemove={onRemove}
         onConfigure={onConfigure}
+        moveTargets={moveTargets}
+        onMoveToTab={onMoveToTab}
         dragHandle={{ setRef: setActivatorNodeRef, attributes, listeners }}
       />
       <ResizeHandle

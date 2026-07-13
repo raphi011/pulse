@@ -8,11 +8,13 @@ import { BrandIcon } from "./brand-icon";
 import { WidgetErrorBoundary } from "./widget-error-boundary";
 
 export function WidgetCard({
-  widget, onConfigure, onRemove, dragHandle,
+  widget, onConfigure, onRemove, moveTargets, onMoveToTab, dragHandle,
 }: {
   widget: Widget;
   onConfigure?: (w: Widget) => void;
   onRemove?: (id: string) => void;
+  moveTargets?: { id: string; name: string }[];
+  onMoveToTab?: (widgetId: string, tabId: string) => void;
   dragHandle?: DragHandle;
 }) {
   const def = getRenderWidget(widget.type);
@@ -40,7 +42,12 @@ export function WidgetCard({
   const Body = def.Component;
   const menu =
     onConfigure && onRemove ? (
-      <CardMenu onConfigure={() => onConfigure(widget)} onRemove={() => onRemove(widget.id)} />
+      <CardMenu
+        onConfigure={() => onConfigure(widget)}
+        onRemove={() => onRemove(widget.id)}
+        moveTargets={moveTargets}
+        onMove={onMoveToTab ? (tabId) => onMoveToTab(widget.id, tabId) : undefined}
+      />
     ) : undefined;
   const HeaderControls = def.HeaderControls;
   const headerExtra =

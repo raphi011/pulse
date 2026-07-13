@@ -1,8 +1,16 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 
-export function CardMenu({ onConfigure, onRemove }: { onConfigure: () => void; onRemove: () => void }) {
+export function CardMenu({
+  onConfigure, onRemove, moveTargets = [], onMove,
+}: {
+  onConfigure: () => void;
+  onRemove: () => void;
+  moveTargets?: { id: string; name: string }[];
+  onMove?: (tabId: string) => void;
+}) {
   const [open, setOpen] = useState(false);
+  const [view, setView] = useState<"root" | "move">("root");
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -24,6 +32,10 @@ export function CardMenu({ onConfigure, onRemove }: { onConfigure: () => void; o
       window.removeEventListener("scroll", close, true);
       window.removeEventListener("resize", close);
     };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) setView("root");
   }, [open]);
 
   function toggle() {
@@ -51,22 +63,55 @@ export function CardMenu({ onConfigure, onRemove }: { onConfigure: () => void; o
           ref={menuRef}
           role="menu"
           style={{ position: "fixed", top: pos.top, right: pos.right }}
-          className="z-50 w-36 overflow-hidden rounded-lg bg-panel py-1 shadow-lg ring-1 ring-border [animation:wd-fade-in_.12s_ease-out] dark:bg-panel-dark dark:ring-border-dark"
+          className="z-50 w-44 overflow-hidden rounded-lg bg-panel py-1 shadow-lg ring-1 ring-border [animation:wd-fade-in_.12s_ease-out] dark:bg-panel-dark dark:ring-border-dark"
         >
-          <button
-            role="menuitem"
-            onClick={() => { setOpen(false); onConfigure(); }}
-            className="block w-full px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/5"
-          >
-            Configure
-          </button>
-          <button
-            role="menuitem"
-            onClick={() => { setOpen(false); onRemove(); }}
-            className="block w-full px-3 py-1.5 text-left text-sm text-danger hover:bg-danger/10"
-          >
-            Remove
-          </button>
+          {view === "root" ? (
+            <>
+              <button
+                role="menuitem"
+                onClick={() => { setOpen(false); onConfigure(); }}
+                className="block w-full px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/5"
+              >
+                Configure
+              </button>
+              {onMove && moveTargets.length > 0 && (
+                <button
+                  role="menuitem"
+                  onClick={() => setView("move")}
+                  className="flex w-full items-center justify-between px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/5"
+                >
+                  Move to tab… <span aria-hidden className="text-slate-400">›</span>
+                </button>
+              )}
+              <button
+                role="menuitem"
+                onClick={() => { setOpen(false); onRemove(); }}
+                className="block w-full px-3 py-1.5 text-left text-sm text-danger hover:bg-danger/10"
+              >
+                Remove
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                role="menuitem"
+                onClick={() => setView("root")}
+                className="flex w-full items-center gap-1 px-3 py-1.5 text-left text-sm text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/5"
+              >
+                <span aria-hidden>‹</span> Back
+              </button>
+              {moveTargets.map((t) => (
+                <button
+                  key={t.id}
+                  role="menuitem"
+                  onClick={() => { setOpen(false); onMove?.(t.id); }}
+                  className="block w-full truncate px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/5"
+                >
+                  {t.name}
+                </button>
+              ))}
+            </>
+          )}
         </div>
       )}
     </>
