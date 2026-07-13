@@ -78,14 +78,65 @@ describe("fetchPrs", () => {
     expect(data.prs[1].review).toBe("none");
   });
 
-  it("builds a search call with one --author arg per listed author", async () => {
-    mockJson
-      .mockResolvedValueOnce([rawPr]) // search
-      .mockResolvedValueOnce({ statusCheckRollup: [{ conclusion: "SUCCESS" }], reviewDecision: "APPROVED" }); // enrich
-    await fetchPrs({ authors: ["alice", "bob"], limit: 20 });
-    const args = (mockJson.mock.calls[0][0] as string[]).join(" ");
-    expect(args).toContain("--author=alice");
-    expect(args).toContain("--author=bob");
-    expect(args).not.toContain("--author=@me");
+  // gh's `search prs --author` is single-valued (last wins), so multiple
+  // authors must be split into one search each and merged.
+  function mockByAuthor(prsByAuthor: Record<string, GhSearchPr[]>) {
+    mockJson.mockImplementation((args: string[]) => {
+      if (args[0] === "search") {
+        const author = args.find((a) => a.startsWith("--author="))!.slice("--author=".length);
+        return Promise.resolve(prsByAuthor[author] ?? []);
+      }
+      return Promise.resolve({ statusCheckRollup: [{ conclusion: "SUCCESS" }], reviewDecision: "APPROVED" });
+    });
+  }
+
+  const searchCalls = () =>
+    mockJson.mock.calls.map((c) => c[0] as string[]).filter((a) => a[0] === "search");
+
+  it("issues one search per author, never multiple --author in one call", async () => {
+    const alicePr: GhSearchPr = { ...rawPr, number: 1, url: "https://github.com/o/r/pull/1", author: { login: "alice" } };
+    const bobPr: GhSearchPr = { ...rawPr, number: 2, url: "https://github.com/o/r/pull/2", author: { login: "bob" } };
+    mockByAuthor({ alice: [alicePr], bob: [bobPr] });
+
+    const data = await fetchPrs({ authors: ["alice", "bob"], limit: 20 });
+
+    const searches = searchCalls();
+    expect(searches).toHaveLength(2);
+    for (const args of searches) {
+      expect(args.filter((a) => a.startsWith("--author="))).toHaveLength(1);
+    }
+    expect(searches.map((a) => a.find((x) => x.startsWith("--author=")))).toEqual([
+      "--author=alice",
+      "--author=bob",
+    ]);
+    expect(data.prs.map((p) => p.author).sort()).toEqual(["alice", "bob"]);
+  });
+
+  it("merges results across authors, sorts by updatedAt desc, and caps to limit", async () => {
+    const older: GhSearchPr = { ...rawPr, number: 1, url: "https://github.com/o/r/pull/1", author: { login: "alice" }, updatedAt: "2026-07-01T00:00:00Z" };
+    const newer: GhSearchPr = { ...rawPr, number: 2, url: "https://github.com/o/r/pull/2", author: { login: "bob" }, updatedAt: "2026-07-09T00:00:00Z" };
+    mockByAuthor({ alice: [older], bob: [newer] });
+
+    const data = await fetchPrs({ authors: ["alice", "bob"], limit: 1 });
+
+    expect(data.prs).toHaveLength(1);
+    expect(data.prs[0].author).toBe("bob"); // most recently updated survives the cap
+  });
+
+  it("tolerates a single author's search failing but surfaces a total failure", async () => {
+    mockJson.mockImplementation((args: string[]) => {
+      if (args[0] === "search") {
+        const author = args.find((a) => a.startsWith("--author="))!.slice("--author=".length);
+        if (author === "bob") return Promise.reject(new Error("gh search failed"));
+        return Promise.resolve([{ ...rawPr, author: { login: "alice" } }]);
+      }
+      return Promise.resolve({ statusCheckRollup: [{ conclusion: "SUCCESS" }], reviewDecision: "APPROVED" });
+    });
+    const data = await fetchPrs({ authors: ["alice", "bob"], limit: 20 });
+    expect(data.prs.map((p) => p.author)).toEqual(["alice"]);
+
+    mockJson.mockReset();
+    mockJson.mockRejectedValue(new Error("gh auth failed"));
+    await expect(fetchPrs({ authors: ["alice", "bob"], limit: 20 })).rejects.toThrow("gh auth failed");
   });
 });

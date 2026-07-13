@@ -52,14 +52,33 @@ async function searchAndEnrich(searchArgs: string[]): Promise<PrItem[]> {
 
 const SEARCH_JSON = "number,title,url,repository,author,updatedAt";
 
+function dedupeByUrl(prs: PrItem[]): PrItem[] {
+  const seen = new Map<string, PrItem>();
+  for (const pr of prs) if (!seen.has(pr.url)) seen.set(pr.url, pr);
+  return [...seen.values()];
+}
+
 export async function fetchPrs(config: PrsConfig): Promise<PrsData> {
   // Blank authors → your own open PRs; otherwise the listed teammates'.
-  const authorArgs = config.authors.length
-    ? config.authors.map((a) => `--author=${a}`)
-    : ["--author=@me"];
-  const prs = await searchAndEnrich([
-    "search", "prs", ...authorArgs, "--state=open",
-    "--json", SEARCH_JSON, "--limit", String(config.limit),
-  ]);
+  // `gh search prs --author` is single-valued (last flag wins), so each author
+  // needs its own search; we merge, sort by recency, and cap to the limit.
+  const authors = config.authors.length ? config.authors : ["@me"];
+  const settled = await Promise.allSettled(
+    authors.map((author) =>
+      searchAndEnrich([
+        "search", "prs", `--author=${author}`, "--state=open",
+        "--json", SEARCH_JSON, "--limit", String(config.limit),
+      ]),
+    ),
+  );
+  const fulfilled = settled.filter((r): r is PromiseFulfilledResult<PrItem[]> => r.status === "fulfilled");
+  // A single bad author shouldn't sink the widget, but a total failure (e.g.
+  // auth) must surface rather than caching an empty "ok" result.
+  if (fulfilled.length === 0 && settled.length > 0) {
+    throw (settled[0] as PromiseRejectedResult).reason;
+  }
+  const prs = dedupeByUrl(fulfilled.flatMap((r) => r.value))
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    .slice(0, config.limit);
   return { prs };
 }
