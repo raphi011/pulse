@@ -152,18 +152,27 @@ export async function runJsonCli<T>(
   opts: RunCliOptions = {},
 ): Promise<T> {
   let stdout: string;
+  // Set when runCli itself failed (non-zero exit / auth / timeout). We still parse the body it
+  // carried — it may hold a richer API error — but if the body is unparseable or turns out to hold
+  // no recognizable error, this original CliError (and its classification) is authoritative.
+  let processError: CliError | undefined;
   try {
     ({ stdout } = await runCli(bin, args, opts));
   } catch (err) {
     // Non-zero exit (e.g. HTTP 404): the JSON error body is carried on the CliError.
-    if (err instanceof CliError && err.stdout) stdout = err.stdout;
-    else throw err;
+    if (err instanceof CliError && err.stdout) {
+      processError = err;
+      stdout = err.stdout;
+    } else throw err;
   }
 
   let body: unknown;
   try {
     body = JSON.parse(stdout);
   } catch {
+    // Unparseable body: a preceding process failure (e.g. auth) is more informative than a
+    // generic parse error, so surface it rather than reclassifying to "failed".
+    if (processError) throw processError;
     throw new CliError(`${bin} returned non-JSON output`, "failed");
   }
 
@@ -174,5 +183,8 @@ export async function runJsonCli<T>(
     }
     throw new CliError(apiError.message?.trim() || `${bin} error ${apiError.code ?? ""}`.trim(), "failed");
   }
+  // A non-zero exit whose body carries no embedded error is still a failure — the process
+  // signaled it via the exit code. Don't return it as a cacheable success.
+  if (processError) throw processError;
   return body as T;
 }

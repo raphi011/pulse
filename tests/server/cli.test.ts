@@ -257,6 +257,30 @@ describe("runJsonCli (driven through the mocked runCli/Command)", () => {
     expect(err.kind).toBe("failed");
     expect(err.message).toMatch(/non-JSON/);
   });
+
+  it("preserves the original auth classification when a failed process emits non-JSON output", async () => {
+    const cmd = nextCommand();
+    const promise = runJsonCli("gws", ["x"], extractApiError, {
+      notAuthenticatedPattern: /reauth/i,
+      notAuthenticatedMessage: "Not authenticated — run `gws auth login`",
+    });
+    cmd.emitStdout("<html>login</html>"); // non-JSON body carried on a failed exit
+    cmd.emitStderr("please reauth");
+    cmd.emitClose({ code: 1, signal: null });
+    const err = (await promise.catch((e) => e)) as CliError;
+    expect(err.kind).toBe("auth");
+    expect(err.message).toBe("Not authenticated — run `gws auth login`");
+  });
+
+  it("surfaces a non-zero exit as failure even when its JSON body carries no embedded error", async () => {
+    const cmd = nextCommand();
+    const promise = runJsonCli("gws", ["x"], extractApiError);
+    cmd.emitStdout("{}"); // parses fine, but the extractor finds no error
+    cmd.emitClose({ code: 1, signal: null });
+    const err = (await promise.catch((e) => e)) as CliError;
+    expect(err).toBeInstanceOf(CliError);
+    expect(err.kind).toBe("failed");
+  });
 });
 
 describe("warmToolPath (mocked @tauri-apps/api/path)", () => {
