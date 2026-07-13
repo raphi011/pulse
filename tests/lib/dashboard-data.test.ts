@@ -4,21 +4,22 @@ import "@/modules/fetch";
 import "@/modules/render";
 import "@/modules/integrations";
 import { useTempDb } from "../helpers/db";
-import { FIXTURE_TYPE } from "../helpers/fixture-widget";
+import { FIXTURE_TYPE, registerFixtureWidget } from "../helpers/fixture-widget";
 import * as data from "@/lib/dashboard-data";
+import * as tabsRepo from "@/server/tabs-repo";
 
-beforeEach(() => useTempDb());
+beforeEach(() => { useTempDb(); registerFixtureWidget(); });
 
 describe("dashboard-data", () => {
   it("creates a widget and lists it", async () => {
-    const w = await data.createWidget(FIXTURE_TYPE);
+    const w = await data.createWidget(FIXTURE_TYPE, "default");
     const layout = await data.fetchLayout();
     expect(layout.widgets.map((x) => x.id)).toContain(w.id);
     expect(layout.prefs.theme).toBe("dark");
   });
 
   it("updates title and rejects invalid config, accepts valid config", async () => {
-    const w = await data.createWidget(FIXTURE_TYPE);
+    const w = await data.createWidget(FIXTURE_TYPE, "default");
 
     const res = await data.updateWidget(w.id, { title: "Hi" });
     expect(res.title).toBe("Hi");
@@ -40,7 +41,7 @@ describe("dashboard-data", () => {
   it("rejects a github repo that is not owner/name (repoSchema injection guard)", async () => {
     // github.failingActions.repos uses repoSchema, which guards against path/command
     // injection into `gh api` — a value with a `?`/`=` must fail regex validation.
-    const w = await data.createWidget("github.failingActions");
+    const w = await data.createWidget("github.failingActions", "default");
     const before = (await data.fetchLayout()).widgets.find((x) => x.id === w.id)?.config;
 
     await expect(
@@ -53,22 +54,22 @@ describe("dashboard-data", () => {
   });
 
   it("hides a widget", async () => {
-    const w = await data.createWidget(FIXTURE_TYPE);
+    const w = await data.createWidget(FIXTURE_TYPE, "default");
     await data.updateWidget(w.id, { hidden: true });
     const layout = await data.fetchLayout();
     expect(layout.widgets.find((x) => x.id === w.id)?.hidden).toBe(true);
   });
 
   it("deletes a widget", async () => {
-    const w = await data.createWidget(FIXTURE_TYPE);
+    const w = await data.createWidget(FIXTURE_TYPE, "default");
     await data.deleteWidget(w.id);
     const layout = await data.fetchLayout();
     expect(layout.widgets.map((x) => x.id)).not.toContain(w.id);
   });
 
   it("saves positions", async () => {
-    const a = await data.createWidget(FIXTURE_TYPE);
-    const b = await data.createWidget(FIXTURE_TYPE);
+    const a = await data.createWidget(FIXTURE_TYPE, "default");
+    const b = await data.createWidget(FIXTURE_TYPE, "default");
     await data.savePositions([
       { id: a.id, order: 1, colSpan: 2, rowSpan: 3 },
       { id: b.id, order: 0, colSpan: 1, rowSpan: 1 },
@@ -81,7 +82,7 @@ describe("dashboard-data", () => {
 
   it("toggleIntegration returns confirmRequired when disabling with widgets present", async () => {
     await data.toggleIntegration("github", true);
-    await data.createWidget("github.prs");
+    await data.createWidget("github.prs", "default");
 
     const res = await data.toggleIntegration("github", false);
     expect(res.confirmRequired).toBe(1);
@@ -98,18 +99,18 @@ describe("dashboard-data", () => {
   });
 
   it("createWidget rejects an unknown widget type", async () => {
-    await expect(data.createWidget("does.not.exist")).rejects.toThrow("Unknown widget type");
+    await expect(data.createWidget("does.not.exist", "default")).rejects.toThrow("Unknown widget type");
   });
 
   it("updateWidget echoes schema defaults applied to an omitted config field", async () => {
     // github.failingActions' `limit` defaults to 10 — omitting it should echo the default back.
-    const w = await data.createWidget("github.failingActions");
+    const w = await data.createWidget("github.failingActions", "default");
     const res = await data.updateWidget(w.id, { config: { repos: ["o/r"] } });
     expect(res.config).toEqual({ repos: ["o/r"], limit: 10 });
   });
 
   it("updateWidget clears the title back to null when set blank", async () => {
-    const w = await data.createWidget(FIXTURE_TYPE);
+    const w = await data.createWidget(FIXTURE_TYPE, "default");
     await data.updateWidget(w.id, { title: "Renamed" });
     const res = await data.updateWidget(w.id, { title: "" });
     expect(res.title).toBeNull();
@@ -120,7 +121,7 @@ describe("dashboard-data", () => {
   });
 
   it("fetchWidgetData returns cached data with status ok", async () => {
-    const w = await data.createWidget(FIXTURE_TYPE);
+    const w = await data.createWidget(FIXTURE_TYPE, "default");
     const row = await data.fetchWidgetData(w.id, false);
     expect(row.status).toBe("ok");
     expect((row.payload as { platform: string }).platform).toBe("macos");
@@ -128,7 +129,7 @@ describe("dashboard-data", () => {
   });
 
   it("stores a preset accent and clears it with null", async () => {
-    const w = await data.createWidget(FIXTURE_TYPE);
+    const w = await data.createWidget(FIXTURE_TYPE, "default");
     const res = await data.updateWidget(w.id, { accent: "violet" });
     expect(res.accent).toBe("violet");
     const cleared = await data.updateWidget(w.id, { accent: null });
@@ -136,16 +137,41 @@ describe("dashboard-data", () => {
   });
 
   it("silently normalizes a non-preset accent to null", async () => {
-    const w = await data.createWidget(FIXTURE_TYPE);
+    const w = await data.createWidget(FIXTURE_TYPE, "default");
     await data.updateWidget(w.id, { accent: "violet" });
     const res = await data.updateWidget(w.id, { accent: "magenta" });
     expect(res.accent).toBeNull();
   });
 
   it("leaves accent untouched when the patch omits it", async () => {
-    const w = await data.createWidget(FIXTURE_TYPE);
+    const w = await data.createWidget(FIXTURE_TYPE, "default");
     await data.updateWidget(w.id, { accent: "teal" });
     const res = await data.updateWidget(w.id, { title: "Renamed" });
     expect(res.accent).toBe("teal");
+  });
+});
+
+describe("dashboard-data tabs", () => {
+  it("fetchLayout returns tabs and defaults activeTabId to the first tab", async () => {
+    const layout = await data.fetchLayout();
+    expect(layout.tabs.map((t) => t.id)).toContain("default");
+    expect(layout.activeTabId).toBe("default");
+  });
+
+  it("fetchLayout honors a persisted active tab, falling back when it is gone", async () => {
+    const t = await tabsRepo.addTab("Work");
+    await data.setActiveTab(t.id);
+    expect((await data.fetchLayout()).activeTabId).toBe(t.id);
+    await data.deleteTab(t.id);
+    expect((await data.fetchLayout()).activeTabId).toBe("default");
+  });
+
+  it("createWidget assigns the given tab and moveWidgetToTab reassigns it", async () => {
+    const t = await tabsRepo.addTab("Work");
+    const w = await data.createWidget(FIXTURE_TYPE, t.id);
+    expect(w.tabId).toBe(t.id);
+    await data.moveWidgetToTab(w.id, "default");
+    const layout = await data.fetchLayout();
+    expect(layout.widgets.find((x) => x.id === w.id)!.tabId).toBe("default");
   });
 });

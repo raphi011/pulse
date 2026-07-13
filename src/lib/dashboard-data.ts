@@ -1,9 +1,13 @@
 import { getFetchWidget } from "@/modules/fetch-registry";
 import {
-  addWidget as repoAddWidget, getWidget, getWidgets, getPref,
-  setHidden, setConfig, setTitle, removeWidget, setPositions, setAccent,
+  addWidget as repoAddWidget, getWidget, getWidgets, getPref, setPref,
+  setHidden, setConfig, setTitle, removeWidget, setPositions, setAccent, setWidgetTab,
   type Widget,
 } from "@/server/config-repo";
+import {
+  getTabs as repoGetTabs, addTab, renameTab as repoRenameTab,
+  deleteTab as repoDeleteTab, setTabOrder, type Tab,
+} from "@/server/tabs-repo";
 import { getWidgetData } from "@/server/widget-service";
 import {
   getIntegrationStatuses, enableIntegration, disableIntegration, ConfirmRequiredError,
@@ -12,21 +16,31 @@ import type { CacheRow } from "@/server/cache-repo";
 import type { IntegrationStatus } from "@/modules/integration-contracts";
 import { isAccentName } from "@/lib/accents";
 
-export type LayoutSnapshot = { widgets: Widget[]; prefs: { theme: string } };
+export type LayoutSnapshot = {
+  widgets: Widget[];
+  tabs: Tab[];
+  activeTabId: string;
+  prefs: { theme: string };
+};
 
 export async function fetchLayout(): Promise<LayoutSnapshot> {
-  const [widgets, theme] = await Promise.all([getWidgets(), getPref("theme", "dark")]);
-  return { widgets, prefs: { theme } };
+  const [widgets, tabs, theme, savedActive] = await Promise.all([
+    getWidgets(), repoGetTabs(), getPref("theme", "dark"), getPref("ui.activeTab", ""),
+  ]);
+  const activeTabId = tabs.some((t) => t.id === savedActive)
+    ? savedActive
+    : tabs[0]?.id ?? "default";
+  return { widgets, tabs, activeTabId, prefs: { theme } };
 }
 
 export async function fetchWidgetData(id: string, refresh: boolean): Promise<CacheRow> {
   return getWidgetData(id, refresh);
 }
 
-export async function createWidget(type: string): Promise<Widget> {
+export async function createWidget(type: string, tabId: string): Promise<Widget> {
   const def = getFetchWidget(type);
   if (!def) throw new Error(`Unknown widget type: ${type}`);
-  return repoAddWidget(type, def.manifest.defaultConfig as Record<string, unknown>);
+  return repoAddWidget(type, def.manifest.defaultConfig as Record<string, unknown>, tabId);
 }
 
 export type WidgetPatch = {
@@ -66,6 +80,28 @@ export async function savePositions(
   positions: { id: string; order: number; colSpan: number; rowSpan: number }[],
 ): Promise<void> {
   await setPositions(positions);
+}
+
+export async function getTabs(): Promise<Tab[]> {
+  return repoGetTabs();
+}
+export async function createTab(name: string): Promise<Tab> {
+  return addTab(name);
+}
+export async function renameTab(id: string, name: string): Promise<void> {
+  await repoRenameTab(id, name);
+}
+export async function deleteTab(id: string): Promise<void> {
+  await repoDeleteTab(id);
+}
+export async function reorderTabs(orders: { id: string; order: number }[]): Promise<void> {
+  await setTabOrder(orders);
+}
+export async function setActiveTab(id: string): Promise<void> {
+  await setPref("ui.activeTab", id);
+}
+export async function moveWidgetToTab(widgetId: string, tabId: string): Promise<void> {
+  await setWidgetTab(widgetId, tabId);
 }
 
 export async function fetchIntegrations(recheck = false): Promise<IntegrationStatus[]> {
