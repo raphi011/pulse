@@ -14,9 +14,7 @@ function shortDate(iso: string): string {
 export function ChatChannelsWidget({ data }: WidgetBodyProps<ChatChannelsData, ChatChannelsConfig>) {
   if (data.channels.length === 0)
     return (
-      <p className="text-sm text-slate-500 dark:text-slate-400">
-        No channels configured — add space IDs (run <code>gws chat spaces list</code>).
-      </p>
+      <p className="text-sm text-slate-500 dark:text-slate-400">No channels configured.</p>
     );
   return (
     <ul className="divide-y divide-border dark:divide-border-dark">

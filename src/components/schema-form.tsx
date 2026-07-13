@@ -159,6 +159,9 @@ function AsyncEnumField({
   );
 }
 
+// Above this many options the list gets a filter box; smaller lists stay bare.
+const MULTI_ENUM_SEARCH_THRESHOLD = 8;
+
 function AsyncMultiEnumField({
   id, label, optionsKey, value, onChange,
 }: {
@@ -167,6 +170,7 @@ function AsyncMultiEnumField({
 }) {
   const provider = getFieldOptionsProvider(optionsKey);
   const { data, isError } = useFieldOptions(optionsKey);
+  const [query, setQuery] = useState("");
 
   if (!provider || isError) {
     return <StringListEditor id={id} value={value} onChange={onChange} />;
@@ -175,22 +179,49 @@ function AsyncMultiEnumField({
   const options: FieldOption[] = data ?? [];
   // Selected values missing from the fetch still appear so nothing is silently dropped.
   const extras = value.filter((v) => !options.some((o) => o.value === v)).map((v) => ({ value: v, label: v }));
+  const all = [...options, ...extras];
   const toggle = (v: string, on: boolean) =>
     onChange(on ? [...value, v] : value.filter((x) => x !== v));
 
+  const showSearch = all.length > MULTI_ENUM_SEARCH_THRESHOLD;
+  const q = query.trim().toLowerCase();
+  const visible = q ? all.filter((o) => o.label.toLowerCase().includes(q)) : all;
+
   return (
     <div role="group" aria-label={label} className="space-y-1.5">
-      {[...options, ...extras].map((o) => (
-        <label key={o.value} className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+      {showSearch && (
+        <div className="flex items-center gap-2">
           <input
-            type="checkbox"
-            className="h-4 w-4 rounded accent-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-500/50"
-            checked={value.includes(o.value)}
-            onChange={(e) => toggle(o.value, e.target.checked)}
+            type="search"
+            aria-label={`Filter ${label}`}
+            className={inputCls}
+            placeholder="Filter…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
           />
-          {o.label}
-        </label>
-      ))}
+          {value.length > 0 && (
+            <span className="shrink-0 text-xs text-slate-500 dark:text-slate-400">{value.length} selected</span>
+          )}
+        </div>
+      )}
+      {/* Scroll rather than cap: a big space list stays fully browsable, and no
+          selected item can be sliced off the bottom. */}
+      <div className={`space-y-1.5 ${showSearch ? "max-h-48 overflow-y-auto pr-1" : ""}`}>
+        {visible.map((o) => (
+          <label key={o.value} className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded accent-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+              checked={value.includes(o.value)}
+              onChange={(e) => toggle(o.value, e.target.checked)}
+            />
+            {o.label}
+          </label>
+        ))}
+        {visible.length === 0 && (
+          <p className="text-xs text-slate-500 dark:text-slate-400">No matches.</p>
+        )}
+      </div>
     </div>
   );
 }

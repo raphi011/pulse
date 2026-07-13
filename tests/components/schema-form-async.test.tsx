@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { z } from "zod";
 import { SchemaForm } from "@/components/schema-form";
@@ -120,5 +121,42 @@ describe("SchemaForm asyncMultiEnum", () => {
       expect(screen.getByRole("textbox", { name: "Spaces" })).toBeInTheDocument(),
     );
     expect(screen.getByRole("textbox", { name: "Spaces" })).toHaveValue("spaces/A");
+  });
+
+  it("shows no filter box for a short list", async () => {
+    registerFieldOptions("test.spaces", async () => [
+      { value: "spaces/A", label: "Team A" },
+      { value: "spaces/B", label: "Team B" },
+    ]);
+    renderMultiForm({ spaceIds: [] });
+
+    await screen.findByRole("checkbox", { name: "Team A" });
+    expect(screen.queryByRole("searchbox", { name: "Filter Spaces" })).not.toBeInTheDocument();
+  });
+
+  it("filters a long list by label and reports the selected count", async () => {
+    const opts: FieldOption[] = Array.from({ length: 12 }, (_, i) => ({
+      value: `spaces/${i}`,
+      label: `Team ${i}`,
+    }));
+    registerFieldOptions("test.spaces", async () => opts);
+    renderMultiForm({ spaceIds: ["spaces/3"] });
+
+    // Long list → filter box appears, with the selected count.
+    const search = await screen.findByRole("searchbox", { name: "Filter Spaces" });
+    expect(screen.getByText("1 selected")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "Team 11" })).toBeInTheDocument();
+
+    // Typing narrows the visible checkboxes; "Team 1" also matches "Team 10"/"Team 11".
+    await userEvent.type(search, "Team 11");
+    await waitFor(() =>
+      expect(screen.queryByRole("checkbox", { name: "Team 2" })).not.toBeInTheDocument(),
+    );
+    expect(screen.getByRole("checkbox", { name: "Team 11" })).toBeInTheDocument();
+
+    // A non-matching query shows the empty state.
+    await userEvent.clear(search);
+    await userEvent.type(search, "zzz");
+    await waitFor(() => expect(screen.getByText("No matches.")).toBeInTheDocument());
   });
 });
