@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { z, type ZodType } from "zod";
+import { getFieldOptionsProvider, type FieldOption } from "@/modules/field-options";
 
 export type FieldKind = "string" | "number" | "boolean" | "stringList" | "enum" | "asyncEnum" | "asyncMultiEnum";
 export type Field = { key: string; label: string; kind: FieldKind; options?: string[]; optionsKey?: string; def?: unknown };
@@ -66,6 +68,96 @@ function StringListEditor({ id, value, onChange }: { id: string; value: string[]
   );
 }
 
+function useFieldOptions(optionsKey: string) {
+  const provider = getFieldOptionsProvider(optionsKey);
+  return useQuery({
+    queryKey: ["field-options", optionsKey],
+    queryFn: () => provider!(),
+    enabled: Boolean(provider),
+    staleTime: 5 * 60_000,
+  });
+}
+
+function AsyncEnumField({
+  id, label, optionsKey, value, onChange,
+}: {
+  id: string; label: string; optionsKey: string;
+  value: string; onChange: (v: string | undefined) => void;
+}) {
+  const provider = getFieldOptionsProvider(optionsKey);
+  const { data, isLoading, isError } = useFieldOptions(optionsKey);
+
+  // No provider, or the fetch failed → plain text entry so the field still works.
+  if (!provider || isError) {
+    return (
+      <input
+        id={id}
+        aria-label={label}
+        className={inputCls}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    );
+  }
+
+  const options: FieldOption[] = data ?? [];
+  // Always show the current value, even if the fetch omitted it (stale/renamed selection).
+  const hasCurrent = value === "" || options.some((o) => o.value === value);
+
+  return (
+    <select
+      id={id}
+      aria-label={label}
+      className={inputCls}
+      disabled={isLoading}
+      value={value}
+      onChange={(e) => onChange(e.target.value || undefined)}
+    >
+      <option value="">Default</option>
+      {!hasCurrent && <option value={value}>{value}</option>}
+      {options.map((o) => (
+        <option key={o.value} value={o.value}>{o.label}</option>
+      ))}
+    </select>
+  );
+}
+
+function AsyncMultiEnumField({
+  id, label, optionsKey, value, onChange,
+}: {
+  id: string; label: string; optionsKey: string;
+  value: string[]; onChange: (v: string[]) => void;
+}) {
+  const provider = getFieldOptionsProvider(optionsKey);
+  const { data, isError } = useFieldOptions(optionsKey);
+
+  if (!provider || isError) {
+    return <StringListEditor id={id} value={value} onChange={onChange} />;
+  }
+
+  const options: FieldOption[] = data ?? [];
+  // Selected values missing from the fetch still appear so nothing is silently dropped.
+  const extras = value.filter((v) => !options.some((o) => o.value === v)).map((v) => ({ value: v, label: v }));
+  const toggle = (v: string, on: boolean) =>
+    onChange(on ? [...value, v] : value.filter((x) => x !== v));
+
+  return (
+    <div role="group" aria-label={label} className="space-y-1.5">
+      {[...options, ...extras].map((o) => (
+        <label key={o.value} className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded accent-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+            checked={value.includes(o.value)}
+            onChange={(e) => toggle(o.value, e.target.checked)}
+          />
+          {o.label}
+        </label>
+      ))}
+    </div>
+  );
+}
+
 export function SchemaForm({
   schema, values, onChange,
 }: {
@@ -122,6 +214,20 @@ export function SchemaForm({
             )}
             {f.kind === "stringList" && (
               <StringListEditor id={id} value={(values[f.key] as string[]) ?? []} onChange={(v) => set(f.key, v)} />
+            )}
+            {f.kind === "asyncEnum" && (
+              <AsyncEnumField
+                id={id} label={f.label} optionsKey={f.optionsKey!}
+                value={String(values[f.key] ?? "")}
+                onChange={(v) => set(f.key, v)}
+              />
+            )}
+            {f.kind === "asyncMultiEnum" && (
+              <AsyncMultiEnumField
+                id={id} label={f.label} optionsKey={f.optionsKey!}
+                value={(values[f.key] as string[]) ?? []}
+                onChange={(v) => set(f.key, v)}
+              />
             )}
           </div>
         );
