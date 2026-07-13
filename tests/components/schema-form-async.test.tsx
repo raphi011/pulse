@@ -72,6 +72,14 @@ describe("SchemaForm asyncEnum", () => {
     );
     expect(screen.getByRole("textbox", { name: "Task list" })).toHaveValue("id1");
   });
+
+  it("falls back to a text input when no provider is registered for the optionsKey", async () => {
+    renderForm({ tasklist: "id1" });
+    await waitFor(() =>
+      expect(screen.getByRole("textbox", { name: "Task list" })).toBeInTheDocument(),
+    );
+    expect(screen.getByRole("textbox", { name: "Task list" })).toHaveValue("id1");
+  });
 });
 
 describe("SchemaForm asyncMultiEnum", () => {

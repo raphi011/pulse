@@ -1,9 +1,7 @@
 import { gwsJson } from "./gws";
 import { registerFieldOptions, type FieldOption } from "@/modules/field-options";
-
-export const TASK_LISTS_KEY = "gws.taskLists";
-export const CALENDARS_KEY = "gws.calendars";
-export const CHAT_SPACES_KEY = "gws.chatSpaces";
+import { TASK_LISTS_KEY, CALENDARS_KEY, CHAT_SPACES_KEY } from "./option-keys";
+export { TASK_LISTS_KEY, CALENDARS_KEY, CHAT_SPACES_KEY };
 
 type ListResp = { id: string; title?: string }[];
 type CalItem = { id: string; summary?: string; primary?: boolean };

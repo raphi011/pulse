@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { defineManifest } from "@/modules/contracts";
-import { TASK_LISTS_KEY, CALENDARS_KEY, CHAT_SPACES_KEY } from "./options";
+import { TASK_LISTS_KEY, CALENDARS_KEY, CHAT_SPACES_KEY } from "./option-keys";
 
 export const GMAIL_TYPE = "gws.gmail";
 export const CALENDAR_TYPE = "gws.calendar";
