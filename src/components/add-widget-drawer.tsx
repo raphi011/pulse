@@ -8,10 +8,10 @@ import { BrandIcon } from "./brand-icon";
 
 export function AddWidgetDrawer({ onAdd }: { onAdd: (type: string) => void }) {
   const [open, setOpen] = useState(false);
-  const { data: statuses } = useQuery({
+  const { data: statuses, isLoading } = useQuery({
     queryKey: ["integrations"],
     queryFn: () => fetchIntegrations(),
-    enabled: open,
+    staleTime: 30_000,
   });
   const enabledIds = new Set((statuses ?? []).filter((s) => s.enabled).map((s) => s.id));
   const types = listRenderWidgets().filter((t) => !t.integration || enabledIds.has(t.integration));
@@ -49,7 +49,10 @@ export function AddWidgetDrawer({ onAdd }: { onAdd: (type: string) => void }) {
               </button>
             </div>
             <ul className="flex-1 space-y-1.5 overflow-y-auto p-3">
-              {types.map((t) => (
+              {isLoading && (
+                <li className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">Loading widgets…</li>
+              )}
+              {!isLoading && types.map((t) => (
                 <li key={t.type}>
                   <button
                     onClick={() => { onAdd(t.type); setOpen(false); }}
@@ -63,7 +66,7 @@ export function AddWidgetDrawer({ onAdd }: { onAdd: (type: string) => void }) {
                   </button>
                 </li>
               ))}
-              {types.length === 0 && (
+              {!isLoading && types.length === 0 && (
                 <li className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">No widgets available.</li>
               )}
             </ul>
