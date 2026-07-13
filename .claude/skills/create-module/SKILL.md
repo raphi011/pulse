@@ -1,6 +1,6 @@
 ---
 name: create-module
-description: Use when adding a new integration to the work-dashboard (a new data source or widget — e.g. GitHub, Jira, Google Workspace, system stats), scaffolding a module under src/modules/, or registering a new widget type. Covers the manifest/fetch/render split, registry + integration wiring, config-form constraints, CLI-backed and live Tauri-command fetching, and the registration test.
+description: Use when adding a new integration to the work-dashboard (a new data source or widget — e.g. GitHub, Jira, Google Workspace, system stats), scaffolding a module under src/modules/, or registering a new widget type. Covers the manifest/fetch/render split, registry + integration wiring, config-form constraints, CLI-backed and live Tauri-command fetching, the Tauri shell-scope permissions a CLI binary needs, and the registration test.
 ---
 
 # Create a Dashboard Module
@@ -203,10 +203,27 @@ export const xJson = <T>(args: string[]) =>
 **N+1 enrichment** (list → per-item detail): run the per-item calls with `Promise.allSettled`
 and drop/fall back on rejection, so one failure doesn't sink the widget (`github/prs.ts`, `gws/gmail.ts`).
 
+### Allow the binary in the Tauri shell scope (required, easy to miss)
+
+`runCli` spawns through `tauri-plugin-shell`, which gates commands **by name**. A binary that
+isn't in the scope fails at runtime with `Scoped command <bin> not found` — and because tests
+mock the CLI wrapper, the whole suite stays green while the real app's widget is broken. Add
+the binary to **both** lists in `src-tauri/capabilities/default.json` (mirror `gh`/`jira`/`gws`):
+
+```jsonc
+{ "identifier": "shell:allow-execute", "allow": [ /* … */ { "name": "ccusage", "cmd": "ccusage", "args": true } ] },
+{ "identifier": "shell:allow-spawn",   "allow": [ /* … */ { "name": "ccusage", "cmd": "ccusage", "args": true } ] }
+```
+
+This is a Rust/capabilities change: it only takes effect after a **Tauri rebuild**
+(`npm run dev` / `npm start`), not a webview reload.
+
 ## Verify (don't skip)
 
 - `npm test` — new registration test + suite green.
 - `npm run lint`, `npx tsc --noEmit`, and `npm run build`.
+- CLI-backed module? Confirm the binary is in both shell-scope lists (see above) — the tests
+  can't catch a missing scope, only a real `npm run dev` launch will.
 - Drive the **real fetch** end-to-end: `npm run dev` (launches Rust + webview), then in the
   app **Edit → + Add widget → <your widget>**. Confirm it renders real data, the refresh
   button re-fetches, and — for CLI-backed modules — that it shows a clean in-card error when
@@ -218,6 +235,9 @@ and drop/fall back on rejection, so one failure doesn't sink the widget (`github
 - Wired only one barrel → widget missing from drawer, or nothing to fetch its data.
 - Manifest sets `integration: "x"` but no `registerIntegration({ id: "x", ... })` wired in
   `src/modules/integrations.ts` → widget silently absent from the drawer.
+- CLI binary not added to `shell:allow-execute` **and** `shell:allow-spawn` in
+  `src-tauri/capabilities/default.json` → runtime `Scoped command <bin> not found`; tests stay
+  green because they mock the CLI wrapper. Requires a Tauri rebuild to take effect.
 - Unsupported config field kind (object, nested array, union) → form throws at render.
 - Building shell command strings → pass an arg array to `runCli`; never interpolate into a shell.
 - `fetch` swallowing errors and returning empty → let it throw; the cache keeps last-good data.
