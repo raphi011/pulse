@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { defineManifest } from "@/modules/contracts";
+import { TASK_LISTS_KEY, CALENDARS_KEY, CHAT_SPACES_KEY } from "./option-keys";
 
 export const GMAIL_TYPE = "gws.gmail";
 export const CALENDAR_TYPE = "gws.calendar";
@@ -13,7 +14,7 @@ export type GmailConfig = z.infer<typeof gmailConfigSchema>;
 export const gmailDefaultConfig: GmailConfig = { query: "is:unread in:inbox", limit: 15 };
 
 export const calendarConfigSchema = z.object({
-  calendarId: z.string().default("primary").describe("Calendar ID"),
+  calendarId: z.string().default("primary").meta({ optionsKey: CALENDARS_KEY }).describe("Calendar"),
   limit: z.number().int().min(1).max(50).default(15).describe("Max events"),
 });
 export type CalendarConfig = z.infer<typeof calendarConfigSchema>;
@@ -55,7 +56,8 @@ export const chatChannelsConfigSchema = z.object({
   spaceIds: z
     .array(z.string())
     .default([])
-    .describe("Space IDs (spaces/…) — run `gws chat spaces list`"),
+    .meta({ optionsKey: CHAT_SPACES_KEY })
+    .describe("Spaces"),
 });
 export type ChatChannelsConfig = z.infer<typeof chatChannelsConfigSchema>;
 export const chatChannelsDefaultConfig: ChatChannelsConfig = { spaceIds: [] };
@@ -125,7 +127,7 @@ export function filterDriveFiles(files: DriveFileItem[], config: DriveConfig): D
 export const TASKS_TYPE = "gws.tasks";
 
 export const tasksConfigSchema = z.object({
-  tasklist: z.string().default("@default").describe("Task list ID (@default = primary list)"),
+  tasklist: z.string().default("@default").meta({ optionsKey: TASK_LISTS_KEY }).describe("Task list"),
   showCompleted: z.boolean().default(false).describe("Show completed tasks"),
   limit: z.number().int().min(1).max(100).default(25).describe("Max tasks"),
 });
@@ -146,7 +148,7 @@ export type TasksData = { tasks: TaskItem[] };
 export const NEXT_MEETING_TYPE = "gws.nextMeeting";
 
 export const nextMeetingConfigSchema = z.object({
-  calendarId: z.string().default("primary").describe("Calendar ID"),
+  calendarId: z.string().default("primary").meta({ optionsKey: CALENDARS_KEY }).describe("Calendar"),
   includeSoloEvents: z
     .boolean()
     .default(false)
