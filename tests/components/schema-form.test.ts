@@ -23,4 +23,22 @@ describe("describeSchema", () => {
     const schema = z.object({ nested: z.object({ a: z.string() }) });
     expect(() => describeSchema(schema)).toThrow(/Unsupported/);
   });
+
+  it("derives an asyncEnum for a string field carrying optionsKey", () => {
+    const schema = z.object({
+      tasklist: z.string().default("@default").meta({ optionsKey: "gws.taskLists" }).describe("Task list"),
+    });
+    expect(describeSchema(schema)).toEqual([
+      { key: "tasklist", label: "Task list", kind: "asyncEnum", optionsKey: "gws.taskLists", def: "@default" },
+    ]);
+  });
+
+  it("derives an asyncMultiEnum for a string-array field carrying optionsKey", () => {
+    const schema = z.object({
+      spaceIds: z.array(z.string()).default([]).meta({ optionsKey: "gws.chatSpaces" }).describe("Spaces"),
+    });
+    expect(describeSchema(schema)).toEqual([
+      { key: "spaceIds", label: "Spaces", kind: "asyncMultiEnum", optionsKey: "gws.chatSpaces", def: [] },
+    ]);
+  });
 });
