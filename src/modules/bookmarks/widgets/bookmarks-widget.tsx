@@ -99,6 +99,9 @@ export function BookmarksHeaderControls({ refresh }: Props) {
   const [url, setUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // Ref mirror of `saving`: the Enter handler and the Save button can both fire add() before a
+  // re-render commits `saving`, and a state read would be a stale closure — the ref blocks the race.
+  const savingRef = useRef(false);
   const btnRef = useRef<HTMLButtonElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
 
@@ -131,23 +134,27 @@ export function BookmarksHeaderControls({ refresh }: Props) {
   }
 
   async function add() {
+    if (savingRef.current) return; // an add is already in flight (repeat Enter / Enter+click)
     const normalized = normalizeUrl(url);
     if (!title.trim() || !normalized) {
       setError("Enter a title and a valid URL.");
       return;
     }
+    savingRef.current = true;
     setSaving(true);
     try {
       await addBookmark(title.trim(), normalized);
       await refresh();
     } catch {
       setError("Couldn't save. Try again.");
+      savingRef.current = false;
       setSaving(false);
       return;
     }
     setTitle("");
     setUrl("");
     setError(null);
+    savingRef.current = false;
     setSaving(false);
     setOpen(false);
   }
