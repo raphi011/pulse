@@ -11,7 +11,6 @@ import { fetchLayout, fetchIntegrations } from "@/lib/dashboard-data";
 import { useExternalLinks } from "@/lib/external-links";
 import { ensureCacheVersion } from "@/server/cache-version";
 import { warmToolPath } from "@/server/cli";
-import type { Widget } from "@/server/config-repo";
 import type { IntegrationStatus } from "@/modules/integration-contracts";
 
 function useHashRoute(): string {
@@ -25,15 +24,18 @@ function useHashRoute(): string {
 }
 
 function DashboardView() {
-  const [widgets, setWidgets] = useState<Widget[] | null>(null);
+  const [layout, setLayout] = useState<Awaited<ReturnType<typeof fetchLayout>> | null>(null);
   useEffect(() => {
-    (async () => {
-      const layout = await fetchLayout();
-      setWidgets(layout.widgets);
-    })();
+    (async () => setLayout(await fetchLayout()))();
   }, []);
-  if (!widgets) return null;
-  return <Dashboard initialWidgets={widgets} />;
+  if (!layout) return null;
+  return (
+    <Dashboard
+      initialWidgets={layout.widgets}
+      initialTabs={layout.tabs}
+      initialActiveTabId={layout.activeTabId}
+    />
+  );
 }
 
 function IntegrationsView() {

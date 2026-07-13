@@ -19,7 +19,7 @@ export function SortableCard({
   onMoveToTab?: (widgetId: string, tabId: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
-    useSortable({ id: widget.id });
+    useSortable({ id: widget.id, data: { type: "widget" } });
   const colSpan = clampSpan(widget.colSpan, cols);
   const style = {
     transform: isDragging ? undefined : CSS.Translate.toString(transform),
