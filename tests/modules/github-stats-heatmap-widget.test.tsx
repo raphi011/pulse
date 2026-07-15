@@ -36,4 +36,20 @@ describe("HeatmapWidget", () => {
     renderWidget({ total: 0, weeks: [] });
     expect(screen.getByText(/No activity this year/i)).toBeInTheDocument();
   });
+
+  it("renders month and weekday axis labels", () => {
+    renderWidget(data);
+    expect(screen.getByText("Jul")).toBeInTheDocument();
+    expect(screen.getByText("Mon")).toBeInTheDocument();
+    expect(screen.getByText("Wed")).toBeInTheDocument();
+    expect(screen.getByText("Fri")).toBeInTheDocument();
+  });
+
+  it("positions each day in its weekday row", () => {
+    // Jul 7 2026 is a Tuesday (getUTCDay === 2) → 3rd cell in its column.
+    renderWidget(data);
+    const tue = screen.getByTitle(/4 contributions on Jul 7/i);
+    const column = tue.parentElement!;
+    expect(Array.from(column.children).indexOf(tue)).toBe(2);
+  });
 });

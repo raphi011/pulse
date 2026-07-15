@@ -44,7 +44,7 @@ describe("fetchHeatmap", () => {
     mockRun.mockResolvedValueOnce(okBody);
     const data = await fetchHeatmap({});
     expect(data.total).toBe(13);
-    expect(data.weeks[0].days[0]).toEqual({ date: "2026-07-07", count: 4, level: 2 });
+    expect(data.weeks[0].days[0]).toEqual({ date: "2026-07-07", count: 4, level: 1 });
   });
 });
 

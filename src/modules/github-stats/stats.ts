@@ -69,16 +69,33 @@ export function toStatsData(raw: RawContributions): StatsData {
   };
 }
 
-const LEVELS: Record<ContributionLevel, HeatmapDay["level"]> = {
-  NONE: 0, FIRST_QUARTILE: 1, SECOND_QUARTILE: 2, THIRD_QUARTILE: 3, FOURTH_QUARTILE: 4,
-};
+/** Nearest-rank value at fraction `q` (0..1) of an ascending-sorted array. */
+function quantile(sorted: number[], q: number): number {
+  if (sorted.length === 0) return 0;
+  return sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))];
+}
 
+/**
+ * Levels each day from its own `contributionCount` via quartiles of the active
+ * (positive-count) days, rather than GitHub's `contributionLevel`. GitHub's
+ * levels are quartiles of the *max*, so a single high-count day (e.g. 385)
+ * collapses most normal days into the faintest bucket. Rank-based quartiles are
+ * outlier-proof: active days spread evenly across levels 1–4. Zero-count days
+ * are level 0.
+ */
 export function toHeatmapData(raw: RawContributions): HeatmapData {
+  const days = raw.contributionCalendar.weeks.flatMap((w) => w.contributionDays);
+  const positives = days.map((d) => d.contributionCount).filter((c) => c > 0).sort((a, b) => a - b);
+  const t1 = quantile(positives, 0.25);
+  const t2 = quantile(positives, 0.5);
+  const t3 = quantile(positives, 0.75);
+  const levelFor = (count: number): HeatmapDay["level"] =>
+    count <= 0 ? 0 : count <= t1 ? 1 : count <= t2 ? 2 : count <= t3 ? 3 : 4;
   const weeks = raw.contributionCalendar.weeks.map((w) => ({
     days: w.contributionDays.map((d) => ({
       date: d.date,
       count: d.contributionCount,
-      level: LEVELS[d.contributionLevel],
+      level: levelFor(d.contributionCount),
     })),
   }));
   return { total: raw.contributionCalendar.totalContributions, weeks };
