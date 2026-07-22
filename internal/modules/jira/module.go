@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"pulse/internal/integration"
 	"pulse/internal/module"
 )
 
@@ -33,4 +34,19 @@ func (m *Module) Fetch(ctx context.Context, widgetType string, config map[string
 		return nil, err
 	}
 	return m.fetchJql(ctx, cfg)
+}
+
+func Integration() integration.Integration {
+	return integration.Integration{
+		ID: "jira", Name: "Jira",
+		Tool: &integration.Tool{
+			Bin:         "jira",
+			InstallHint: "Install jira-cli — https://github.com/ankitpokhrel/jira-cli (`brew install ankitpokhrel/jira-cli/jira-cli`).",
+			AuthHint:    "Run `jira init` and set the `JIRA_API_TOKEN` environment variable.",
+		},
+		Probe: func(ctx context.Context) error {
+			_, err := runJira(ctx, []string{"me"})
+			return err
+		},
+	}
 }

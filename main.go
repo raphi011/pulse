@@ -11,6 +11,7 @@ import (
 	"pulse/internal/apppath"
 	"pulse/internal/dashboard"
 	"pulse/internal/db"
+	"pulse/internal/integration"
 	"pulse/internal/module"
 	"pulse/internal/modules/bookmarks"
 	"pulse/internal/modules/ccusage"
@@ -72,6 +73,10 @@ func main() {
 		log.Fatal(err)
 	}
 
+	integrations := integration.NewService(store, registry, []integration.Integration{
+		github.Integration(), jira.Integration(), gws.Integration(), ccusage.Integration(),
+	})
+
 	// The emitter needs the app and the app needs the dashboard service:
 	// construct the emitter first and fill in its app pointer once
 	// application.New returns.
@@ -101,6 +106,7 @@ func main() {
 			application.NewService(bookmarks.NewService(bmRepo)),
 			application.NewService(system.NewService(monitor)),
 			application.NewService(gws.NewService()),
+			application.NewService(integrations),
 			application.NewService(notifier),
 			application.NewService(pomodoro.NewService(pomoRepo, notifier)),
 		},

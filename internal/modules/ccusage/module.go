@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"pulse/internal/cli"
+	"pulse/internal/integration"
 	"pulse/internal/module"
 )
 
@@ -62,4 +63,22 @@ func (m *Module) Fetch(ctx context.Context, widgetType string, config map[string
 		return nil, &cli.Error{Kind: cli.KindFailed, Message: "ccusage returned non-JSON output"}
 	}
 	return SpendData{CostUsd: body.Totals.TotalCost, Date: now.Format("2006-01-02")}, nil
+}
+
+// ccusage reads local ~/.claude logs — no auth concept, so NoAuth reports
+// authed: "n/a".
+func Integration() integration.Integration {
+	return integration.Integration{
+		ID: "ccusage", Name: "Claude Usage (ccusage)",
+		Tool: &integration.Tool{
+			Bin:         "ccusage",
+			InstallHint: "Install ccusage — `npm i -g ccusage`.",
+			AuthHint:    "No authentication needed — ccusage reads local ~/.claude logs.",
+		},
+		NoAuth: true,
+		Probe: func(ctx context.Context) error {
+			_, err := runCcusage(ctx, []string{"--version"})
+			return err
+		},
+	}
 }

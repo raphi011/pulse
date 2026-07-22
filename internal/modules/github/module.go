@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"pulse/internal/integration"
 	"pulse/internal/module"
 )
 
@@ -66,4 +67,21 @@ func (m *Module) Fetch(ctx context.Context, widgetType string, config map[string
 		return fetchDependabot(ctx, m.run, cfg)
 	}
 	return nil, fmt.Errorf("github: unknown widget type %s", widgetType)
+}
+
+// Integration describes the github CLI for the integrations panel; the
+// probe is a cheap authenticated call.
+func Integration() integration.Integration {
+	return integration.Integration{
+		ID: "github", Name: "GitHub",
+		Tool: &integration.Tool{
+			Bin:         "gh",
+			InstallHint: "Install the GitHub CLI — https://cli.github.com (`brew install gh`).",
+			AuthHint:    "Run `gh auth login` to authenticate.",
+		},
+		Probe: func(ctx context.Context) error {
+			_, err := RunGh(ctx, []string{"auth", "status"})
+			return err
+		},
+	}
 }

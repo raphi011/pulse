@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"pulse/internal/integration"
 	"pulse/internal/module"
 )
 
@@ -127,4 +128,22 @@ func (m *Module) Fetch(ctx context.Context, widgetType string, config map[string
 		return fetchNextMeeting(ctx, m.run, cfg)
 	}
 	return nil, fmt.Errorf("gws: unknown widget type %s", widgetType)
+}
+
+func Integration() integration.Integration {
+	return integration.Integration{
+		ID: "gws", Name: "Google Workspace",
+		Tool: &integration.Tool{
+			Bin:         "gws",
+			InstallHint: "Install the `gws` CLI and configure OAuth credentials.",
+			AuthHint:    "Run `gws auth login` to authenticate.",
+		},
+		// getProfile is a cheap authenticated Gmail call — 401 when unauthenticated.
+		Probe: func(ctx context.Context) error {
+			var out map[string]any
+			return runGwsJSON(ctx, []string{
+				"gmail", "users", "getProfile", "--params", jsonArg(map[string]any{"userId": "me"}),
+			}, &out)
+		},
+	}
 }
