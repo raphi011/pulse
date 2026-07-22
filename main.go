@@ -12,6 +12,7 @@ import (
 	"pulse/internal/db"
 	"pulse/internal/module"
 	"pulse/internal/modules/bookmarks"
+	"pulse/internal/modules/ccusage"
 	"pulse/internal/modules/system"
 	"pulse/internal/scheduler"
 )
@@ -56,7 +57,7 @@ func main() {
 
 	monitor := system.NewMonitor()
 	bmRepo := &bookmarks.Repo{DB: d}
-	registry, err := module.NewRegistry(system.New(), bookmarks.New(bmRepo))
+	registry, err := module.NewRegistry(system.New(), bookmarks.New(bmRepo), ccusage.New())
 	if err != nil {
 		log.Fatal(err)
 	}

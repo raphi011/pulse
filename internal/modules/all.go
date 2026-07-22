@@ -6,6 +6,7 @@ package modules
 import (
 	"pulse/internal/module"
 	"pulse/internal/modules/bookmarks"
+	"pulse/internal/modules/ccusage"
 	"pulse/internal/modules/system"
 )
 
@@ -15,5 +16,6 @@ func ManifestModules() []module.Module {
 	return []module.Module{
 		system.New(),
 		bookmarks.New(nil),
+		ccusage.New(),
 	}
 }
