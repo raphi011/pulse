@@ -8,6 +8,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"pulse/internal/cli"
 	"pulse/internal/db"
@@ -111,13 +112,88 @@ func TestStatusesDedupsConcurrentProbes(t *testing.T) {
 			}
 		}()
 	}
-	// Let both goroutines reach healthFor before releasing the probe.
+	// Let both goroutines reach resolve's probe call before releasing it.
 	for probes.Load() == 0 {
 	}
 	close(gate)
 	wg.Wait()
 	if got := probes.Load(); got != 1 {
 		t.Errorf("probes = %d, want 1 (in-flight dedup)", got)
+	}
+}
+
+// TestStatusesReleasesLeaderClaimsWhenWidgetsFails guards against a leaked
+// leader claim: Statuses takes cache/in-flight claims for every integration
+// before reading widgets, and must give them back if that read fails, or
+// every later Statuses call for that integration wedges forever behind
+// <-c.flight.done.
+func TestStatusesReleasesLeaderClaimsWhenWidgetsFails(t *testing.T) {
+	var probes atomic.Int32
+	integ := Integration{
+		ID: "github", Name: "GitHub", Tool: &Tool{Bin: "gh"},
+		Probe: func(ctx context.Context) error { probes.Add(1); return nil },
+	}
+	reg, err := module.NewRegistry(manifestOnly{manifests: []module.Manifest{
+		{Type: "github.prs", Integration: "github", Refreshable: true},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	d, err := db.Open(filepath.Join(t.TempDir(), "test.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Migrate(d); err != nil {
+		t.Fatal(err)
+	}
+	store := db.NewStore(d)
+	if err := d.Close(); err != nil { // force every subsequent store.Widgets() to fail
+		t.Fatal(err)
+	}
+
+	svc := NewService(store, reg, []Integration{integ})
+
+	if _, err := svc.Statuses(false); err == nil {
+		t.Fatal("Statuses with a closed DB: want error, got nil")
+	}
+	if got := probes.Load(); got != 0 {
+		t.Errorf("probes = %d, want 0 (a widgets-read failure must abort before any probe runs)", got)
+	}
+
+	// Swap in a working store (whitebox: same package). A leaked leader
+	// claim from the call above would wedge this one behind
+	// <-c.flight.done forever instead of probing fresh.
+	d2, err := db.Open(filepath.Join(t.TempDir(), "test2.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { d2.Close() })
+	if err := db.Migrate(d2); err != nil {
+		t.Fatal(err)
+	}
+	svc.store = db.NewStore(d2)
+
+	done := make(chan struct{})
+	var statuses []Status
+	var statusesErr error
+	go func() {
+		statuses, statusesErr = svc.Statuses(false)
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("Statuses hung after a prior widgets-read error — a leader claim was never released")
+	}
+	if statusesErr != nil {
+		t.Fatalf("Statuses after recovery: %v", statusesErr)
+	}
+	if got := probes.Load(); got != 1 {
+		t.Errorf("probes = %d, want 1 (fresh probe, not a poisoned cache entry from the aborted call)", got)
+	}
+	if len(statuses) != 1 || !statuses[0].Health.Installed || statuses[0].Health.Authed != true {
+		t.Errorf("statuses = %+v", statuses)
 	}
 }
 

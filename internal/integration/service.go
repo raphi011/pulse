@@ -44,6 +44,7 @@ func NewService(store *db.Store, reg *module.Registry, integrations []Integratio
 // integration's health: either a fresh cache hit, a follower waiting on
 // someone else's in-flight probe, or the leader who must run the probe.
 type probeClaim struct {
+	id       string
 	cached   *Health
 	flight   *flight
 	isLeader bool
@@ -52,24 +53,50 @@ type probeClaim struct {
 // claim resolves the cache/in-flight state under the lock and returns
 // immediately — no CLI call or other I/O happens here. Splitting this out
 // from resolve lets Statuses call it before any slow work (DB reads,
-// goroutine dispatch) so two truly-concurrent callers reliably see each
-// other's in-flight entry instead of racing it away — see Statuses' doc
-// comment for why ordering this ahead of the widgets query matters.
+// goroutine dispatch), removing the deterministic delay a DB read would
+// otherwise insert between two concurrent callers reaching this check (see
+// Statuses' doc comment for the reproduction). That closes the window that
+// was actually observed, but doesn't make the two claim() calls atomic with
+// each other — a nanoscale scheduling window between them still exists in
+// principle, it's just no longer stretched wide enough by I/O to hit.
 func (s *Service) claim(id string, force bool) probeClaim {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if !force {
 		if c, ok := s.cache[id]; ok && time.Since(c.at) < healthTTL {
 			h := c.health
-			return probeClaim{cached: &h}
+			return probeClaim{id: id, cached: &h}
 		}
 	}
 	if f, ok := s.inflight[id]; ok {
-		return probeClaim{flight: f}
+		return probeClaim{id: id, flight: f}
 	}
 	f := &flight{done: make(chan struct{})}
 	s.inflight[id] = f
-	return probeClaim{flight: f, isLeader: true}
+	return probeClaim{id: id, flight: f, isLeader: true}
+}
+
+// abortClaims releases every leader claim in claims without probing or
+// caching: it deletes the leader's in-flight entry (so the next Statuses
+// call re-probes fresh instead of finding a poisoned cache row) and wakes
+// any followers already parked on <-c.flight.done with a zero-value Health
+// carrying an explanatory Detail, rather than leaving them blocked forever.
+// Used when Statuses can't proceed past the claim phase (e.g. the widgets
+// DB read failed) and must give back every claim it just took.
+func (s *Service) abortClaims(claims []probeClaim) {
+	s.mu.Lock()
+	for _, c := range claims {
+		if c.isLeader {
+			c.flight.health = Health{Detail: "integration status probe aborted before running: widgets query failed"}
+			delete(s.inflight, c.id)
+		}
+	}
+	s.mu.Unlock()
+	for _, c := range claims {
+		if c.isLeader {
+			close(c.flight.done)
+		}
+	}
 }
 
 // resolve runs the actual (possibly slow) work for a claim: a follower just
@@ -143,6 +170,11 @@ func (s *Service) Statuses(force bool) ([]Status, error) {
 
 	widgets, err := s.store.Widgets(ctx)
 	if err != nil {
+		// Every claim above must be given back: a leader claim left in
+		// s.inflight with a never-closed done channel would wedge every
+		// future Statuses call for that integration behind <-c.flight.done
+		// forever, turning one transient DB error into a permanent hang.
+		s.abortClaims(claims)
 		return nil, err
 	}
 
