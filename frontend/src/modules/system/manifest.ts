@@ -1,15 +1,27 @@
-import { z } from "zod";
-import { defineManifest } from "@/modules/contracts";
-
 export const SYSTEM_STATS_TYPE = "system.stats";
 
 /** Both fields render as number inputs in the auto-generated config form. */
-export const systemStatsConfigSchema = z.object({
-  sampleIntervalSeconds: z.number().min(1).max(10).default(2).describe("Sample interval (seconds)"),
-  historySeconds: z.number().min(30).max(600).default(120).describe("History window (seconds)"),
-});
-export type SystemStatsConfig = z.infer<typeof systemStatsConfigSchema>;
+export interface SystemStatsConfig {
+  sampleIntervalSeconds: number;
+  historySeconds: number;
+}
 export const systemStatsDefaultConfig: SystemStatsConfig = { sampleIntervalSeconds: 2, historySeconds: 120 };
+
+/**
+ * Guard against a stale/invalid config reaching the live sampler (see
+ * use-system-stats.ts) — mirrors the bounds the server-side schema enforces.
+ */
+export function isValidSystemStatsConfig(config: unknown): config is SystemStatsConfig {
+  if (typeof config !== "object" || config === null) return false;
+  const c = config as Record<string, unknown>;
+  const { sampleIntervalSeconds, historySeconds } = c;
+  return (
+    typeof sampleIntervalSeconds === "number" &&
+    sampleIntervalSeconds >= 1 && sampleIntervalSeconds <= 10 &&
+    typeof historySeconds === "number" &&
+    historySeconds >= 30 && historySeconds <= 600
+  );
+}
 
 /** Raw payload of the `system_stats` Tauri command (serde camelCase). */
 export type SystemStatsPayload = {
@@ -28,9 +40,3 @@ export type SamplePoint = { t: number; cpu: number; memUsed: number; memTotal: n
  * live sampler (src/modules/system/sampler.ts), so fetch returns an empty object.
  */
 export type SystemStatsData = Record<string, never>;
-
-export const systemStatsManifest = defineManifest({
-  type: SYSTEM_STATS_TYPE, title: "System",
-  configSchema: systemStatsConfigSchema, defaultConfig: systemStatsDefaultConfig,
-  refreshable: false,
-});

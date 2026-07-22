@@ -1,9 +1,9 @@
 import { FaRegBookmark } from "react-icons/fa6";
 import { registerRender } from "@/modules/render-registry";
-import { bookmarksManifest } from "./manifest";
+import { BOOKMARKS_TYPE } from "./manifest";
 import { BookmarksWidget, BookmarksHeaderControls } from "./widgets/bookmarks-widget";
 
-registerRender(bookmarksManifest, {
+registerRender(BOOKMARKS_TYPE, {
   Component: BookmarksWidget,
   count: (d) => d.bookmarks.length,
   formEditable: false,

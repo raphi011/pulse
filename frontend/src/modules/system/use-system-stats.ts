@@ -1,6 +1,6 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { systemSampler, type SamplerSnapshot } from "./sampler";
-import { systemStatsConfigSchema, systemStatsDefaultConfig, type SystemStatsConfig } from "./manifest";
+import { isValidSystemStatsConfig, systemStatsDefaultConfig, type SystemStatsConfig } from "./manifest";
 
 /** Subscribe this component to the live sampler and keep it tuned to the widget config. */
 export function useSystemStats(config: SystemStatsConfig): SamplerSnapshot {
@@ -12,8 +12,7 @@ export function useSystemStats(config: SystemStatsConfig): SamplerSnapshot {
     // the previous payload). An invalid config must never reach the sampler
     // timer: missing numeric fields make capacity() return NaN (unbounded
     // buffer) and setInterval(cb, NaN) fires as fast as possible.
-    const parsed = systemStatsConfigSchema.safeParse(config);
-    systemSampler.configure(parsed.success ? parsed.data : systemStatsDefaultConfig);
+    systemSampler.configure(isValidSystemStatsConfig(config) ? config : systemStatsDefaultConfig);
   }, [config]);
   return useSyncExternalStore(systemSampler.subscribe, systemSampler.getSnapshot);
 }
