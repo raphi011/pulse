@@ -3,6 +3,7 @@ module pulse
 go 1.25.0
 
 require (
+	github.com/google/uuid v1.6.0
 	github.com/shirou/gopsutil/v4 v4.26.6
 	github.com/wailsapp/wails/v3 v3.0.0-alpha2.114
 	modernc.org/sqlite v1.54.0
@@ -15,7 +16,6 @@ require (
 	github.com/ebitengine/purego v0.10.0 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/godbus/dbus/v5 v5.2.2 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/jchv/go-winloader v0.0.0-20250406163304-c1995be93bd1 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
