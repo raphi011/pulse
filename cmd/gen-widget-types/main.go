@@ -11,12 +11,11 @@ import (
 	"sort"
 
 	"pulse/internal/module"
-	"pulse/internal/modules/bookmarks"
-	"pulse/internal/modules/system"
+	"pulse/internal/modules"
 )
 
 func main() {
-	reg, err := module.NewRegistry(system.New(), bookmarks.New(nil))
+	reg, err := module.NewRegistry(modules.ManifestModules()...)
 	if err != nil {
 		log.Fatal(err)
 	}
