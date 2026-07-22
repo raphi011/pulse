@@ -4,12 +4,15 @@ import { WidgetShell } from "@/components/widget-shell";
 import { CardMenu } from "@/components/card-menu";
 
 vi.mock("@/components/use-widget-data", () => ({ useWidgetData: vi.fn() }));
+// WidgetCard also reads the server-owned manifest via useManifest; stub it out so
+// this test never has to import the real @/lib/backend (Wails bindings).
+vi.mock("@/components/use-manifests", () => ({ useManifest: () => undefined, useManifests: () => [] }));
 import { useWidgetData } from "@/components/use-widget-data";
 import { WidgetCard } from "@/components/widget-card";
-import { registerFixtureWidget, FIXTURE_TYPE } from "../helpers/fixture-widget";
-import type { Widget } from "@/server/config-repo";
+import { registerFixtureRenderWidget, FIXTURE_TYPE } from "../helpers/fixture-widget";
+import type { Widget } from "@/lib/backend";
 
-registerFixtureWidget();
+registerFixtureRenderWidget();
 const mockUseWidgetData = useWidgetData as unknown as ReturnType<typeof vi.fn>;
 const fixtureWidget: Widget = {
   id: "w1", type: FIXTURE_TYPE, title: null, accent: null,

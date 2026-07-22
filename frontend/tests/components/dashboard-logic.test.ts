@@ -5,8 +5,7 @@ import {
   tabDndId, parseTabDndId, classifyDrag,
 } from "@/components/dashboard-logic";
 import { FIXTURE_TYPE } from "../helpers/fixture-widget";
-import type { Widget } from "@/server/config-repo";
-import type { Tab } from "@/server/tabs-repo";
+import type { Widget, Tab } from "@/lib/backend";
 
 const mk = (id: string, order: number, extra: Partial<Widget> = {}): Widget => ({
   id, type: FIXTURE_TYPE, title: null, accent: null, order, colSpan: 1, rowSpan: 6,

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const invokeMock = vi.hoisted(() => vi.fn());
-vi.mock("@tauri-apps/api/core", () => ({ invoke: invokeMock }));
+vi.mock("@/lib/backend", () => ({ System: { Stats: invokeMock } }));
 
 import { systemSampler, __resetSamplerForTests } from "@/modules/system/sampler";
 

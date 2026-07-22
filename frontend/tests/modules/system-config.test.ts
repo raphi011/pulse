@@ -1,29 +1,36 @@
 import { describe, it, expect } from "vitest";
 import {
-  systemStatsConfigSchema,
+  isValidSystemStatsConfig,
   systemStatsDefaultConfig,
-  systemStatsManifest,
   SYSTEM_STATS_TYPE,
 } from "@/modules/system/manifest";
 
-describe("system stats config schema", () => {
-  it("fills defaults from an empty object", () => {
-    expect(systemStatsConfigSchema.parse({})).toEqual({ sampleIntervalSeconds: 2, historySeconds: 120 });
-    expect(systemStatsDefaultConfig).toEqual({ sampleIntervalSeconds: 2, historySeconds: 120 });
+// The Zod schema (and the manifest object itself) moved server-side (Go); this
+// guard is the frontend's last line of defense before handing config to the
+// live sampler timer (see use-system-stats.ts).
+describe("isValidSystemStatsConfig", () => {
+  it("accepts the default config", () => {
+    expect(isValidSystemStatsConfig(systemStatsDefaultConfig)).toBe(true);
   });
 
-  it("enforces bounds", () => {
-    expect(() => systemStatsConfigSchema.parse({ sampleIntervalSeconds: 0 })).toThrow();
-    expect(() => systemStatsConfigSchema.parse({ sampleIntervalSeconds: 11 })).toThrow();
-    expect(() => systemStatsConfigSchema.parse({ historySeconds: 10 })).toThrow();
-    expect(() => systemStatsConfigSchema.parse({ historySeconds: 601 })).toThrow();
+  it("rejects out-of-bounds sampleIntervalSeconds", () => {
+    expect(isValidSystemStatsConfig({ sampleIntervalSeconds: 0, historySeconds: 120 })).toBe(false);
+    expect(isValidSystemStatsConfig({ sampleIntervalSeconds: 11, historySeconds: 120 })).toBe(false);
   });
 
-  it("manifest is live (non-refreshable) with the right identity", () => {
-    expect(systemStatsManifest.type).toBe(SYSTEM_STATS_TYPE);
+  it("rejects out-of-bounds historySeconds", () => {
+    expect(isValidSystemStatsConfig({ sampleIntervalSeconds: 2, historySeconds: 10 })).toBe(false);
+    expect(isValidSystemStatsConfig({ sampleIntervalSeconds: 2, historySeconds: 601 })).toBe(false);
+  });
+
+  it("rejects missing fields, non-objects, and null", () => {
+    expect(isValidSystemStatsConfig({})).toBe(false);
+    expect(isValidSystemStatsConfig(null)).toBe(false);
+    expect(isValidSystemStatsConfig("nope")).toBe(false);
+  });
+
+  it("has the right type identity", () => {
     expect(SYSTEM_STATS_TYPE).toBe("system.stats");
-    expect(systemStatsManifest.title).toBe("System");
-    expect(systemStatsManifest.refreshable).toBe(false);
-    expect(systemStatsManifest.integration).toBeUndefined();
+    expect(systemStatsDefaultConfig).toEqual({ sampleIntervalSeconds: 2, historySeconds: 120 });
   });
 });

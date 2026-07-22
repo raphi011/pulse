@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { DndContext } from "@dnd-kit/core";
 import { TabBar } from "@/components/tab-bar";
-import type { Tab } from "@/server/tabs-repo";
+import type { Tab } from "@/lib/backend";
 
 const tabs: Tab[] = [
   { id: "t1", name: "Work", order: 0 },

@@ -1,11 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 
-vi.mock("@/modules/bookmarks/repo", () => ({
-  addBookmark: vi.fn(async () => {}),
-  removeBookmark: vi.fn(async () => {}),
+vi.mock("@/lib/backend", () => ({
+  Bookmarks: {
+    Add: vi.fn(async () => {}),
+    Remove: vi.fn(async () => {}),
+  },
 }));
-import { addBookmark } from "@/modules/bookmarks/repo";
+import { Bookmarks } from "@/lib/backend";
 import { BookmarksHeaderControls } from "@/modules/bookmarks/widgets/bookmarks-widget";
 import type { WidgetBodyProps } from "@/modules/contracts";
 import type { BookmarksData, BookmarksConfig } from "@/modules/bookmarks/manifest";
@@ -29,8 +31,9 @@ describe("BookmarksHeaderControls add guard (F8)", () => {
     fireEvent.keyDown(urlInput, { key: "Enter" });
     fireEvent.keyDown(urlInput, { key: "Enter" });
 
-    await waitFor(() => expect(addBookmark).toHaveBeenCalled());
-    expect(addBookmark).toHaveBeenCalledTimes(1);
-    expect(addBookmark).toHaveBeenCalledWith("Example", "https://example.com/");
+    await waitFor(() => expect(Bookmarks.Add).toHaveBeenCalled());
+    expect(Bookmarks.Add).toHaveBeenCalledTimes(1);
+    // URL normalization now happens server-side (Go); the widget passes the raw input through.
+    expect(Bookmarks.Add).toHaveBeenCalledWith("Example", "example.com");
   });
 });

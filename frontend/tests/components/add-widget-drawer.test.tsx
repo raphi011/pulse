@@ -2,22 +2,26 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AddWidgetDrawer } from "@/components/add-widget-drawer";
-import { fetchIntegrations } from "@/lib/dashboard-data";
+import { fetchIntegrations, fetchManifests } from "@/lib/dashboard-data";
 import type { IntegrationStatus } from "@/modules/integration-contracts";
 
+// listRenderWidgets contributes only {type, icon}; title/integration now come from
+// the server-owned manifest (fetchManifests), joined in the component itself.
 vi.mock("@/modules/render-registry", () => ({
   listRenderWidgets: () => [
-    { type: "github.prs", title: "Pull Requests", integration: "github" },
-    { type: "jira.jql", title: "Jira Query", integration: "jira" },
-    { type: "test.fixture", title: "Test Fixture" },
+    { type: "github.prs" },
+    { type: "jira.jql" },
+    { type: "test.fixture" },
   ],
 }));
 
 vi.mock("@/lib/dashboard-data", () => ({
   fetchIntegrations: vi.fn(),
+  fetchManifests: vi.fn(),
 }));
 
 const mockFetchIntegrations = vi.mocked(fetchIntegrations);
+const mockFetchManifests = vi.mocked(fetchManifests);
 
 const statuses: IntegrationStatus[] = [
   { id: "github", name: "GitHub", tool: null, health: { installed: true, authed: true }, enabled: true, override: null, widgetCount: 0 },
@@ -27,6 +31,12 @@ const statuses: IntegrationStatus[] = [
 beforeEach(() => {
   mockFetchIntegrations.mockReset();
   mockFetchIntegrations.mockResolvedValue(statuses);
+  mockFetchManifests.mockReset();
+  mockFetchManifests.mockResolvedValue([
+    { type: "github.prs", title: "Pull Requests", configFields: [], refreshable: true, integration: "github" },
+    { type: "jira.jql", title: "Jira Query", configFields: [], refreshable: true, integration: "jira" },
+    { type: "test.fixture", title: "Test Fixture", configFields: [], refreshable: true },
+  ]);
 });
 
 function open() {

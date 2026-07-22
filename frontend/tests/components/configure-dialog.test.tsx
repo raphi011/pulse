@@ -3,16 +3,32 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
+// vi.mock factories are hoisted above imports, so the fixture manifest must be
+// self-contained here (vi.hoisted) rather than referencing the helper import below.
+const hoisted = vi.hoisted(() => ({
+  fixtureManifest: {
+    type: "test.fixture",
+    title: "Test Fixture",
+    configFields: [{ key: "label", label: "Label", kind: "string", def: "Fixture" }],
+    refreshable: true,
+  },
+}));
+
 vi.mock("@/lib/dashboard-data", () => ({
   updateWidget: vi.fn(async () => ({ config: { label: "" }, title: null, accent: "teal" })),
   fetchWidgetData: vi.fn(async () => ({ widgetId: "w1", payload: null, fetchedAt: 0, status: "ok", error: null, errorKind: null })),
+  // ConfigureDialog resolves its manifest (title, configFields) through useManifest ->
+  // useManifests -> fetchManifests; feed it the fixture manifest so the dialog renders.
+  fetchManifests: vi.fn(async () => [hoisted.fixtureManifest]),
 }));
 
 import "@/modules/render";
 import { updateWidget, fetchWidgetData } from "@/lib/dashboard-data";
 import { ConfigureDialog } from "@/components/configure-dialog";
-import { FIXTURE_TYPE } from "../helpers/fixture-widget";
-import type { Widget } from "@/server/config-repo";
+import { FIXTURE_TYPE, registerFixtureRenderWidget } from "../helpers/fixture-widget";
+import type { Widget } from "@/lib/backend";
+
+registerFixtureRenderWidget();
 
 const widget: Widget = {
   id: "w1", type: FIXTURE_TYPE, title: null, accent: null,
@@ -20,8 +36,12 @@ const widget: Widget = {
 };
 
 function renderDialog(onSaved = vi.fn()) {
+  const qc = new QueryClient();
+  // Pre-seed the manifests query so the dialog (gated on useManifest resolving)
+  // renders synchronously instead of the tests racing an async fetch.
+  qc.setQueryData(["manifests"], [hoisted.fixtureManifest]);
   render(
-    <QueryClientProvider client={new QueryClient()}>
+    <QueryClientProvider client={qc}>
       <ConfigureDialog widget={widget} onClose={() => {}} onSaved={onSaved} />
     </QueryClientProvider>,
   );

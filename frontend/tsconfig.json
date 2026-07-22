@@ -22,5 +22,5 @@
     "**/*.tsx",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "legacy-modules", "tests", "vitest.setup.ts"]
+  "exclude": ["node_modules", "legacy-modules"]
 }

@@ -1,13 +1,37 @@
-import { render, screen, act } from "@testing-library/react";
-import { beforeEach, expect, test } from "vitest";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+// Auto-refresh is now a backend-owned pref (Dashboard.AutoRefresh/SetAutoRefresh)
+// driven by the Go scheduler; this context just reflects/forwards it.
+// The real bindings return a Wails CancellablePromise; declaring the mocks
+// here (rather than via vi.mocked on the imported binding) keeps their type
+// a plain Promise-returning Mock so .mockResolvedValue etc. type-check.
+const mocks = vi.hoisted(() => ({
+  autoRefresh: vi.fn<() => Promise<boolean>>(),
+  setAutoRefresh: vi.fn<(enabled: boolean) => Promise<void>>(),
+  refreshAll: vi.fn<() => Promise<void>>(),
+}));
+
+vi.mock("@/lib/backend", () => ({
+  Dashboard: {
+    AutoRefresh: mocks.autoRefresh,
+    SetAutoRefresh: mocks.setAutoRefresh,
+    RefreshAll: mocks.refreshAll,
+  },
+}));
+
 import { AutoRefreshProvider, useAutoRefresh } from "@/components/auto-refresh-context";
 
+const mockAutoRefresh = mocks.autoRefresh;
+const mockSetAutoRefresh = mocks.setAutoRefresh;
+const mockRefreshAll = mocks.refreshAll;
+
 function Probe() {
-  const { enabled, nonce, toggle, refreshAll } = useAutoRefresh();
+  const { enabled, toggle, refreshAll } = useAutoRefresh();
   return (
     <div>
       <span data-testid="enabled">{String(enabled)}</span>
-      <span data-testid="nonce">{nonce}</span>
       <button onClick={toggle}>toggle</button>
       <button onClick={refreshAll}>refreshAll</button>
     </div>
@@ -15,36 +39,57 @@ function Probe() {
 }
 
 function renderProbe() {
+  const qc = new QueryClient();
   return render(
-    <AutoRefreshProvider>
-      <Probe />
-    </AutoRefreshProvider>,
+    <QueryClientProvider client={qc}>
+      <AutoRefreshProvider><Probe /></AutoRefreshProvider>
+    </QueryClientProvider>,
   );
 }
 
-beforeEach(() => localStorage.clear());
-
-test("defaults to disabled with empty storage", () => {
-  renderProbe();
-  expect(screen.getByTestId("enabled").textContent).toBe("false");
+beforeEach(() => {
+  mockAutoRefresh.mockReset().mockResolvedValue(false);
+  mockSetAutoRefresh.mockReset().mockResolvedValue(undefined);
+  mockRefreshAll.mockReset().mockResolvedValue(undefined);
 });
 
-test("hydrates enabled from localStorage", () => {
-  localStorage.setItem("pulse:auto-refresh", "1");
-  renderProbe();
-  expect(screen.getByTestId("enabled").textContent).toBe("true");
+describe("AutoRefreshProvider", () => {
+  it("defaults to disabled before the pref query resolves", () => {
+    mockAutoRefresh.mockReturnValue(new Promise(() => {})); // never resolves
+    renderProbe();
+    expect(screen.getByTestId("enabled").textContent).toBe("false");
+  });
+
+  it("reflects an enabled backend pref once loaded", async () => {
+    mockAutoRefresh.mockResolvedValue(true);
+    renderProbe();
+    await waitFor(() => expect(screen.getByTestId("enabled").textContent).toBe("true"));
+  });
+
+  it("toggle flips the backend pref and re-fetches it", async () => {
+    renderProbe();
+    await waitFor(() => expect(mockAutoRefresh).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByText("toggle"));
+    await waitFor(() => expect(mockSetAutoRefresh).toHaveBeenCalledWith(true));
+    await waitFor(() => expect(mockAutoRefresh).toHaveBeenCalledTimes(2));
+  });
+
+  it("refreshAll delegates straight to Dashboard.RefreshAll", () => {
+    renderProbe();
+    fireEvent.click(screen.getByText("refreshAll"));
+    expect(mockRefreshAll).toHaveBeenCalledOnce();
+  });
 });
 
-test("toggle flips state and persists to localStorage", () => {
-  renderProbe();
-  act(() => screen.getByText("toggle").click());
-  expect(screen.getByTestId("enabled").textContent).toBe("true");
-  expect(localStorage.getItem("pulse:auto-refresh")).toBe("1");
-});
-
-test("refreshAll bumps nonce", () => {
-  renderProbe();
-  expect(screen.getByTestId("nonce").textContent).toBe("0");
-  act(() => screen.getByText("refreshAll").click());
-  expect(screen.getByTestId("nonce").textContent).toBe("1");
+describe("useAutoRefresh", () => {
+  it("throws when used outside the provider", () => {
+    const Bare = () => {
+      useAutoRefresh();
+      return null;
+    };
+    // Suppress the expected React error-boundary console noise.
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(() => render(<Bare />)).toThrow(/useAutoRefresh must be used within/);
+    spy.mockRestore();
+  });
 });
