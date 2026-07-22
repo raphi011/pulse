@@ -1,8 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { SummaryWidget } from "@/modules/github-stats/widgets/summary-widget";
-import { summaryDefaultConfig } from "@/modules/github-stats/manifest";
-import type { StatsData } from "@/modules/github-stats/manifest";
+import type { StatsData, SummaryConfig } from "@/modules/github-stats/manifest";
 
 const data: StatsData = {
   commits: 42, prs: 7, reviews: 5, issues: 3, total: 57,
@@ -12,8 +11,10 @@ const data: StatsData = {
   ],
 };
 
+const config: SummaryConfig = { timeframe: "30d" };
+
 function renderWidget(d: StatsData) {
-  return render(<SummaryWidget data={d} config={summaryDefaultConfig} refresh={async () => {}} />);
+  return render(<SummaryWidget data={d} config={config} refresh={async () => {}} />);
 }
 
 describe("SummaryWidget", () => {

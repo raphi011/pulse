@@ -1,6 +1,8 @@
 [
   "bookmarks.links",
   "ccusage.spend",
+  "github-stats.heatmap",
+  "github-stats.summary",
   "github.dependabot",
   "github.failingActions",
   "github.prs",

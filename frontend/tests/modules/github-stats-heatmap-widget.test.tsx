@@ -1,8 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { HeatmapWidget } from "@/modules/github-stats/widgets/heatmap-widget";
-import { heatmapDefaultConfig } from "@/modules/github-stats/manifest";
-import type { HeatmapData } from "@/modules/github-stats/manifest";
+import type { HeatmapData, HeatmapConfig } from "@/modules/github-stats/manifest";
 
 const data: HeatmapData = {
   total: 16,
@@ -17,8 +16,10 @@ const data: HeatmapData = {
   ],
 };
 
+const config: HeatmapConfig = {};
+
 function renderWidget(d: HeatmapData) {
-  return render(<HeatmapWidget data={d} config={heatmapDefaultConfig} refresh={async () => {}} />);
+  return render(<HeatmapWidget data={d} config={config} refresh={async () => {}} />);
 }
 
 describe("HeatmapWidget", () => {

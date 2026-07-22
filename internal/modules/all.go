@@ -8,6 +8,7 @@ import (
 	"pulse/internal/modules/bookmarks"
 	"pulse/internal/modules/ccusage"
 	"pulse/internal/modules/github"
+	"pulse/internal/modules/githubstats"
 	"pulse/internal/modules/system"
 )
 
@@ -19,5 +20,6 @@ func ManifestModules() []module.Module {
 		bookmarks.New(nil),
 		ccusage.New(),
 		github.New(),
+		githubstats.New(),
 	}
 }
