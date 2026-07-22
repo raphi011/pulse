@@ -70,10 +70,13 @@ grid) knows only the widget contract, never a specific integration.
 ### WidgetManifest & config descriptor
 
 `WidgetManifest`: `Type`, `Title`, `ConfigFields`, `Defaults`, `Refreshable`,
-`Integration`. `ConfigFields` is a Go struct DSL restricted to exactly today's five form
-field kinds — `string`, `number`, `boolean`, `stringList`, `enum` — each with label
-(today's `.describe()`) and default. Unsupported shapes are unrepresentable in the type
-system, replacing today's "schema-form throws" enforcement.
+`Integration`. `ConfigFields` is a Go struct DSL restricted to exactly today's seven form
+field kinds — `string`, `number` (with min/max), `boolean`, `stringList`, `enum`, plus
+`asyncEnum`/`asyncMultiEnum` (an `optionsKey` resolved at form-open time by a
+module-registered options provider, today's `field-options.ts`; served via a
+`FieldOptions(key)` bound method) — each with label (today's `.describe()`) and default.
+Unsupported shapes are unrepresentable in the type system, replacing today's
+"schema-form throws" enforcement.
 
 Frontend `schema-form.tsx` re-targets from Zod introspection to this descriptor (fetched
 via `Manifests()`).
@@ -103,6 +106,14 @@ Cache-first, preserved from today:
 3. UI listens, re-reads only that widget.
 4. Manual refresh button → `Refresh(widgetID)` → same fetch/cache/emit path.
 5. `refreshable: false` manifests: no ticker, no refresh button, no fetchedAt (unchanged).
+6. The global auto-refresh toggle and "refresh all now" move from
+   localStorage/frontend intervals to a pref + bound methods (`SetAutoRefresh`,
+   `RefreshAll`) driving the Go scheduler. Interval stays 5 minutes.
+7. Exception (documented): the `system.stats` live sampler keeps its frontend ring
+   buffer and poll loop (it is view-state for a live chart and must pause on
+   `document.hidden`, which only the webview can observe); it polls a bound
+   `system.Stats()` method that owns the stateful CPU/net delta sampling in Go
+   (gopsutil), replacing the Rust `system_stats` command.
 
 N+1 enrichment (list → per-item detail, e.g. github PRs) uses per-item goroutines with
 collected errors — one item's failure never sinks the widget (allSettled equivalent).
