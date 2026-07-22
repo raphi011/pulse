@@ -2,6 +2,7 @@ package jira
 
 import (
 	"context"
+	"errors"
 	"os"
 	"testing"
 
@@ -86,5 +87,49 @@ func TestFetchJqlAppendsRawAndPagination(t *testing.T) {
 		if gotArgs[i] != want[i] {
 			t.Fatalf("args = %v, want %v", gotArgs, want)
 		}
+	}
+}
+
+func TestNormalizeIssueNullAssignee(t *testing.T) {
+	fixture, err := os.ReadFile("testdata/jql.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := testModule(t, string(fixture), nil)
+	got, err := m.fetchJql(context.Background(), jqlConfig{Jql: "project = X", Limit: 10})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Issues) < 3 {
+		t.Fatalf("want at least 3 issues, got %d", len(got.Issues))
+	}
+	// CORE-102: empty-string displayName should normalize to nil
+	if got.Issues[1].Key != "CORE-102" {
+		t.Fatalf("fixture[1] should be CORE-102, got %s", got.Issues[1].Key)
+	}
+	if got.Issues[1].Assignee != nil {
+		t.Errorf("CORE-102 (empty displayName) assignee should be nil, got %v", got.Issues[1].Assignee)
+	}
+	// CORE-103: null assignee should normalize to nil
+	if got.Issues[2].Key != "CORE-103" {
+		t.Fatalf("fixture[2] should be CORE-103, got %s", got.Issues[2].Key)
+	}
+	if got.Issues[2].Assignee != nil {
+		t.Errorf("CORE-103 (null assignee) assignee should be nil, got %v", got.Issues[2].Assignee)
+	}
+}
+
+func TestFetchJqlPassthroughNonNotFoundErrors(t *testing.T) {
+	m := testModule(t, "", &cli.Error{Kind: cli.KindAuth, Message: "Not authenticated — run `jira init`"})
+	_, err := m.fetchJql(context.Background(), jqlConfig{Jql: "project = X", Limit: 10})
+	if err == nil {
+		t.Fatal("want error passthrough for auth error, got nil")
+	}
+	var ce *cli.Error
+	if !errors.As(err, &ce) {
+		t.Fatalf("want *cli.Error, got %T", err)
+	}
+	if ce.Kind != cli.KindAuth {
+		t.Errorf("want KindAuth, got %v", ce.Kind)
 	}
 }
