@@ -35,6 +35,7 @@ function ChartTooltip({ active, payload, format }: { active?: boolean; payload?:
 
 function StatArea({
   points, dataKey, domain, colorVar, gradientId, format,
+  wrapperClass = "mt-1 h-16",
 }: {
   points: SamplePoint[];
   dataKey: "cpu" | "memUsed";
@@ -42,10 +43,11 @@ function StatArea({
   colorVar: "--chart-cpu" | "--chart-mem";
   gradientId: string;
   format: (v: number) => string;
+  wrapperClass?: string;
 }) {
   const color = `var(${colorVar})`;
   return (
-    <div className="mt-1 h-16">
+    <div className={wrapperClass}>
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={points} margin={{ top: 2, right: 0, bottom: 0, left: 0 }}>
           <defs>
@@ -197,11 +199,15 @@ function CompactLayout({ points, latest }: { points: SamplePoint[]; latest: Samp
   );
 }
 
+/** Sections split the body evenly; each chart takes whatever its section has left. */
+const fullSectionCls = "flex min-h-0 flex-1 flex-col";
+const chartFillCls = "mt-1 min-h-0 flex-1";
+
 function FullLayout({ points, latest }: { points: SamplePoint[]; latest: SamplePoint }) {
   return (
-    <div className="space-y-4 py-1">
-      <section aria-label="CPU usage" data-testid="system-chart-section">
-        <div className="flex items-baseline justify-between">
+    <div className="flex h-full flex-col gap-3 py-1">
+      <section aria-label="CPU usage" data-testid="system-chart-section" className={fullSectionCls}>
+        <div className="flex shrink-0 items-baseline justify-between">
           <h3 className="text-xs font-medium uppercase tracking-wide text-muted">CPU</h3>
           <span className="text-sm font-semibold tabular-nums text-slate-900 dark:text-slate-100">
             {`${latest.cpu.toFixed(0)}%`}
@@ -210,10 +216,11 @@ function FullLayout({ points, latest }: { points: SamplePoint[]; latest: SampleP
         <StatArea
           points={points} dataKey="cpu" domain={[0, 100]}
           colorVar="--chart-cpu" gradientId="sys-cpu-fill" format={(v) => `${v.toFixed(0)}%`}
+          wrapperClass={chartFillCls}
         />
       </section>
-      <section aria-label="Memory usage" data-testid="system-chart-section">
-        <div className="flex items-baseline justify-between">
+      <section aria-label="Memory usage" data-testid="system-chart-section" className={fullSectionCls}>
+        <div className="flex shrink-0 items-baseline justify-between">
           <h3 className="text-xs font-medium uppercase tracking-wide text-muted">Memory</h3>
           <span className="text-sm font-semibold tabular-nums text-slate-900 dark:text-slate-100">
             {`${gb(latest.memUsed)} / ${gb(latest.memTotal)} GB`}
@@ -222,10 +229,11 @@ function FullLayout({ points, latest }: { points: SamplePoint[]; latest: SampleP
         <StatArea
           points={points} dataKey="memUsed" domain={[0, latest.memTotal]}
           colorVar="--chart-mem" gradientId="sys-mem-fill" format={(v) => `${gb(v)} GB`}
+          wrapperClass={chartFillCls}
         />
       </section>
-      <section aria-label="Network traffic" data-testid="system-chart-section">
-        <div className="flex items-baseline justify-between">
+      <section aria-label="Network traffic" data-testid="system-chart-section" className={fullSectionCls}>
+        <div className="flex shrink-0 items-baseline justify-between">
           <h3 className="text-xs font-medium uppercase tracking-wide text-muted">Network</h3>
           <span className="text-sm font-semibold tabular-nums text-slate-900 dark:text-slate-100">
             <span aria-hidden style={{ color: "var(--chart-net-rx)" }}>↓</span>
@@ -234,7 +242,7 @@ function FullLayout({ points, latest }: { points: SamplePoint[]; latest: SampleP
             {` ${rate(latest.tx)}`}
           </span>
         </div>
-        <NetworkArea points={points} />
+        <NetworkArea points={points} wrapperClass={chartFillCls} />
       </section>
     </div>
   );

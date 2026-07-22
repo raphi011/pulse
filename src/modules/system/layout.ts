@@ -1,12 +1,18 @@
 export type Layout = "compact" | "full";
 
 /**
- * Provisional pixel thresholds — tune in Task 3's verify step against the real
- * running card. Full needs ~290px of body height to show three 64px charts
- * without scrolling; compact fits in ~90px.
+ * Full's charts flex to fill the body, so its threshold is only what three
+ * sections need at a *minimum* chart height (~37px), not at a fixed one; above
+ * that, extra height goes to the charts rather than to dead space. Compact
+ * fits in ~90px.
+ *
+ * A card of rowSpan n measures `56n - 16` tall and spends ~65px on chrome, so
+ * the body lands on 143 / 199 / 255 / 311px for n = 4…7. The deadband sits in
+ * the gap between 143 and 199: no reachable height falls inside it, so the
+ * hysteresis can never strand a card in the layout it started in.
  */
-export const FULL_MIN_PX = 290;
-export const COMPACT_MAX_PX = 260;
+export const FULL_MIN_PX = 190;
+export const COMPACT_MAX_PX = 165;
 
 /**
  * Pick the layout for a measured available height. Inside the
