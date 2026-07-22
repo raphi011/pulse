@@ -3,26 +3,26 @@
 #
 # The lines below are called `modelines`. See `:help modeline`
 
-name: "pulse-scaffold"
+name: "pulse"
 arch: ${GOARCH}
 platform: "linux"
 version: "0.1.0"
 section: "default"
 priority: "extra"
 maintainer: ${GIT_COMMITTER_NAME} <${GIT_COMMITTER_EMAIL}>
-description: "A pulse-scaffold application"
-vendor: "My Company"
+description: "A local, single-user, pluggable desktop dashboard for organizing daily work."
+vendor: "Pulse"
 homepage: "https://wails.io"
 license: "MIT"
 release: "1"
 
 contents:
-  - src: "./bin/pulse-scaffold"
-    dst: "/usr/local/bin/pulse-scaffold"
+  - src: "./bin/pulse"
+    dst: "/usr/local/bin/pulse"
   - src: "./build/appicon.png"
-    dst: "/usr/share/icons/hicolor/128x128/apps/pulse-scaffold.png"
-  - src: "./build/linux/pulse-scaffold.desktop"
-    dst: "/usr/share/applications/pulse-scaffold.desktop"
+    dst: "/usr/share/icons/hicolor/128x128/apps/pulse.png"
+  - src: "./build/linux/pulse.desktop"
+    dst: "/usr/share/applications/pulse.desktop"
 
 # Default dependencies for the GTK4 + WebKitGTK 6.0 stack (Ubuntu 24.04+ / Debian 13+)
 depends:

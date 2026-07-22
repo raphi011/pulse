@@ -8,27 +8,27 @@
         AllowPromptForPassword="false">
     </Settings>
     <Installer
-        Path="pulse-scaffold"
+        Path="pulse"
         Arguments=""
-        InstallLocation="C:\Program Files\My Company\My Product">
+        InstallLocation="C:\Program Files\Pulse\Pulse">
     </Installer>
     <PackageInformation
-        PackageName="My Product"
-        PackageDisplayName="My Product"
-        PublisherName="CN=My Company"
-        PublisherDisplayName="My Company"
+        PackageName="Pulse"
+        PackageDisplayName="Pulse"
+        PublisherName="CN=Pulse"
+        PublisherDisplayName="Pulse"
         Version="0.1.0.0"
-        PackageDescription="A pulse-scaffold application">
+        PackageDescription="A local, single-user, pluggable desktop dashboard for organizing daily work.">
         <Capabilities>
             <Capability Name="runFullTrust" />
             
         </Capabilities>
         <Applications>
             <Application
-                Id="com.example.pulsescaffold"
-                Description="A pulse-scaffold application"
-                DisplayName="My Product"
-                ExecutableName="pulse-scaffold"
+                Id="com.pulse.dashboard"
+                Description="A local, single-user, pluggable desktop dashboard for organizing daily work."
+                DisplayName="Pulse"
+                ExecutableName="pulse"
                 EntryPoint="Windows.FullTrustApplication">
                 
             </Application>
@@ -41,13 +41,13 @@
         </Dependencies>
         <Properties>
             <Framework>false</Framework>
-            <DisplayName>My Product</DisplayName>
-            <PublisherDisplayName>My Company</PublisherDisplayName>
-            <Description>A pulse-scaffold application</Description>
+            <DisplayName>Pulse</DisplayName>
+            <PublisherDisplayName>Pulse</PublisherDisplayName>
+            <Description>A local, single-user, pluggable desktop dashboard for organizing daily work.</Description>
             <Logo>Assets\AppIcon.png</Logo>
         </Properties>
     </PackageInformation>
-    <SaveLocation PackagePath="pulse-scaffold.msix" />
+    <SaveLocation PackagePath="pulse.msix" />
     <PackageIntegrity>
         <CertificatePath></CertificatePath>
     </PackageIntegrity>
