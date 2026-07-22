@@ -210,6 +210,41 @@ func TestValidateNonObjectRaw(t *testing.T) {
 	}
 }
 
+func TestDefaultConfigNormalizesIntNumberDefaults(t *testing.T) {
+	fields := []ConfigField{
+		{Key: "n", Kind: FieldNumber, Default: 2}, // int literal
+	}
+	got := DefaultConfig(fields)
+	v, ok := got["n"].(float64)
+	if !ok || v != 2.0 {
+		t.Fatalf("expected float64(2), got %T %v", got["n"], got["n"])
+	}
+}
+
+func TestValidateBackfillNormalizesIntNumberDefaults(t *testing.T) {
+	fields := []ConfigField{
+		{Key: "n", Kind: FieldNumber, Default: 2}, // int literal
+	}
+	got, err := ValidateConfig(fields, json.RawMessage(`{}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	v, ok := got["n"].(float64)
+	if !ok || v != 2.0 {
+		t.Fatalf("expected float64(2), got %T %v", got["n"], got["n"])
+	}
+}
+
+func TestValidateRejectsExplicitNull(t *testing.T) {
+	fields := []ConfigField{
+		{Key: "n", Kind: FieldNumber, Default: 2},
+	}
+	_, err := ValidateConfig(fields, json.RawMessage(`{"n": null}`))
+	if !errors.Is(err, ErrInvalidConfig) {
+		t.Fatalf("expected ErrInvalidConfig, got %v", err)
+	}
+}
+
 func TestDefaultConfig(t *testing.T) {
 	fields := []ConfigField{
 		{Key: "a", Kind: FieldNumber, Default: 1.0},

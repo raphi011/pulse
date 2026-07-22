@@ -14,13 +14,33 @@ func invalid(key, why string) error {
 	return fmt.Errorf("%w: field %q %s", ErrInvalidConfig, key, why)
 }
 
+// normalizeValue coerces numeric defaults to float64 so a backfilled default
+// and a JSON-decoded value are always the same Go type for FieldNumber.
+func normalizeValue(f ConfigField, v any) any {
+	if f.Kind != FieldNumber {
+		return v
+	}
+	switch n := v.(type) {
+	case int:
+		return float64(n)
+	case int32:
+		return float64(n)
+	case int64:
+		return float64(n)
+	case float32:
+		return float64(n)
+	default:
+		return v
+	}
+}
+
 // DefaultConfig builds a config map from each field's default, skipping
 // fields with no default.
 func DefaultConfig(fields []ConfigField) map[string]any {
 	out := map[string]any{}
 	for _, f := range fields {
 		if f.Default != nil {
-			out[f.Key] = f.Default
+			out[f.Key] = normalizeValue(f, f.Default)
 		}
 	}
 	return out
@@ -41,7 +61,7 @@ func ValidateConfig(fields []ConfigField, raw json.RawMessage) (map[string]any, 
 		v, ok := in[f.Key]
 		if !ok {
 			if f.Default != nil {
-				out[f.Key] = f.Default
+				out[f.Key] = normalizeValue(f, f.Default)
 			}
 			continue
 		}
