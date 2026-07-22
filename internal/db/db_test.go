@@ -50,8 +50,8 @@ func TestForeignKeyCascadeTabToWidgetToCache(t *testing.T) {
 
 func TestStrictRejectsWrongType(t *testing.T) {
 	d := open(t)
-	if _, err := d.Exec(`INSERT INTO prefs (key, value) VALUES ('k', 42)`); err == nil {
-		t.Fatal("STRICT table accepted an integer into a TEXT column")
+	if _, err := d.Exec(`INSERT INTO tabs (id, name, "order", created_at) VALUES ('x', 'y', 'abc', 0)`); err == nil {
+		t.Fatal("STRICT table accepted non-numeric TEXT into an INTEGER column")
 	}
 }
 
