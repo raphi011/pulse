@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Name=My Product
+Comment=A pulse-scaffold application
+# The Exec line includes %u to pass the URL to the application
+Exec=/usr/local/bin/pulse-scaffold %u
+Terminal=false
+Type=Application
+Icon=pulse-scaffold
+Categories=Utility;
+StartupWMClass=pulse-scaffold
+
+ 

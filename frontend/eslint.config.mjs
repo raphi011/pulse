@@ -7,9 +7,12 @@ const NODE_API_MESSAGE =
 export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
-  // `dist` at any depth (incl. build bundles inside .claude/worktrees checkouts),
-  // plus the worktrees scratch dir itself (separate checkouts, not this tree's source).
-  { ignores: ["**/dist", "src-tauri/target", "drizzle", ".claude/worktrees"] },
+  // `dist` at any depth (incl. build bundles inside nested worktree checkouts).
+  // `drizzle` holds generated SQL migrations, `bindings` is wails3-generated
+  // TS bound to Go services/events — neither is source to lint. Sibling dirs
+  // outside frontend/ (src-tauri/target, ../.claude/worktrees) are outside this
+  // config's lint root (cwd is frontend/) and don't need an ignore entry.
+  { ignores: ["**/dist", "drizzle", "bindings"] },
   {
     // Webview code cannot reach Node builtins/globals — they throw at runtime.
     // Scoped to src/ only; tests legitimately run on Node.
