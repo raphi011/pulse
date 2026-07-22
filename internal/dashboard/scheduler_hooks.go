@@ -13,6 +13,7 @@ type kicker interface{ Kick() }
 // AttachScheduler wires k so RefreshAll can trigger an immediate refresh
 // round. Optional: RefreshAll is a no-op until this is called (main.go
 // calls it once at startup, after both the service and scheduler exist).
+//wails:ignore
 func (s *Service) AttachScheduler(k kicker) {
 	s.scheduler = k
 }

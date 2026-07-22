@@ -14,6 +14,7 @@ const cacheVersionPref = "cacheVersion"
 
 // EnsureCacheVersion wipes the disposable widget cache when the payload shape
 // version changed. Wipe-then-stamp: a crash between the two just re-wipes next boot.
+//wails:ignore
 func (s *Service) EnsureCacheVersion() error {
 	ctx := context.Background()
 	stored, err := s.store.Pref(ctx, cacheVersionPref, "")
