@@ -14,5 +14,6 @@
   "gws.nextMeeting",
   "gws.tasks",
   "jira.jql",
+  "pomodoro.timer",
   "system.stats"
 ]

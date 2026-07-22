@@ -11,6 +11,7 @@ import (
 	"pulse/internal/modules/githubstats"
 	"pulse/internal/modules/gws"
 	"pulse/internal/modules/jira"
+	"pulse/internal/modules/pomodoro"
 	"pulse/internal/modules/system"
 )
 
@@ -25,5 +26,6 @@ func ManifestModules() []module.Module {
 		githubstats.New(),
 		jira.New(),
 		gws.New(),
+		pomodoro.New(),
 	}
 }
