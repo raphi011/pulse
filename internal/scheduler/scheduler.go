@@ -17,8 +17,12 @@ import (
 type Config struct {
 	Interval    time.Duration                               // 0 → 5 * time.Minute
 	ListWidgets func(ctx context.Context) ([]string, error) // ids of refreshable, non-hidden widgets
-	Refresh     func(ctx context.Context, widgetID string)  // errors are already cached rows; no return
-	Enabled     func(ctx context.Context) bool              // pref-backed toggle
+	// Refresh receives the scheduler's ctx and should honor its
+	// cancellation; Run does not preempt an in-flight round — after ctx
+	// cancellation it returns once the current round's Refresh calls
+	// complete. Errors are already cached rows; no return.
+	Refresh func(ctx context.Context, widgetID string)
+	Enabled func(ctx context.Context) bool // pref-backed toggle
 }
 
 // Scheduler owns interval refresh for every refreshable widget: the port of
@@ -27,7 +31,6 @@ type Config struct {
 type Scheduler struct {
 	cfg  Config
 	kick chan struct{}
-	busy sync.Mutex // held for the duration of a refresh round
 }
 
 // New constructs a Scheduler from cfg, defaulting Interval to 5 minutes
@@ -50,6 +53,15 @@ func (s *Scheduler) Kick() {
 
 // Run blocks until ctx is cancelled, driving refresh rounds on every tick
 // (when Enabled) and on every Kick. Call it in a goroutine.
+//
+// Run is the only caller of round, and calls it synchronously — rounds are
+// serialized by construction, and a Kick that arrives mid-round waits in the
+// buffered channel and runs immediately after. If Run is ever restructured
+// to launch rounds concurrently, an explicit guard must be reintroduced;
+// TestScheduler_RoundsNeverOverlap will fail to flag it.
+//
+// Run does not preempt an in-flight round on ctx cancellation: it returns
+// once the current round's Refresh calls complete (see Config.Refresh).
 func (s *Scheduler) Run(ctx context.Context) {
 	t := time.NewTicker(s.cfg.Interval)
 	defer t.Stop()
@@ -68,13 +80,16 @@ func (s *Scheduler) Run(ctx context.Context) {
 }
 
 // round lists widgets and refreshes them concurrently, one goroutine per
-// widget, each wrapped in a panic recovery. Overlapping rounds are
-// prevented: a round already in flight makes this call a no-op.
+// widget, each wrapped in a panic recovery. Run calls round synchronously
+// and never launches two rounds at once, so rounds never overlap (see the
+// Run doc comment); the list+dispatch body is wrapped in its own panic
+// recovery so a panicking ListWidgets can't kill the loop.
 func (s *Scheduler) round(ctx context.Context) {
-	if !s.busy.TryLock() {
-		return // previous round still in flight
-	}
-	defer s.busy.Unlock()
+	defer func() {
+		if r := recover(); r != nil {
+			slog.Error("scheduler: round panicked", "panic", r)
+		}
+	}()
 
 	ids, err := s.cfg.ListWidgets(ctx)
 	if err != nil {
