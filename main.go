@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/services/notifications"
 
 	"pulse/internal/apppath"
 	"pulse/internal/dashboard"
@@ -17,6 +18,7 @@ import (
 	"pulse/internal/modules/githubstats"
 	"pulse/internal/modules/gws"
 	"pulse/internal/modules/jira"
+	"pulse/internal/modules/pomodoro"
 	"pulse/internal/modules/system"
 	"pulse/internal/scheduler"
 )
@@ -61,8 +63,10 @@ func main() {
 
 	monitor := system.NewMonitor()
 	bmRepo := &bookmarks.Repo{DB: d}
+	notifier := notifications.New()
+	pomoRepo := &pomodoro.Repo{DB: d}
 	registry, err := module.NewRegistry(
-		system.New(), bookmarks.New(bmRepo), ccusage.New(), github.New(), githubstats.New(), jira.New(), gws.New(),
+		system.New(), bookmarks.New(bmRepo), ccusage.New(), github.New(), githubstats.New(), jira.New(), gws.New(), pomodoro.New(),
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -97,6 +101,8 @@ func main() {
 			application.NewService(bookmarks.NewService(bmRepo)),
 			application.NewService(system.NewService(monitor)),
 			application.NewService(gws.NewService()),
+			application.NewService(notifier),
+			application.NewService(pomodoro.NewService(pomoRepo, notifier)),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
