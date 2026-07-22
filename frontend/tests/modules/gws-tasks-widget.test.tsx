@@ -1,13 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, act } from "@testing-library/react";
+
+vi.mock("@/lib/backend", () => ({
+  Gws: { SetTaskCompleted: vi.fn().mockResolvedValue(undefined) },
+}));
+import { Gws } from "@/lib/backend";
 import { TasksWidget } from "@/modules/gws/widgets/tasks-widget";
 import { ToastProvider } from "@/components/toast-context";
-import { tasksDefaultConfig, type TaskItem } from "@/modules/gws/manifest";
-import { setTaskCompleted } from "@/modules/gws/tasks";
-import { CliError } from "@/server/cli";
+import type { TaskItem, TasksConfig } from "@/modules/gws/manifest";
 
-vi.mock("@/modules/gws/tasks", () => ({ setTaskCompleted: vi.fn().mockResolvedValue(undefined) }));
-const mockSet = setTaskCompleted as unknown as ReturnType<typeof vi.fn>;
+const tasksDefaultConfig: TasksConfig = {
+  tasklist: "@default",
+  showCompleted: false,
+  completedMaxAge: "All time",
+  limit: 25,
+};
+
+const mockSet = Gws.SetTaskCompleted as unknown as ReturnType<typeof vi.fn>;
 
 const task = (id: string, completed: boolean): TaskItem => ({
   id,
@@ -70,7 +79,7 @@ describe("TasksWidget", () => {
 
   it("shows an error toast and does not refresh when the toggle fails", async () => {
     mockSet.mockRejectedValueOnce(
-      new CliError("Request had insufficient authentication scopes.", "failed"),
+      new Error("Request had insufficient authentication scopes."),
     );
     const { refresh } = renderWidget([task("todo", false)]);
     const btn = screen.getByRole("button", { name: 'Mark "todo" complete' });

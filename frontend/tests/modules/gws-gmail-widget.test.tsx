@@ -1,19 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, act } from "@testing-library/react";
+
+vi.mock("@/lib/backend", () => ({
+  Gws: {
+    ArchiveEmail: vi.fn().mockResolvedValue(undefined),
+    MarkEmailRead: vi.fn().mockResolvedValue(undefined),
+    TrashEmail: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+import { Gws } from "@/lib/backend";
 import { GmailWidget } from "@/modules/gws/widgets/gmail-widget";
 import { ToastProvider } from "@/components/toast-context";
-import { gmailDefaultConfig, type EmailItem } from "@/modules/gws/manifest";
-import { archiveEmail, markEmailRead, trashEmail } from "@/modules/gws/gmail";
-import { CliError } from "@/server/cli";
+import type { EmailItem, GmailConfig } from "@/modules/gws/manifest";
 
-vi.mock("@/modules/gws/gmail", () => ({
-  archiveEmail: vi.fn().mockResolvedValue(undefined),
-  markEmailRead: vi.fn().mockResolvedValue(undefined),
-  trashEmail: vi.fn().mockResolvedValue(undefined),
-}));
-const mockArchive = archiveEmail as unknown as ReturnType<typeof vi.fn>;
-const mockRead = markEmailRead as unknown as ReturnType<typeof vi.fn>;
-const mockTrash = trashEmail as unknown as ReturnType<typeof vi.fn>;
+const gmailDefaultConfig: GmailConfig = { query: "is:unread in:inbox", limit: 15 };
+
+const mockArchive = Gws.ArchiveEmail as unknown as ReturnType<typeof vi.fn>;
+const mockRead = Gws.MarkEmailRead as unknown as ReturnType<typeof vi.fn>;
+const mockTrash = Gws.TrashEmail as unknown as ReturnType<typeof vi.fn>;
 
 const email = (id: string, unread: boolean): EmailItem => ({
   id,
@@ -83,7 +87,7 @@ describe("GmailWidget actions", () => {
   });
 
   it("shows an error toast and does not refresh when a mutation fails", async () => {
-    mockTrash.mockRejectedValueOnce(new CliError("failed", "failed"));
+    mockTrash.mockRejectedValueOnce(new Error("failed"));
     const { refresh } = renderWidget([email("a", true)]);
     const btn = screen.getByRole("button", { name: /trash .*from-a/i });
 

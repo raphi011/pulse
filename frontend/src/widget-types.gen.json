@@ -6,6 +6,13 @@
   "github.dependabot",
   "github.failingActions",
   "github.prs",
+  "gws.calendar",
+  "gws.chatChannels",
+  "gws.chatDms",
+  "gws.drive",
+  "gws.gmail",
+  "gws.nextMeeting",
+  "gws.tasks",
   "jira.jql",
   "system.stats"
 ]

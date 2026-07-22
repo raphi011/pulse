@@ -4,4 +4,5 @@ import "./ccusage/render";
 import "./github/render";
 import "./github-stats/render";
 import "./jira/render";
+import "./gws/render";
 // Register future modules' render side here. Task 12 ports the rest from legacy-modules/.

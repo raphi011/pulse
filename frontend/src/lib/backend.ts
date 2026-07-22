@@ -3,10 +3,11 @@
 // model shapes and the cache-updated event subscription helper.
 import * as Dashboard from "../../bindings/pulse/internal/dashboard/service";
 import * as Bookmarks from "../../bindings/pulse/internal/modules/bookmarks/service";
+import * as Gws from "../../bindings/pulse/internal/modules/gws/service";
 import * as System from "../../bindings/pulse/internal/modules/system/service";
 import { Events } from "@wailsio/runtime";
 
-export { Dashboard, Bookmarks, System };
+export { Dashboard, Bookmarks, System, Gws };
 
 // Generated model types — one source of truth mirroring the Go structs.
 export type { CacheRow, Widget, Tab, Position, TabOrder } from "../../bindings/pulse/internal/db/models";

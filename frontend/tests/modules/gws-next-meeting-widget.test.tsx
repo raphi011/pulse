@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, act } from "@testing-library/react";
 import { NextMeetingWidget, formatCountdown, urgencyClass } from "@/modules/gws/widgets/next-meeting-widget";
-import { nextMeetingDefaultConfig, type NextMeetingData, type MeetingItem } from "@/modules/gws/manifest";
+import type { NextMeetingConfig, NextMeetingData, MeetingItem } from "@/modules/gws/manifest";
+
+const nextMeetingDefaultConfig: NextMeetingConfig = { calendarId: "primary", includeSoloEvents: false };
 
 const NOW = new Date("2026-07-12T10:00:00Z");
 

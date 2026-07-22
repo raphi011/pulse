@@ -4,10 +4,13 @@ import { FiArchive, FiCheck, FiTrash2 } from "react-icons/fi";
 import type { IconType } from "react-icons";
 import type { WidgetBodyProps } from "@/modules/contracts";
 import type { GmailData, GmailConfig, EmailItem } from "../manifest";
-import { archiveEmail, markEmailRead, trashEmail } from "../gmail";
+import { Gws } from "@/lib/backend";
 import { useToast } from "@/components/toast-context";
 import { PartialFailure } from "@/components/partial-failure";
-import { CliError } from "@/server/cli";
+
+const archiveEmail = (id: string) => Gws.ArchiveEmail(id);
+const markEmailRead = (id: string) => Gws.MarkEmailRead(id);
+const trashEmail = (id: string) => Gws.TrashEmail(id);
 
 function shortDate(iso: string): string {
   if (!iso) return "";
@@ -45,7 +48,7 @@ export function GmailWidget({ data, refresh }: WidgetBodyProps<GmailData, GmailC
       await action.run();
       await refresh();
     } catch (err) {
-      const message = err instanceof CliError ? err.message : "please try again.";
+      const message = err instanceof Error ? err.message : "please try again.";
       toast(`Couldn't ${action.verb} email: ${message}`, "error");
     } finally {
       setPending((p) => {

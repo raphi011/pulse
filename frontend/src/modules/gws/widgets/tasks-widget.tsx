@@ -8,9 +8,11 @@ import {
   type TasksConfig,
   type TaskItem,
 } from "../manifest";
-import { setTaskCompleted } from "../tasks";
+import { Gws } from "@/lib/backend";
 import { useToast } from "@/components/toast-context";
-import { CliError } from "@/server/cli";
+
+const setTaskCompleted = (tasklist: string, taskId: string, completed: boolean) =>
+  Gws.SetTaskCompleted(tasklist, taskId, completed);
 
 // Google Tasks due dates are date-only at UTC midnight — format in UTC to avoid a day shift.
 function dueLabel(due: string): string {
@@ -80,7 +82,7 @@ export function TasksWidget({ data, config, refresh }: WidgetBodyProps<TasksData
       await setTaskCompleted(config.tasklist, t.id, next);
       await refresh(); // the row's new state comes only from server data
     } catch (err) {
-      const message = err instanceof CliError ? err.message : "please try again.";
+      const message = err instanceof Error ? err.message : "please try again.";
       toast(`Couldn't update task: ${message}`, "error");
     } finally {
       setPending((p) => {
