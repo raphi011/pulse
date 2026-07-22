@@ -16,7 +16,8 @@ import (
 )
 
 // ManifestModules returns one instance of every module, in registration
-// order. Append new modules here as they are ported (Plan 2).
+// order. All eight modules are ported (Plan 2 complete); append new modules
+// here as they are added.
 func ManifestModules() []module.Module {
 	return []module.Module{
 		system.New(),

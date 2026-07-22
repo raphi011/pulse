@@ -11,9 +11,7 @@ export default defineConfig({
     // Vitest's root is frontend/ (cwd for all npm scripts); nested worktree
     // checkouts live under ../.claude/worktrees/<name>, outside this subtree,
     // so they're never swept up and don't need an explicit exclude.
-    // legacy-modules/ parks unported modules (Plan 2 revives them one by one)
-    // and its tests aren't wired to the new server-owned manifests yet.
-    exclude: ["**/node_modules/**", "**/legacy-modules/**"],
+    exclude: ["**/node_modules/**"],
   },
   resolve: {
     alias: {

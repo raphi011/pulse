@@ -1,10 +1,13 @@
-# Wails Rewrite — Handoff (after Plan 1: Foundation)
+# Wails Rewrite — Handoff (after Plan 1: Foundation, Plan 2: Modules)
 
-**State:** Plan 1 complete at commit `4ae026a` on branch `worktree-wails`
-(worktree: `.claude/worktrees/wails`). Final whole-branch review: Ready to merge —
-but per the spec, **do not merge to main until Plan 3 cutover**. `main` is still the
-daily-driver Tauri app; `dashboard.db` untouched (new app uses `pulse.db` in the same
-app-data dir).
+**State:** Plan 1 (foundation) merged to `main` at `d85ff94`. Plan 2 (modules) is
+now complete on branch `worktree-wails` (worktree: `.claude/worktrees/wails`):
+all 17 widget types across all eight modules (system, bookmarks, ccusage, github,
+github-stats, jira, gws, pomodoro) are live end-to-end, plus the integration health
+service (`internal/integration` + integrations panel). `frontend/legacy-modules/`
+has been deleted. `main` still runs the daily-driver Tauri app until the Plan 3
+cutover merge; `dashboard.db` (Tauri) is untouched, the new app uses `pulse.db` in
+the same app-data dir.
 
 ## Running the app
 
@@ -40,8 +43,9 @@ From the worktree root (`.claude/worktrees/wails`):
 - Frontend: `frontend/` (Vite/React). `frontend/src/lib/backend.ts` is the ONLY file
   importing generated bindings (`frontend/bindings/`, gitignored — regenerate with
   `wails3 generate bindings -ts -i`) and `@wailsio/runtime`.
-- Parked for Plan 2: `frontend/legacy-modules/{ccusage,github,github-stats,gws,jira,pomodoro}`
-  (+ their tests in `__tests__/`), excluded from tsconfig/vitest/eslint.
+- `frontend/legacy-modules/` (Plan 2's parking spot for unported modules) is gone —
+  every module lives under `internal/modules/<name>` (Go) + `frontend/src/modules/<name>`
+  (TS), same shape as `github`/`jira`. No more tsconfig/vitest/eslint excludes for it.
 - Registry parity: `cmd/gen-widget-types` writes `frontend/src/widget-types.gen.json`;
   Go test `internal/module/parity_test.go` + TS test `frontend/tests/modules/registry-parity.test.ts`
   both assert against it. Re-run the generator after adding a module.
@@ -61,31 +65,37 @@ From the worktree root (`.claude/worktrees/wails`):
 - CLI spawning: `internal/cli` resolves binaries via `lookPathIn` against the curated
   PATH (exec.Command ignores cmd.Env for resolution — do not regress this).
 
-## Plan 2 (next): remaining six modules
+## Plan 2 (done): remaining six modules
 
-Port from `frontend/legacy-modules/` + old TS fetch logic (reference on `main`,
-`src/modules/<name>/fetch.ts`): **github (3 widgets, N+1 enrichment via goroutines),
-jira, gws (payload-model CLI → cli.RunJSON), ccusage, pomodoro (local repo +
-engine — decide engine placement: TS engine is UI-state-heavy, consider keeping
-frontend), github-stats**. Also:
-- `internal/integration` health service (port `src/server/integration-service.ts`:
-  TTL cache, in-flight dedup, enable/disable with widget-delete confirm) + un-stub
-  `fetchIntegrations`/`toggleIntegration` in `frontend/src/lib/dashboard-data.ts`.
-- Async field options: jira/gws modules implement `module.OptionsSource`;
-  frontend already calls `Dashboard.FieldOptions(optionsKey)`.
-- Bump `dashboard.CacheVersion` if any payload shape changes vs the TS versions.
-- Each module: Go package under `internal/modules/`, register in `main.go` +
-  `cmd/gen-widget-types`, move frontend module back from legacy-modules, re-add its
-  tests, re-run generator.
+Ported all six remaining modules from `frontend/legacy-modules/` + old TS fetch
+logic: **github (3 widgets, N+1 enrichment via goroutines), jira, gws (payload-model
+CLI → cli.RunJSON), ccusage, pomodoro (engine kept in the TS layer, on top of a Go
+session-log + native-notifications service), github-stats** — 17 widget types
+across 8 modules total. Also done:
+- `internal/integration` health service (TTL cache, in-flight dedup, enable/disable
+  with widget-delete confirm), wired end-to-end (`fetchIntegrations`/
+  `toggleIntegration` in `frontend/src/lib/dashboard-data.ts`, integrations panel).
+- Async field options: jira/gws modules implement `module.OptionsSource`; frontend
+  calls `Dashboard.FieldOptions(optionsKey)` for calendar/task-list/space dropdowns.
+- No `dashboard.CacheVersion` bump was needed — all payload shapes are byte-compatible
+  with the old TS fetchers.
+- `frontend/legacy-modules/` deleted; tsconfig/vitest excludes for it removed.
 
 ## Plan 3 (last): cutover
 
-Delete `src-tauri/`, `frontend/drizzle.config.ts`, tauri/drizzle/zod deps from
-`frontend/package.json` (kept so far only for legacy-modules), `db:generate` script.
-Root scripts equivalent of `npm start` (wails3 package + open). Rewrite CLAUDE.md,
-README, and the `create-module` skill for the Go world (shell-scope/capabilities
-gotchas no longer apply). Merge `worktree-wails` → main; delete old `dashboard.db`
-manually whenever.
+What actually remains:
+- Delete `src-tauri/` and the root scripts that drove it (Tauri-era `npm start`
+  equivalent); replace with a Wails equivalent (`wails3 package` + open the `.app`).
+- Prune `frontend/package.json`: remove the `zod`/Drizzle/`tauri-plugin-*`/
+  `@tauri-apps/*` dependencies and the `db:generate` script — nothing in the ported
+  Go modules uses them anymore (schema-form/config validation now lives server-side
+  in Go; `better-sqlite3` test-only transport is also gone with `legacy-modules`).
+  Also drop `frontend/drizzle.config.ts`.
+- Rewrite `CLAUDE.md`, `README`, and the `create-module` skill for the Go world
+  (shell-scope/capabilities gotchas no longer apply; document the Go
+  manifest/fetch/render split instead).
+- Merge `worktree-wails` → `main`; delete the old Tauri `dashboard.db` manually
+  whenever.
 
 ## Known follow-ups (accepted, non-blocking — from final review)
 
