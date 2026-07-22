@@ -86,9 +86,9 @@ func normalizeEvent(e gEvent) CalendarEventItem {
 	}
 	return CalendarEventItem{
 		ID: e.ID, Title: title,
-		Start:  startStr(e.Start),
-		End:    startStr(e.End),
-		AllDay: e.Start == nil || e.Start.DateTime == "", // all-day events carry `date`, not `dateTime`
+		Start:    startStr(e.Start),
+		End:      startStr(e.End),
+		AllDay:   e.Start == nil || e.Start.DateTime == "", // all-day events carry `date`, not `dateTime`
 		Location: e.Location, MeetURL: e.HangoutLink, URL: e.HTMLLink,
 	}
 }
