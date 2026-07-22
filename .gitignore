@@ -4,6 +4,7 @@
 
 # dependencies
 /node_modules
+frontend/node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -16,12 +17,18 @@
 /coverage
 
 # production
-/build
 /dist
 
 # misc
 .DS_Store
 *.pem
+
+# wails build output/tooling (build/ at root is tracked: Taskfile assets, icons, Info.plist)
+bin/
+.task/
+frontend/dist/
+frontend/bindings/
+/pulse
 
 # debug
 npm-debug.log*

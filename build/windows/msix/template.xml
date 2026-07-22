@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MsixPackagingToolTemplate
+    xmlns="http://schemas.microsoft.com/msix/packaging/msixpackagingtool/template/2022">
+    <Settings
+        AllowTelemetry="false"
+        ApplyACLsToPackageFiles="true"
+        GenerateCommandLineFile="true"
+        AllowPromptForPassword="false">
+    </Settings>
+    <Installer
+        Path="pulse"
+        Arguments=""
+        InstallLocation="C:\Program Files\Pulse\Pulse">
+    </Installer>
+    <PackageInformation
+        PackageName="Pulse"
+        PackageDisplayName="Pulse"
+        PublisherName="CN=Pulse"
+        PublisherDisplayName="Pulse"
+        Version="0.1.0.0"
+        PackageDescription="A local, single-user, pluggable desktop dashboard for organizing daily work.">
+        <Capabilities>
+            <Capability Name="runFullTrust" />
+            
+        </Capabilities>
+        <Applications>
+            <Application
+                Id="com.pulse.dashboard"
+                Description="A local, single-user, pluggable desktop dashboard for organizing daily work."
+                DisplayName="Pulse"
+                ExecutableName="pulse"
+                EntryPoint="Windows.FullTrustApplication">
+                
+            </Application>
+        </Applications>
+        <Resources>
+            <Resource Language="en-us" />
+        </Resources>
+        <Dependencies>
+            <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.19041.0" />
+        </Dependencies>
+        <Properties>
+            <Framework>false</Framework>
+            <DisplayName>Pulse</DisplayName>
+            <PublisherDisplayName>Pulse</PublisherDisplayName>
+            <Description>A local, single-user, pluggable desktop dashboard for organizing daily work.</Description>
+            <Logo>Assets\AppIcon.png</Logo>
+        </Properties>
+    </PackageInformation>
+    <SaveLocation PackagePath="pulse.msix" />
+    <PackageIntegrity>
+        <CertificatePath></CertificatePath>
+    </PackageIntegrity>
+</MsixPackagingToolTemplate>

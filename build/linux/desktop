@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Name=Pulse
+Comment=A local, single-user, pluggable desktop dashboard for organizing daily work.
+# The Exec line includes %u to pass the URL to the application
+Exec=/usr/local/bin/pulse %u
+Terminal=false
+Type=Application
+Icon=pulse
+Categories=Utility;
+StartupWMClass=pulse
+
+ 

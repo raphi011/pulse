@@ -1,0 +1,15 @@
+{
+	"fixed": {
+		"file_version": "0.1.0"
+	},
+	"info": {
+		"0000": {
+			"ProductVersion": "0.1.0",
+			"CompanyName": "Pulse",
+			"FileDescription": "A local, single-user, pluggable desktop dashboard for organizing daily work.",
+			"LegalCopyright": "(c) 2026, Raphael Gruber",
+			"ProductName": "Pulse",
+			"Comments": "Personal project"
+		}
+	}
+}
