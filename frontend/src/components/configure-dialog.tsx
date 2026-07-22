@@ -1,10 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import type { Widget } from "@/server/config-repo";
+import type { Widget } from "@/lib/backend";
 import { getRenderWidget } from "@/modules/render-registry";
 import { updateWidget, fetchWidgetData } from "@/lib/dashboard-data";
 import { ACCENT_NAMES, accentClass } from "@/lib/accents";
+import { useManifest } from "./use-manifests";
 import { SchemaForm } from "./schema-form";
 
 export function ConfigureDialog({
@@ -15,6 +16,7 @@ export function ConfigureDialog({
   onSaved: (id: string, config: Record<string, unknown>, title: string | null, accent: string | null) => void;
 }) {
   const def = getRenderWidget(widget.type);
+  const manifest = useManifest(widget.type);
   const qc = useQueryClient();
   const [values, setValues] = useState<Record<string, unknown>>(widget.config);
   const [title, setTitle] = useState(widget.title ?? "");
@@ -28,7 +30,7 @@ export function ConfigureDialog({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  if (!def) return null;
+  if (!def || !manifest) return null;
 
   async function save() {
     setSaving(true);
@@ -70,21 +72,21 @@ export function ConfigureDialog({
       <div
         role="dialog"
         aria-modal="true"
-        aria-label={`Configure ${def.manifest.title}`}
+        aria-label={`Configure ${manifest.title}`}
         className="w-full max-w-sm rounded-xl bg-panel p-5 shadow-xl ring-1 ring-border dark:bg-panel-dark dark:ring-border-dark"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="mb-4 text-sm font-semibold">Configure {def.manifest.title}</h2>
+        <h2 className="mb-4 text-sm font-semibold">Configure {manifest.title}</h2>
         <div className="mb-4 space-y-1.5">
           <label htmlFor="cfg-title" className="block text-xs font-medium text-slate-600 dark:text-slate-300">Title</label>
           <input
             id="cfg-title"
             className="w-full rounded-lg bg-surface px-2.5 py-1.5 text-sm ring-1 ring-border focus:outline-none focus:ring-2 focus:ring-primary-500/50 dark:bg-surface-dark dark:ring-border-dark"
             value={title}
-            placeholder={def.manifest.title}
+            placeholder={manifest.title}
             onChange={(e) => setTitle(e.target.value)}
           />
-          <p className="text-xs text-slate-500 dark:text-slate-400">Blank uses the default ({def.manifest.title}).</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Blank uses the default ({manifest.title}).</p>
         </div>
         <div className="mb-4 space-y-1.5">
           <span className="block text-xs font-medium text-slate-600 dark:text-slate-300">Color</span>
@@ -115,7 +117,7 @@ export function ConfigureDialog({
           </div>
         </div>
         {def.formEditable !== false && (
-          <SchemaForm schema={def.manifest.configSchema} values={values} onChange={setValues} />
+          <SchemaForm fields={manifest.configFields} values={values} onChange={setValues} />
         )}
         {error && <p className="mt-3 text-sm text-danger">{error}</p>}
         <div className="mt-5 flex justify-end gap-2">

@@ -1,8 +1,9 @@
 "use client";
 import { getRenderWidget } from "@/modules/render-registry";
-import type { Widget } from "@/server/config-repo";
+import type { Widget } from "@/lib/backend";
 import { WidgetShell, type WidgetState, type DragHandle } from "./widget-shell";
 import { useWidgetData } from "./use-widget-data";
+import { useManifest } from "./use-manifests";
 import { CardMenu } from "./card-menu";
 import { BrandIcon } from "./brand-icon";
 import { WidgetErrorBoundary } from "./widget-error-boundary";
@@ -18,8 +19,9 @@ export function WidgetCard({
   dragHandle?: DragHandle;
 }) {
   const def = getRenderWidget(widget.type);
-  const refreshable = def?.manifest.refreshable !== false;
-  const { data, isLoading, isError, error: queryError, refresh, isRefreshing } = useWidgetData(widget.id, refreshable);
+  const manifest = useManifest(widget.type);
+  const refreshable = manifest?.refreshable !== false;
+  const { data, isLoading, isError, error: queryError, refresh, isRefreshing } = useWidgetData(widget.id);
 
   if (!def) {
     return <WidgetShell title={widget.title ?? widget.type} state="error" error={`No renderer for ${widget.type}`} fetchedAt={null} onRefresh={() => {}} dragHandle={dragHandle} accent={widget.accent} />;
@@ -66,7 +68,7 @@ export function WidgetCard({
 
   return (
     <WidgetShell
-      title={widget.title ?? def.manifest.title}
+      title={widget.title ?? manifest?.title ?? widget.type}
       icon={def.icon && <BrandIcon mark={def.icon} />}
       count={count}
       state={state}

@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import type { WidgetBodyProps } from "@/modules/contracts";
-import { normalizeUrl, type BookmarksConfig, type BookmarksData } from "../manifest";
-import { addBookmark, removeBookmark } from "../repo";
+import { Bookmarks } from "@/lib/backend";
+import type { BookmarksConfig, BookmarksData } from "../manifest";
 
 type Props = WidgetBodyProps<BookmarksData, BookmarksConfig>;
 
@@ -43,7 +43,7 @@ export function BookmarksWidget({ data, refresh }: Props) {
 
   async function remove(id: string) {
     try {
-      await removeBookmark(id);
+      await Bookmarks.Remove(id);
       await refresh();
     } catch {
       // Delete or refresh failed; the row stays visible. Swallow to avoid an unhandled rejection.
@@ -135,18 +135,18 @@ export function BookmarksHeaderControls({ refresh }: Props) {
 
   async function add() {
     if (savingRef.current) return; // an add is already in flight (repeat Enter / Enter+click)
-    const normalized = normalizeUrl(url);
-    if (!title.trim() || !normalized) {
-      setError("Enter a title and a valid URL.");
+    if (!title.trim() || !url.trim()) {
+      setError("Enter a title and a URL.");
       return;
     }
     savingRef.current = true;
     setSaving(true);
     try {
-      await addBookmark(title.trim(), normalized);
+      // URL normalization + validation now happens in Go (bookmarks.Service.Add).
+      await Bookmarks.Add(title.trim(), url.trim());
       await refresh();
-    } catch {
-      setError("Couldn't save. Try again.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't save. Try again.");
       savingRef.current = false;
       setSaving(false);
       return;

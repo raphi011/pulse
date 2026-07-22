@@ -7,8 +7,7 @@ import {
   type CollisionDetection, type DragEndEvent, type DragStartEvent,
 } from "@dnd-kit/core";
 import { SortableContext, rectSortingStrategy } from "@dnd-kit/sortable";
-import type { Widget } from "@/server/config-repo";
-import type { Tab } from "@/server/tabs-repo";
+import type { Widget, Tab } from "@/lib/backend";
 import {
   widgetsForTab, applyReorder, applyResize, assignWidgetToTab,
   applyReorderTabs, classifyDrag, persistPositions,

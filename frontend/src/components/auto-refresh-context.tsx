@@ -1,50 +1,41 @@
 "use client";
-import { createContext, useCallback, useContext, useState, useSyncExternalStore, type ReactNode } from "react";
+import { createContext, useCallback, useContext, type ReactNode } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Dashboard } from "@/lib/backend";
 
-export const INTERVAL_MS = 5 * 60 * 1000;
-const STORAGE_KEY = "pulse:auto-refresh";
-
-// Back the toggle with localStorage via an external store so it survives reloads
-// without a setState-in-effect hydration hack. The server snapshot is always
-// false; after hydration React re-reads the real client value.
-const listeners = new Set<() => void>();
-
-function subscribe(cb: () => void): () => void {
-  listeners.add(cb);
-  return () => { listeners.delete(cb); };
-}
-
-function getSnapshot(): boolean {
-  return localStorage.getItem(STORAGE_KEY) === "1";
-}
-
-function getServerSnapshot(): boolean {
-  return false;
-}
-
-function persistEnabled(value: boolean): void {
-  localStorage.setItem(STORAGE_KEY, value ? "1" : "0");
-  listeners.forEach((l) => l());
-}
-
+// Auto-refresh state is now backend-owned (the "autoRefresh" pref) and the Go
+// scheduler drives the actual refreshes, delivering results via cache-updated
+// events. This context just reflects the pref and forwards toggle/refresh-all.
 type AutoRefreshValue = {
   enabled: boolean;
   toggle: () => void;
   refreshAll: () => void;
-  nonce: number;
 };
 
 const AutoRefreshContext = createContext<AutoRefreshValue | null>(null);
 
 export function AutoRefreshProvider({ children }: { children: ReactNode }) {
-  const enabled = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  const [nonce, setNonce] = useState(0);
+  const qc = useQueryClient();
+  const { data: enabled = false } = useQuery({
+    queryKey: ["autoRefresh"],
+    queryFn: () => Dashboard.AutoRefresh(),
+    staleTime: Infinity,
+  });
 
-  const toggle = useCallback(() => persistEnabled(!getSnapshot()), []);
-  const refreshAll = useCallback(() => setNonce((n) => n + 1), []);
+  const toggle = useCallback(() => {
+    void (async () => {
+      await Dashboard.SetAutoRefresh(!enabled);
+      await qc.invalidateQueries({ queryKey: ["autoRefresh"] });
+    })();
+  }, [enabled, qc]);
+
+  // The scheduler owns the refresh; its cache-updated events invalidate each widget query.
+  const refreshAll = useCallback(() => {
+    void Dashboard.RefreshAll();
+  }, []);
 
   return (
-    <AutoRefreshContext.Provider value={{ enabled, toggle, refreshAll, nonce }}>
+    <AutoRefreshContext.Provider value={{ enabled, toggle, refreshAll }}>
       {children}
     </AutoRefreshContext.Provider>
   );

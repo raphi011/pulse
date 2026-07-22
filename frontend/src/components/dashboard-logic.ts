@@ -1,5 +1,4 @@
-import type { Widget } from "@/server/config-repo";
-import type { Tab } from "@/server/tabs-repo";
+import type { Widget, Tab } from "@/lib/backend";
 import { savePositions } from "@/lib/dashboard-data";
 
 /** Visible widgets in global flow order. */

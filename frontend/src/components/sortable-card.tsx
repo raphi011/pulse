@@ -1,7 +1,7 @@
 "use client";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { Widget } from "@/server/config-repo";
+import type { Widget } from "@/lib/backend";
 import { clampSpan, ROW_UNIT_PX } from "@/lib/grid";
 import { WidgetCard } from "./widget-card";
 import { ResizeHandle } from "./resize-handle";

@@ -3,47 +3,11 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { FiChevronDown } from "react-icons/fi";
-import { z, type ZodType } from "zod";
-import { getFieldOptionsProvider, type FieldOption } from "@/modules/field-options";
+import { Dashboard } from "@/lib/backend";
 
 export type FieldKind = "string" | "number" | "boolean" | "stringList" | "enum" | "asyncEnum" | "asyncMultiEnum";
 export type Field = { key: string; label: string; kind: FieldKind; options?: string[]; optionsKey?: string; def?: unknown };
-
-function humanize(key: string): string {
-  return key.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase()).trim();
-}
-
-type JsonProp = {
-  type?: string; description?: string; default?: unknown;
-  enum?: string[]; items?: { type?: string }; optionsKey?: string;
-};
-
-export function describeSchema(schema: ZodType): Field[] {
-  const json = z.toJSONSchema(schema) as { properties?: Record<string, JsonProp> };
-  const props = json.properties ?? {};
-  return Object.entries(props).map(([key, p]) => {
-    const label = p.description ?? humanize(key);
-    const def = p.default;
-    if (p.optionsKey) {
-      if (p.type === "string") return { key, label, kind: "asyncEnum", optionsKey: p.optionsKey, def };
-      if (p.type === "array" && p.items?.type === "string")
-        return { key, label, kind: "asyncMultiEnum", optionsKey: p.optionsKey, def };
-      throw new Error(`optionsKey on unsupported field "${key}": ${p.type}`);
-    }
-    if (Array.isArray(p.enum)) return { key, label, kind: "enum", options: p.enum, def };
-    switch (p.type) {
-      case "string": return { key, label, kind: "string", def };
-      case "number":
-      case "integer": return { key, label, kind: "number", def };
-      case "boolean": return { key, label, kind: "boolean", def };
-      case "array":
-        if (p.items?.type === "string") return { key, label, kind: "stringList", def };
-        throw new Error(`Unsupported array item type for "${key}"`);
-      default:
-        throw new Error(`Unsupported field type for "${key}": ${p.type}`);
-    }
-  });
-}
+type FieldOption = { value: string; label: string };
 
 const inputCls =
   "w-full rounded-lg bg-surface px-2.5 py-1.5 text-sm ring-1 ring-border focus:outline-none focus:ring-2 focus:ring-primary-500/50 dark:bg-surface-dark dark:ring-border-dark";
@@ -106,11 +70,9 @@ function StringListEditor({ id, value, onChange }: { id: string; value: string[]
 }
 
 function useFieldOptions(optionsKey: string) {
-  const provider = getFieldOptionsProvider(optionsKey);
   return useQuery({
     queryKey: ["field-options", optionsKey],
-    queryFn: () => provider!(),
-    enabled: Boolean(provider),
+    queryFn: async (): Promise<FieldOption[]> => (await Dashboard.FieldOptions(optionsKey)) ?? [],
     staleTime: 5 * 60_000,
     retry: false,
   });
@@ -122,11 +84,10 @@ function AsyncEnumField({
   id: string; label: string; optionsKey: string;
   value: string; onChange: (v: string | undefined) => void;
 }) {
-  const provider = getFieldOptionsProvider(optionsKey);
   const { data, isLoading, isError } = useFieldOptions(optionsKey);
 
-  // No provider, or the fetch failed → plain text entry so the field still works.
-  if (!provider || isError) {
+  // The options fetch failed → plain text entry so the field still works.
+  if (isError) {
     return (
       <input
         id={id}
@@ -168,11 +129,10 @@ function AsyncMultiEnumField({
   id: string; label: string; optionsKey: string;
   value: string[]; onChange: (v: string[]) => void;
 }) {
-  const provider = getFieldOptionsProvider(optionsKey);
   const { data, isError } = useFieldOptions(optionsKey);
   const [query, setQuery] = useState("");
 
-  if (!provider || isError) {
+  if (isError) {
     return <StringListEditor id={id} value={value} onChange={onChange} />;
   }
 
@@ -227,13 +187,12 @@ function AsyncMultiEnumField({
 }
 
 export function SchemaForm({
-  schema, values, onChange,
+  fields, values, onChange,
 }: {
-  schema: ZodType;
+  fields: Field[];
   values: Record<string, unknown>;
   onChange: (v: Record<string, unknown>) => void;
 }) {
-  const fields = describeSchema(schema);
   const set = (key: string, val: unknown) => onChange({ ...values, [key]: val });
 
   return (

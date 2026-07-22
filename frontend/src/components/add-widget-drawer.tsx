@@ -4,17 +4,31 @@ import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { listRenderWidgets } from "@/modules/render-registry";
 import { fetchIntegrations } from "@/lib/dashboard-data";
+import type { BrandMark } from "@/modules/contracts";
+import { useManifests } from "./use-manifests";
 import { BrandIcon } from "./brand-icon";
+
+type AddableWidget = { type: string; icon?: BrandMark; title: string; integration?: string };
 
 export function AddWidgetDrawer({ onAdd }: { onAdd: (type: string) => void }) {
   const [open, setOpen] = useState(false);
-  const { data: statuses, isLoading } = useQuery({
+  const { data: statuses } = useQuery({
     queryKey: ["integrations"],
     queryFn: () => fetchIntegrations(),
     staleTime: 30_000,
   });
+  const manifests = useManifests();
+  const isLoading = manifests.length === 0;
   const enabledIds = new Set((statuses ?? []).filter((s) => s.enabled).map((s) => s.id));
-  const types = listRenderWidgets().filter((t) => !t.integration || enabledIds.has(t.integration));
+  // Join the render registry (type/icon) with the server manifests (title/integration).
+  const byType = new Map(manifests.map((m) => [m.type, m]));
+  const types: AddableWidget[] = listRenderWidgets()
+    .map((rw): AddableWidget | null => {
+      const m = byType.get(rw.type);
+      return m ? { type: rw.type, icon: rw.icon, title: m.title, integration: m.integration } : null;
+    })
+    .filter((t): t is AddableWidget => t !== null)
+    .filter((t) => !t.integration || enabledIds.has(t.integration));
 
   useEffect(() => {
     if (!open) return;

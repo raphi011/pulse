@@ -27,6 +27,7 @@
     "@tauri-apps/plugin-os": "^2.3.2",
     "@tauri-apps/plugin-shell": "^2.3.5",
     "@tauri-apps/plugin-sql": "^2.4.0",
+    "@wailsio/runtime": "^3.0.0-alpha.97",
     "drizzle-orm": "0.45.2",
     "react": "19.2.4",
     "react-dom": "19.2.4",

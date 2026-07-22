@@ -1,5 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
-import type { SamplePoint, SystemStatsConfig, SystemStatsPayload } from "./manifest";
+import { System } from "@/lib/backend";
+import type { SamplePoint, SystemStatsConfig } from "./manifest";
 import { systemStatsDefaultConfig } from "./manifest";
 
 export type SamplerSnapshot = { points: SamplePoint[]; error: boolean };
@@ -35,7 +35,7 @@ function emit() {
 
 async function tick() {
   try {
-    const p = await invoke<SystemStatsPayload>("system_stats");
+    const p = await System.Stats();
     failures = 0;
     points = [
       ...points,

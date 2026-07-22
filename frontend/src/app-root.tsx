@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import "@/modules/render";
 import "@/modules/integrations";
 import { AutoRefreshProvider } from "@/components/auto-refresh-context";
@@ -9,8 +9,7 @@ import { IntegrationsPanel } from "@/components/integrations-panel";
 import { LoadError } from "@/components/load-error";
 import { useAsyncResource } from "@/components/use-async-resource";
 import { fetchLayout, fetchIntegrations } from "@/lib/dashboard-data";
-import { ensureCacheVersion } from "@/server/cache-version";
-import { warmToolPath } from "@/server/cli";
+import { onCacheUpdated } from "@/lib/backend";
 
 function useHashRoute(): string {
   const [route, setRoute] = useState(() => window.location.hash.replace(/^#/, "") || "/");
@@ -42,6 +41,17 @@ function IntegrationsView() {
   return <IntegrationsPanel initial={initial} />;
 }
 
+/** Global bridge: the Go scheduler emits a cache-updated event per widget; invalidate its query. */
+function CacheEventBridge() {
+  const qc = useQueryClient();
+  useEffect(() => {
+    return onCacheUpdated((widgetId) => {
+      void qc.invalidateQueries({ queryKey: ["widget", widgetId] });
+    });
+  }, [qc]);
+  return null;
+}
+
 export function AppRoot() {
   const [client] = useState(
     () =>
@@ -49,21 +59,12 @@ export function AppRoot() {
         defaultOptions: { queries: { staleTime: 30_000, refetchOnWindowFocus: false } },
       }),
   );
-  const [dbReady, setDbReady] = useState(false);
   const route = useHashRoute();
-  useEffect(() => {
-    // Best-effort startup, gated before any widget fetch: a failed cache wipe must not blank the
-    // app (widgets surface DB errors themselves), and warmToolPath folds home-relative CLI dirs
-    // (bun, where `gws` lives) into the spawn PATH. Neither blocks readiness on failure.
-    Promise.allSettled([ensureCacheVersion(), warmToolPath()])
-      .then(([cache]) => {
-        if (cache.status === "rejected") console.error("cache version check failed", cache.reason);
-      })
-      .finally(() => setDbReady(true));
-  }, []);
-  if (!dbReady) return null;
+  // Cache-version bump + migrations now run in Go at startup (main.go), so the webview no longer
+  // gates on a readiness effect before mounting.
   return (
     <QueryClientProvider client={client}>
+      <CacheEventBridge />
       <AutoRefreshProvider>
         <ToastProvider>
           {route.startsWith("/integrations") ? <IntegrationsView /> : <DashboardView />}

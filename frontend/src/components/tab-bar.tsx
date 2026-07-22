@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { Tab } from "@/server/tabs-repo";
+import type { Tab } from "@/lib/backend";
 import { tabDndId } from "@/components/dashboard-logic";
 
 type TabBarProps = {
