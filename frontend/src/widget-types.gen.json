@@ -6,5 +6,6 @@
   "github.dependabot",
   "github.failingActions",
   "github.prs",
+  "jira.jql",
   "system.stats"
 ]

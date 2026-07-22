@@ -9,6 +9,7 @@ import (
 	"pulse/internal/modules/ccusage"
 	"pulse/internal/modules/github"
 	"pulse/internal/modules/githubstats"
+	"pulse/internal/modules/jira"
 	"pulse/internal/modules/system"
 )
 
@@ -21,5 +22,6 @@ func ManifestModules() []module.Module {
 		ccusage.New(),
 		github.New(),
 		githubstats.New(),
+		jira.New(),
 	}
 }
