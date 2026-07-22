@@ -7,8 +7,7 @@ import (
 	"testing"
 
 	"pulse/internal/module"
-	"pulse/internal/modules/bookmarks"
-	"pulse/internal/modules/system"
+	"pulse/internal/modules"
 )
 
 // TestWidgetTypeParityWithFrontend guards against the Go registry and the
@@ -16,7 +15,7 @@ import (
 // (this test and the frontend registry-parity test) must agree on the same
 // set of widget types.
 func TestWidgetTypeParityWithFrontend(t *testing.T) {
-	reg, err := module.NewRegistry(system.New(), bookmarks.New(nil))
+	reg, err := module.NewRegistry(modules.ManifestModules()...)
 	if err != nil {
 		t.Fatalf("NewRegistry: %v", err)
 	}
