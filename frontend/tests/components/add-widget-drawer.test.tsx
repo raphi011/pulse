@@ -40,7 +40,7 @@ beforeEach(() => {
 });
 
 function open() {
-  const qc = new QueryClient();
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(<QueryClientProvider client={qc}><AddWidgetDrawer onAdd={() => {}} /></QueryClientProvider>);
   fireEvent.click(screen.getByText("Add widget"));
 }
@@ -55,5 +55,12 @@ describe("AddWidgetDrawer", () => {
     open();
     await screen.findByText("Pull Requests");
     expect(screen.queryByText("Jira Query")).not.toBeInTheDocument();      // jira disabled
+  });
+  it("shows an error line instead of an eternal loading state when manifests fail (F3)", async () => {
+    mockFetchManifests.mockReset();
+    mockFetchManifests.mockRejectedValue(new Error("boom"));
+    open();
+    expect(await screen.findByText("Couldn't load widgets.")).toBeInTheDocument();
+    expect(screen.queryByText("Loading widgets…")).not.toBeInTheDocument();
   });
 });

@@ -229,7 +229,7 @@ func (s *Service) UpdateWidget(id string, patch WidgetPatch) (UpdateResult, erro
 		if manifest, ok := s.registry.Manifest(w.Type); ok {
 			normalized, err := module.ValidateConfig(manifest.ConfigFields, *patch.Config)
 			if err != nil {
-				return UpdateResult{}, fmt.Errorf("invalid config: %w", err)
+				return UpdateResult{}, err
 			}
 			raw, err := json.Marshal(normalized)
 			if err != nil {

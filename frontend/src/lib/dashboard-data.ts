@@ -33,8 +33,9 @@ export async function createWidget(type: string, tabId: string): Promise<Widget>
 /** Every registered widget manifest (server-owned). Cache via TanStack under ["manifests"]. */
 export async function fetchManifests(): Promise<WidgetManifest[]> {
   const manifests = await Dashboard.Manifests();
-  // Runtime shape is exactly the frontend WidgetManifest (Field-shaped configFields).
-  return (manifests ?? []) as unknown as WidgetManifest[];
+  // Runtime shape is exactly the frontend WidgetManifest (Field-shaped configFields), except
+  // the generated configFields is nullable — normalize it to [] at this choke point.
+  return (manifests ?? []).map((m) => ({ ...m, configFields: m.configFields ?? [] })) as WidgetManifest[];
 }
 
 export type WidgetPatch = {

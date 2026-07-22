@@ -2,7 +2,7 @@ import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 
 const NODE_API_MESSAGE =
-  "Node APIs are unavailable in the Tauri webview; use a Tauri plugin.";
+  "Node APIs are unavailable in the webview; use a Wails-bound Go function.";
 
 export default tseslint.config(
   js.configs.recommended,
@@ -41,15 +41,6 @@ export default tseslint.config(
         "error",
         { name: "process", message: NODE_API_MESSAGE },
       ],
-    },
-  },
-  {
-    // The Node/test transport genuinely uses process.env.DASHBOARD_DB and a
-    // dynamic better-sqlite3 import; it only runs off-webview. Exempt it.
-    files: ["src/db/client.ts"],
-    rules: {
-      "no-restricted-imports": "off",
-      "no-restricted-globals": "off",
     },
   },
 );

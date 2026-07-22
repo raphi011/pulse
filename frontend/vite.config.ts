@@ -5,7 +5,6 @@ import { resolve } from "node:path";
 export default defineConfig({
   plugins: [react()],
   clearScreen: false,
-  server: { port: 1420, strictPort: true },
   resolve: { alias: { "@": resolve(__dirname, "./src") } },
   build: {
     outDir: "dist",

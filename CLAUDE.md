@@ -1,5 +1,9 @@
 # Work Dashboard
 
+*Mid-rewrite: this branch is porting the app from Tauri (Rust) to Wails v3 (Go). Backend logic
+lives in Go under `internal/`, frontend in `frontend/` (Vite/React); run via `wails3 dev`. The
+Tauri-stack sections below are stale until the Plan-3 cutover rewrite.*
+
 Local, single-user, pluggable Tauri desktop dashboard (Vite + React) for organizing daily work. Personal project.
 
 ## Conventions

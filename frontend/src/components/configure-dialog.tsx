@@ -46,7 +46,11 @@ export function ConfigureDialog({
       // Distinguish a schema-validation failure from a save/DB failure — labelling every failure
       // "Invalid configuration" hides the real cause (e.g. a locked DB).
       const m = err instanceof Error ? err.message : "";
-      setError(m === "Invalid config" ? "Invalid configuration" : `Couldn't save: ${m || "unknown error"}`);
+      setError(
+        m.toLowerCase().startsWith("invalid config")
+          ? "Invalid configuration"
+          : `Couldn't save: ${m || "unknown error"}`,
+      );
       setSaving(false);
       return;
     }

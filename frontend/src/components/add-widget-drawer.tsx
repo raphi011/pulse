@@ -17,8 +17,8 @@ export function AddWidgetDrawer({ onAdd }: { onAdd: (type: string) => void }) {
     queryFn: () => fetchIntegrations(),
     staleTime: 30_000,
   });
-  const manifests = useManifests();
-  const isLoading = manifests.length === 0;
+  const { manifests, isError } = useManifests();
+  const isLoading = !isError && manifests.length === 0;
   const enabledIds = new Set((statuses ?? []).filter((s) => s.enabled).map((s) => s.id));
   // Join the render registry (type/icon) with the server manifests (title/integration).
   const byType = new Map(manifests.map((m) => [m.type, m]));
@@ -63,10 +63,13 @@ export function AddWidgetDrawer({ onAdd }: { onAdd: (type: string) => void }) {
               </button>
             </div>
             <ul className="flex-1 space-y-1.5 overflow-y-auto p-3">
-              {isLoading && (
+              {isError && (
+                <li className="px-3 py-2 text-sm text-danger">Couldn't load widgets.</li>
+              )}
+              {!isError && isLoading && (
                 <li className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">Loading widgets…</li>
               )}
-              {!isLoading && types.map((t) => (
+              {!isError && !isLoading && types.map((t) => (
                 <li key={t.type}>
                   <button
                     onClick={() => { onAdd(t.type); setOpen(false); }}
@@ -80,7 +83,7 @@ export function AddWidgetDrawer({ onAdd }: { onAdd: (type: string) => void }) {
                   </button>
                 </li>
               ))}
-              {!isLoading && types.length === 0 && (
+              {!isError && !isLoading && types.length === 0 && (
                 <li className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">No widgets available.</li>
               )}
             </ul>

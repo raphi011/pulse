@@ -23,7 +23,7 @@ export function isValidSystemStatsConfig(config: unknown): config is SystemStats
   );
 }
 
-/** Raw payload of the `system_stats` Tauri command (serde camelCase). */
+/** Raw payload of the system.Stats() binding (serde camelCase). */
 export type SystemStatsPayload = {
   cpuPercent: number;
   memUsedBytes: number;

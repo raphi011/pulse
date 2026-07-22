@@ -77,6 +77,13 @@ describe("ConfigureDialog accent picker", () => {
     expect(vi.mocked(updateWidget)).toHaveBeenCalled();
   });
 
+  it("shows a friendly message for a config-validation failure (F1)", async () => {
+    vi.mocked(updateWidget).mockRejectedValueOnce(new Error('invalid config: field "x" must be <= 10'));
+    renderDialog();
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByText("Invalid configuration")).toBeInTheDocument();
+  });
+
   it("marks the current selection with aria-pressed", async () => {
     renderDialog();
     expect(screen.getByRole("button", { name: "No color" })).toHaveAttribute("aria-pressed", "true");
