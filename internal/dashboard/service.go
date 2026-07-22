@@ -30,9 +30,10 @@ const EventCacheUpdated = "widget:cache-updated"
 // registry. All bound methods use context.Background() internally — Wails
 // invokes them directly, there is no request context to thread through.
 type Service struct {
-	store    *db.Store
-	registry *module.Registry
-	emit     Emitter
+	store     *db.Store
+	registry  *module.Registry
+	emit      Emitter
+	scheduler kicker // attached post-construction via AttachScheduler; nil until then
 }
 
 // NewService requires a non-nil Emitter; main.go passes the real Wails

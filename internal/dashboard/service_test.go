@@ -482,6 +482,108 @@ func TestLayoutActiveTabFallsBackToFirstTabWhenSavedMissing(t *testing.T) {
 	}
 }
 
+// fakeKicker is the test double for the scheduler-facing kicker interface:
+// it just counts Kick calls.
+type fakeKicker struct{ kicks int }
+
+func (k *fakeKicker) Kick() { k.kicks++ }
+
+func TestAutoRefreshDefaultsOffAndRoundTrips(t *testing.T) {
+	store := openStore(t)
+	mod := &fakeModule{manifests: []module.Manifest{widgetManifest()}}
+	svc := NewService(store, newRegistry(t, mod), &recorder{})
+
+	on, err := svc.AutoRefresh()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if on {
+		t.Fatal("want autoRefresh default off")
+	}
+
+	if err := svc.SetAutoRefresh(true); err != nil {
+		t.Fatal(err)
+	}
+	on, err = svc.AutoRefresh()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !on {
+		t.Fatal("want autoRefresh on after SetAutoRefresh(true)")
+	}
+
+	if err := svc.SetAutoRefresh(false); err != nil {
+		t.Fatal(err)
+	}
+	on, err = svc.AutoRefresh()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if on {
+		t.Fatal("want autoRefresh off after SetAutoRefresh(false)")
+	}
+}
+
+func TestRefreshAllNoOpWithoutAttachedScheduler(t *testing.T) {
+	store := openStore(t)
+	mod := &fakeModule{manifests: []module.Manifest{widgetManifest()}}
+	svc := NewService(store, newRegistry(t, mod), &recorder{})
+
+	// Must not panic when no scheduler has been attached.
+	svc.RefreshAll()
+}
+
+func TestRefreshAllKicksAttachedScheduler(t *testing.T) {
+	store := openStore(t)
+	mod := &fakeModule{manifests: []module.Manifest{widgetManifest()}}
+	svc := NewService(store, newRegistry(t, mod), &recorder{})
+
+	k := &fakeKicker{}
+	svc.AttachScheduler(k)
+
+	svc.RefreshAll()
+	svc.RefreshAll()
+
+	if k.kicks != 2 {
+		t.Fatalf("want 2 kicks, got %d", k.kicks)
+	}
+}
+
+func TestRefreshableWidgetIDs(t *testing.T) {
+	ctx := context.Background()
+	store := openStore(t)
+	mod := &fakeModule{manifests: []module.Manifest{
+		widgetManifest(), // type "widget", Refreshable: true
+		{Type: "static", Title: "Static", Refreshable: false},
+	}}
+	svc := NewService(store, newRegistry(t, mod), &recorder{})
+
+	// Refreshable, visible: included.
+	if err := store.AddWidget(ctx, db.Widget{ID: "w1", Type: "widget", TabID: "default", Config: json.RawMessage(`{}`)}); err != nil {
+		t.Fatal(err)
+	}
+	// Refreshable, hidden: excluded.
+	if err := store.AddWidget(ctx, db.Widget{ID: "w2", Type: "widget", TabID: "default", Hidden: true, Config: json.RawMessage(`{}`)}); err != nil {
+		t.Fatal(err)
+	}
+	// Refreshable: false in its manifest: excluded.
+	if err := store.AddWidget(ctx, db.Widget{ID: "w3", Type: "static", TabID: "default", Config: json.RawMessage(`{}`)}); err != nil {
+		t.Fatal(err)
+	}
+	// Unknown type: excluded.
+	if err := store.AddWidget(ctx, db.Widget{ID: "w4", Type: "ghost", TabID: "default", Config: json.RawMessage(`{}`)}); err != nil {
+		t.Fatal(err)
+	}
+
+	ids, err := svc.RefreshableWidgetIDs(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ids) != 1 || ids[0] != "w1" {
+		t.Fatalf("want only [w1], got %v", ids)
+	}
+}
+
 func TestDeleteTabLastTabErrorPassthrough(t *testing.T) {
 	store := openStore(t)
 	mod := &fakeModule{manifests: []module.Manifest{widgetManifest()}}
