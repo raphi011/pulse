@@ -4,11 +4,12 @@
 import * as Dashboard from "../../bindings/pulse/internal/dashboard/service";
 import * as Bookmarks from "../../bindings/pulse/internal/modules/bookmarks/service";
 import * as Gws from "../../bindings/pulse/internal/modules/gws/service";
+import * as Integrations from "../../bindings/pulse/internal/integration/service";
 import * as Pomodoro from "../../bindings/pulse/internal/modules/pomodoro/service";
 import * as System from "../../bindings/pulse/internal/modules/system/service";
 import { Events } from "@wailsio/runtime";
 
-export { Dashboard, Bookmarks, System, Gws, Pomodoro };
+export { Dashboard, Bookmarks, System, Gws, Pomodoro, Integrations };
 
 // Generated model types — one source of truth mirroring the Go structs.
 export type { CacheRow, Widget, Tab, Position, TabOrder } from "../../bindings/pulse/internal/db/models";

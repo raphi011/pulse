@@ -1,7 +1,7 @@
 // Thin frontend data layer: every function delegates to a generated Wails
 // binding. Function names/signatures match the pre-Wails API so callers are
 // unchanged. All backend logic (validation, cache, fetch dispatch) lives in Go.
-import { Dashboard, type CacheRow, type Widget, type Tab, type WidgetPatch as GoWidgetPatch } from "./backend";
+import { Dashboard, Integrations, type CacheRow, type Widget, type Tab, type WidgetPatch as GoWidgetPatch } from "./backend";
 import type { WidgetManifest } from "@/modules/contracts";
 import type { IntegrationStatus } from "@/modules/integration-contracts";
 
@@ -96,17 +96,23 @@ export async function moveWidgetToTab(widgetId: string, tabId: string): Promise<
   await Dashboard.UpdateWidget(widgetId, { moveToTab: tabId });
 }
 
-// Integrations return in Plan 2; the panel renders an empty section for now.
-// Signatures are kept so existing call sites (which pass a recheck flag / toggle
-// args) type-check unchanged.
 export async function fetchIntegrations(recheck = false): Promise<IntegrationStatus[]> {
-  void recheck; // Plan 2
-  return [];
+  // The generated Status type matches IntegrationStatus structurally except
+  // `authed: any` (Go serializes true | false | "n/a") — cast once here.
+  return ((await Integrations.Statuses(recheck)) ?? []) as unknown as IntegrationStatus[];
 }
 
+/** Returns { statuses } on success, plus { confirmRequired } when disabling would delete widgets. */
 export async function toggleIntegration(
   id: string, enabled: boolean, deleteWidgets = false,
 ): Promise<{ statuses: IntegrationStatus[]; confirmRequired?: number }> {
-  void id; void enabled; void deleteWidgets; // Plan 2
-  throw new Error("integrations return in Plan 2");
+  if (enabled) {
+    await Integrations.Enable(id);
+  } else {
+    const res = await Integrations.Disable(id, deleteWidgets);
+    if (res.confirmRequired > 0) {
+      return { statuses: await fetchIntegrations(true), confirmRequired: res.confirmRequired };
+    }
+  }
+  return { statuses: await fetchIntegrations(true) };
 }

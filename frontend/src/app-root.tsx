@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import "@/modules/render";
-import "@/modules/integrations";
 import { AutoRefreshProvider } from "@/components/auto-refresh-context";
 import { ToastProvider } from "@/components/toast-context";
 import { Dashboard } from "@/components/dashboard";
