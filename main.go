@@ -15,6 +15,7 @@ import (
 	"pulse/internal/modules/ccusage"
 	"pulse/internal/modules/github"
 	"pulse/internal/modules/githubstats"
+	"pulse/internal/modules/gws"
 	"pulse/internal/modules/jira"
 	"pulse/internal/modules/system"
 	"pulse/internal/scheduler"
@@ -61,7 +62,7 @@ func main() {
 	monitor := system.NewMonitor()
 	bmRepo := &bookmarks.Repo{DB: d}
 	registry, err := module.NewRegistry(
-		system.New(), bookmarks.New(bmRepo), ccusage.New(), github.New(), githubstats.New(), jira.New(),
+		system.New(), bookmarks.New(bmRepo), ccusage.New(), github.New(), githubstats.New(), jira.New(), gws.New(),
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -95,6 +96,7 @@ func main() {
 			application.NewService(dash),
 			application.NewService(bookmarks.NewService(bmRepo)),
 			application.NewService(system.NewService(monitor)),
+			application.NewService(gws.NewService()),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
