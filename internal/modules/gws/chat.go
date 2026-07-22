@@ -106,6 +106,16 @@ func isUnread(lastActiveTime, lastReadTime string) bool {
 	return active.After(read)
 }
 
+// parseLastActive parses an RFC3339Nano timestamp for chronological sorting.
+// Unparsable (including empty) values sort as the zero time.
+func parseLastActive(t string) time.Time {
+	parsed, err := time.Parse(time.RFC3339Nano, t)
+	if err != nil {
+		return time.Time{}
+	}
+	return parsed
+}
+
 var callerRe = regexp.MustCompile(`^(users/[^/]+)/`)
 
 // "users/12345/spaces/AAAA/spaceReadState" → "users/12345" (or "").
@@ -239,7 +249,7 @@ func fetchChatDms(ctx context.Context, run jsonRunner, cfg chatDmsConfig) (ChatD
 		}
 	}
 	sort.SliceStable(dmSpaces, func(i, j int) bool {
-		return dmSpaces[i].LastActiveTime > dmSpaces[j].LastActiveTime
+		return parseLastActive(dmSpaces[i].LastActiveTime).After(parseLastActive(dmSpaces[j].LastActiveTime))
 	})
 	if len(dmSpaces) > cfg.Limit {
 		dmSpaces = dmSpaces[:cfg.Limit]

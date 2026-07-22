@@ -197,6 +197,25 @@ func TestStatusesReleasesLeaderClaimsWhenWidgetsFails(t *testing.T) {
 	}
 }
 
+// TestAbortClaimsSetsAuthedFalse guards the follower-visible Health that
+// abortClaims hands out: it must carry a typed Authed (false), matching the
+// documented boolean | "n/a" contract, not a nil that serializes as null.
+func TestAbortClaimsSetsAuthedFalse(t *testing.T) {
+	svc := &Service{cache: map[string]cachedHealth{}, inflight: map[string]*flight{}}
+	f := &flight{done: make(chan struct{})}
+	svc.inflight["github"] = f
+	claims := []probeClaim{{id: "github", flight: f, isLeader: true}}
+
+	svc.abortClaims(claims)
+
+	if f.health.Authed != false {
+		t.Errorf("aborted Health.Authed = %#v, want false", f.health.Authed)
+	}
+	if _, stillInflight := svc.inflight["github"]; stillInflight {
+		t.Error("aborted leader claim was not released from inflight")
+	}
+}
+
 func TestResolveEnabled(t *testing.T) {
 	tr, fa := true, false
 	cases := []struct {

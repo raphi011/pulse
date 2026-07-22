@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"pulse/internal/cli"
 )
@@ -35,6 +36,28 @@ func TestIsUnread(t *testing.T) {
 				t.Errorf("isUnread(%q,%q) = %v, want %v", c.active, c.read, got, c.want)
 			}
 		})
+	}
+}
+
+// TestParseLastActiveOrdersMixedFractionalPrecisionChronologically guards
+// the DM sort against string-comparing RFC3339Nano timestamps: naive string
+// comparison ranks "...:00Z" as greater than "...:00.500Z" (because 'Z' >
+// '.'), which — under a descending sort — puts the whole-second timestamp
+// first even though the fractional one is chronologically later.
+func TestParseLastActiveOrdersMixedFractionalPrecisionChronologically(t *testing.T) {
+	whole := "2026-07-20T10:00:00Z"
+	fractional := "2026-07-20T10:00:00.500Z"
+
+	if whole < fractional {
+		t.Fatalf("test setup: expected string comparison to be misleading here (%q < %q)", whole, fractional)
+	}
+
+	if !parseLastActive(fractional).After(parseLastActive(whole)) {
+		t.Errorf("parseLastActive(%q) should be After parseLastActive(%q)", fractional, whole)
+	}
+
+	if got := parseLastActive("not-a-timestamp"); !got.Equal(time.Time{}) {
+		t.Errorf("parseLastActive(unparsable) = %v, want zero time", got)
 	}
 }
 

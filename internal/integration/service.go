@@ -87,7 +87,7 @@ func (s *Service) abortClaims(claims []probeClaim) {
 	s.mu.Lock()
 	for _, c := range claims {
 		if c.isLeader {
-			c.flight.health = Health{Detail: "integration status probe aborted before running: widgets query failed"}
+			c.flight.health = Health{Authed: false, Detail: "integration status probe aborted before running: widgets query failed"}
 			delete(s.inflight, c.id)
 		}
 	}
