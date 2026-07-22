@@ -7,6 +7,7 @@ import (
 	"pulse/internal/module"
 	"pulse/internal/modules/bookmarks"
 	"pulse/internal/modules/ccusage"
+	"pulse/internal/modules/github"
 	"pulse/internal/modules/system"
 )
 
@@ -17,5 +18,6 @@ func ManifestModules() []module.Module {
 		system.New(),
 		bookmarks.New(nil),
 		ccusage.New(),
+		github.New(),
 	}
 }

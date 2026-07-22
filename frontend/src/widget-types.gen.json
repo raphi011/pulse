@@ -1,5 +1,8 @@
 [
   "bookmarks.links",
   "ccusage.spend",
+  "github.dependabot",
+  "github.failingActions",
+  "github.prs",
   "system.stats"
 ]
