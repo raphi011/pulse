@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -43,13 +42,38 @@ type Options struct {
 // A Finder-launched .app inherits only the minimal system PATH, so prepend the
 // common Homebrew/system dirs where gh/jira/node live, plus bun's global bin
 // (where gws installs).
-var toolPath = sync.OnceValue(func() string {
+var toolPath = defaultToolPath()
+
+func defaultToolPath() string {
 	base := "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 	if home, err := os.UserHomeDir(); err == nil {
 		base += ":" + filepath.Join(home, ".bun", "bin")
 	}
 	return base
-})
+}
+
+// lookPathIn resolves a bare binary name against an explicit colon-separated
+// path list (exec.LookPath consults the process PATH, which a Finder-launched
+// .app doesn't control). Names containing a path separator pass through as-is.
+func lookPathIn(pathList, bin string) (string, error) {
+	if strings.ContainsRune(bin, os.PathSeparator) {
+		return bin, nil
+	}
+	for _, dir := range filepath.SplitList(pathList) {
+		if dir == "" {
+			continue
+		}
+		candidate := filepath.Join(dir, bin)
+		info, err := os.Stat(candidate)
+		if err != nil || info.IsDir() {
+			continue
+		}
+		if info.Mode()&0o111 != 0 {
+			return candidate, nil
+		}
+	}
+	return "", fmt.Errorf("%q: %w", bin, exec.ErrNotFound)
+}
 
 func authMessage(opts Options) string {
 	if opts.NotAuthMessage != "" {
@@ -68,8 +92,13 @@ func Run(ctx context.Context, bin string, args []string, opts Options) (string, 
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, bin, args...)
-	cmd.Env = append(os.Environ(), "PATH="+toolPath())
+	resolved, lookErr := lookPathIn(toolPath, bin)
+	if lookErr != nil {
+		return "", "", &Error{Kind: KindNotFound, Message: fmt.Sprintf("%s not found — install it", bin)}
+	}
+
+	cmd := exec.CommandContext(ctx, resolved, args...)
+	cmd.Env = append(os.Environ(), "PATH="+toolPath)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 

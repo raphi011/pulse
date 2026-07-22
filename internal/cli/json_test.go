@@ -73,3 +73,31 @@ func TestRunJSONNonZeroExitWithCleanBodyIsStillFailure(t *testing.T) {
 }
 
 func mustRe(s string) *regexp.Regexp { return regexp.MustCompile(s) }
+
+func TestRunJSONInto(t *testing.T) {
+	t.Run("success decodes into typed struct", func(t *testing.T) {
+		var out struct {
+			Items []string
+		}
+		err := RunJSONInto(context.Background(), "sh", []string{"-c", `echo '{"items":["a"]}'`}, extractGws,
+			Options{}, &out)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(out.Items) != 1 || out.Items[0] != "a" {
+			t.Fatalf("out = %+v", out)
+		}
+	})
+
+	t.Run("type mismatch is a failed Error", func(t *testing.T) {
+		var out struct {
+			Items []string
+		}
+		err := RunJSONInto(context.Background(), "sh", []string{"-c", `echo '{"items":"x"}'`}, extractGws,
+			Options{}, &out)
+		var ce *Error
+		if !errors.As(err, &ce) || ce.Kind != KindFailed {
+			t.Fatalf("got %v", err)
+		}
+	})
+}

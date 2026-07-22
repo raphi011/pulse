@@ -28,6 +28,7 @@ bin/
 .task/
 frontend/dist/
 frontend/bindings/
+/pulse
 
 # debug
 npm-debug.log*
