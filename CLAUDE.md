@@ -1,65 +1,96 @@
 # Work Dashboard
 
-*Mid-rewrite: this branch is porting the app from Tauri (Rust) to Wails v3 (Go). Backend logic
-lives in Go under `internal/` — all eight modules are now ported (Plan 2 complete); frontend
-in `frontend/` (Vite/React); run via `wails3 dev`. Plan 3 cutover (deleting `src-tauri/`,
-pruning Tauri/Drizzle/Zod deps, rewriting this file for the Go world) is still pending. The
-Tauri-stack sections below are stale until then.*
-
-Local, single-user, pluggable Tauri desktop dashboard (Vite + React) for organizing daily work. Personal project.
+Local, single-user, pluggable Wails v3 desktop dashboard — Go backend
+(`internal/`), Vite + React webview (`frontend/`). Personal project.
 
 ## Conventions
 
-- **No Jira prefix on commits/branches.** This is a personal project, not day-job work — the global `[CORE-12345]` rule does not apply here. Use plain conventional-style messages (e.g. `feat: add github module`).
+- **No Jira prefix on commits/branches.** Personal project — plain conventional
+  messages (e.g. `feat: add github module`).
 - Feature-flag-style toggles default to disabled.
 - Match existing patterns; keep changes surgical.
 
 ## Stack
 
-- Tauri v2 + Vite 6 + React 19 + TypeScript (SPA rendered in the webview, no server)
+- Wails v3 (`v3.0.0-alpha2.114`) + Go ≥ 1.25; Vite 8 + React 19 + TypeScript
 - Tailwind v4 (CSS-native `@theme` in `src/globals.css`; class-based dark mode)
-- Drizzle ORM (`dashboard.db`; `tauri-plugin-sql` transport in-app, `better-sqlite3` test-only)
-- dnd-kit (drag/reorder), TanStack Query (cache-first fetch)
-- Zod (widget config), Vitest + Testing Library (tests)
+- SQLite via `internal/db` (stdlib `database/sql`; migrations in
+  `internal/db/migrations/*.sql`, run on startup)
+- dnd-kit (drag/reorder), TanStack Query (cache-first fetch), Vitest + Testing
+  Library
 
 ## Commands
 
-- `npm run dev` — `tauri dev` (Rust + webview); `npm run dev:vite` — Vite only, no Rust
-- `npm start` — release build (`.app` only) + open it (how the app is run for daily use)
-- `npm test` / `npm run test:watch` — tests
-- `npm run build` — `tauri build` (release `.app`/`.dmg`); `npm run build:vite` — Vite build only; `npm run lint`
-- `npm run db:generate` — Drizzle migration files (migrations run in-app via the SQL plugin, not a CLI step)
+- `wails3 dev` (or `task dev`) — dev mode; `task start` — package release
+  `.app` + open it (daily use)
+- `go test -race ./internal/... ./cmd/...` — backend tests
+- `cd frontend && npm test` / `npm run lint` / `npx tsc --noEmit` — frontend gates
+- `wails3 generate bindings -ts -i` — regenerate TS bindings (gitignored) after
+  changing any bound service surface
+- `go run ./cmd/gen-widget-types` — regenerate `frontend/src/widget-types.gen.json`
+  after adding/removing a widget type
 
 ## Architecture
 
-Integrations are self-contained **modules** under `src/modules/<name>/`, split into:
-- `manifest.ts` — shared types, Zod config schema, defaults, and one `WidgetManifest` per widget (`type/title/configSchema/defaultConfig/refreshable?/integration?`) via `defineManifest` (no runtime deps)
-- `fetch.ts` — `registerFetch(manifest, { fetch })`; CLI-first, but API is fine
-- `widgets/*.tsx` + `render.ts` — `registerRender(manifest, { Component, icon?, count?, HeaderControls?, formEditable? })`
-- `repo.ts` (only for local-data modules, e.g. bookmarks) — module-owned table + CRUD functions
+Integrations are **modules**: a Go package `internal/modules/<name>/` implementing
+`module.Module` (`Manifests() []module.Manifest` + `Fetch(ctx, widgetType,
+config)`), plus a frontend render side `frontend/src/modules/<name>/`
+(`manifest.ts` = plain TS types mirroring the Go payloads, `render.ts` =
+`registerRender(TYPE, { Component, icon, ... })`, `widgets/*.tsx`).
 
-The shell knows only the widget contract, never a specific integration. Add a module = drop a folder + add its import to `src/modules/fetch.ts` and `src/modules/render.ts`.
+The server owns manifests and config validation; config forms are generated from
+`module.ConfigField` (kinds: string, number, boolean, stringList, enum —
+`ConfigField` serializes `def`, not `default`). `module.DecodeConfig[T]` turns
+the validated map into a typed struct at the top of `Fetch`.
 
-Data flow is **cache-first**: widgets read cached rows from `widget_cache` instantly; refresh (manual or interval) re-runs `fetch()` and re-caches. Layout *is* the `widgets` table (`column`/`order`/`hidden`).
+Wiring a module (all in the same commit — two parity tests enforce it):
+1. `internal/modules/all.go` → append to `ManifestModules()`
+2. `main.go` → append to the registry (and `application.NewService(...)` if the
+   module has a bound mutation service)
+3. `go run ./cmd/gen-widget-types` → commit the regenerated
+   `frontend/src/widget-types.gen.json`
+4. `frontend/src/modules/render.ts` → add the `import "./<name>/render";`
 
-**Authoring a module:** vocabulary is pinned in `CONTEXT.md` (glossary); use the **`create-module`** skill (`.claude/skills/create-module/`) to scaffold one.
+Data flow is **cache-first**: widgets read cached payloads instantly; refresh
+re-runs the Go `Fetch` and re-caches (event `widget:cache-updated`, bare
+widget-id string). Cache rows: `{widgetId, payload, fetchedAt, status, error,
+errorKind}`, errorKind ∈ `not-found|auth|timeout|failed`.
 
-**No server, no API routes, no RSC.** The app is a Vite SPA: the webview runs *all* non-UI TS (module fetch/parse, Zod validation, Drizzle, repos, services) in-process. React reads/writes through `src/lib/dashboard-data.ts` directly (still wrapped by TanStack Query) — no `fetch()`-to-an-endpoint indirection.
+Widgets that mutate data call Wails-bound per-module services through
+`frontend/src/lib/backend.ts` (e.g. gws email/task actions, pomodoro session
+log) — never CLIs or the DB directly. Local user data lives in a module-owned
+table via a module `repo.go` (see `bookmarks`, `pomodoro`).
 
-**Gotchas / patterns (code-verified):**
-- Config forms auto-generate from the Zod schema; only these field kinds render (`src/components/schema-form.tsx`): `string`, `number`, `boolean`, `stringList` (`z.array(z.string())`), `enum`. `.describe()` sets the label. Other shapes throw.
-- CLI-backed modules wrap `runCli` (`src/server/cli.ts`, spawns via `tauri-plugin-shell`'s `Command`, with a Homebrew-inclusive `PATH` prepended so a Finder-launched `.app` still finds `gh`/`jira`/`gws`). Two error models: process-model CLIs (stderr + non-zero exit, e.g. `gh`/`jira`) use `runCli` + an auth regex; payload-model CLIs (errors as JSON on stdout, maybe exit 0, e.g. `gws`) use `runJsonCli` + an error extractor. Errors classify as `not-found`/`auth`/`timeout`/`failed`.
-- N+1 enrichment (list → per-item detail) uses `Promise.allSettled` so one failure doesn't sink the widget (`github/prs.ts`).
-- Reference modules: `github` (3 widgets, N+1 enrichment) and `jira` (single widget, custom-query config) — both fully wired; copy their shape.
-- Registration test per module asserts both registries resolve each widget type (`tests/modules/*-registration.test.ts`).
-- Widget bodies get `{ data, config, refresh }`. There is no action/RPC API: widgets that mutate module data import the module's repo functions directly (no server boundary) and call `refresh()` after — see `bookmarks`. Local user data lives in a module-owned table, never in widget config.
-- `refreshable: false` in the manifest hides the refresh button + fetchedAt and skips auto-refresh; `HeaderControls` render *next to* the refresh button, never instead of it.
-- Stored config is validated against the manifest schema on every read (`widget-service.ts`); Zod `.default()`s backfill additive schema changes, breaking ones surface as an in-card "Invalid config" error without overwriting the stored config.
-- Payload shape changed? Bump `CACHE_VERSION` (`src/server/cache-version.ts`) — the cache is wiped on startup mismatch. Widget bodies are wrapped in a per-card ErrorBoundary.
-- DB access goes through `getDb()` (`src/db/client.ts`), which uses Drizzle's `sqlite-proxy` async driver. The transport swaps by environment: `tauri-plugin-sql` in the app, `better-sqlite3` in tests (Node). **All repo functions (`cache-repo`, `config-repo`) are async** — `await` them. Multi-statement atomic writes use `db.batch([...])`, not `db.transaction()`; in-app this goes through the custom `db_batch` Rust command (`src-tauri/src/db_batch.rs`), which runs every statement inside one held `sqlx` transaction (separate BEGIN/COMMIT IPC calls would race across pooled connections). Migrations live in `src-tauri` (`include_str!` of the generated `drizzle/*.sql` files, run by the SQL plugin's migration runner on startup). The DB file lives in the macOS app-data dir: `~/Library/Application Support/com.pulse.dashboard/dashboard.db`.
+**Reference modules:** `ccusage` (smallest: one widget, CLI fetch), `github`
+(multi-widget, N+1 enrichment, process-model CLI), `gws` (payload-model CLI,
+options providers, mutation service).
+
+## Gotchas (code-verified)
+
+- **Numeric manifest defaults are float64 literals** (`20.0` not `20`).
+- **Every payload slice field must be non-nil** (`[]T{}`) — a nil slice marshals
+  to JSON `null` and widgets do `d.items.length`.
+- **Payload JSON keys are camelCase matching the TS types exactly**; optional TS
+  fields (`errors?`, `meetUrl?`) get `omitempty`.
+- Two CLI error models (`internal/cli`): process-model (stderr + non-zero exit,
+  auth classified by regex via `cli.Options.NotAuthPattern` — `gh`, `jira`) and
+  payload-model (errors as JSON on stdout, maybe exit 0 — `gws`, via
+  `cli.RunJSONInto` + an error extractor).
+- CLI seams are injectable `runner` funcs — module tests fake the CLI, never
+  shell out.
+- **Backend-only bound-service methods get `//wails:ignore`** (last doc-comment
+  line, blank `//` before it).
+- `internal/` stays OS-neutral and Wails-free — sole exception:
+  `internal/modules/pomodoro/service.go` (notifications seam).
+- Vite must bind IPv4 (`server.host: "127.0.0.1"` in `vite.config.ts`) — the
+  Wails dev-server asset proxy dials `tcp4`.
+- Stored config is validated against the manifest on every read; additive schema
+  changes backfill via field defaults, breaking ones surface as an in-card
+  error. Widget bodies are wrapped in a per-card ErrorBoundary.
+- DB file: `~/Library/Application Support/com.pulse.dashboard/dashboard.db`.
 
 ## Design & docs
 
 - UI work: use the **impeccable** skill; styling: **tailwind** (v4) skill.
-- Spec: `docs/superpowers/specs/2026-07-09-work-dashboard-design.md`
-- Plans: `docs/superpowers/plans/` (Plan 1 = framework shell; GitHub module = Plan 2)
+- New module: use the **create-module** skill (`.claude/skills/create-module/`).
+- Specs: `docs/superpowers/specs/`; plans: `docs/superpowers/plans/`.
