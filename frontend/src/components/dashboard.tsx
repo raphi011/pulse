@@ -58,7 +58,8 @@ function AutoRefreshControls() {
 function Toolbar({ tabBar, onAdd }: { tabBar: React.ReactNode; onAdd: (type: string) => void }) {
   return (
     <div className="sticky top-0 z-30 border-b border-border/80 bg-surface/80 backdrop-blur dark:border-border-dark/80 dark:bg-surface-dark/70">
-      <div className="flex items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
+      {/* pl-20 clears the macOS traffic lights (MacTitleBarHiddenInset overlays them ~72px into the webview). */}
+      <div className="flex items-center justify-between gap-4 py-3 pl-20 pr-4 sm:pr-6 lg:pr-8">
         {tabBar}
         <div className="flex items-center gap-3">
           <AutoRefreshControls />
@@ -283,7 +284,9 @@ export function Dashboard({
       </main>
       <DragOverlay>
         {activeWidget ? (
-          <div className="cursor-grabbing rounded-xl shadow-2xl ring-1 ring-black/5 dark:ring-white/10">
+          // h-full/w-full: DragOverlay sizes this wrapper to the dragged cell's rect — fill it so the
+          // preview keeps the widget's real size instead of collapsing to content height.
+          <div className="h-full w-full cursor-grabbing rounded-xl shadow-2xl ring-1 ring-black/5 dark:ring-white/10">
             <WidgetCard widget={activeWidget} />
           </div>
         ) : null}

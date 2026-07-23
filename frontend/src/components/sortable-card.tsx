@@ -24,7 +24,9 @@ export function SortableCard({
   const style = {
     transform: isDragging ? undefined : CSS.Translate.toString(transform),
     transition,
-    opacity: isDragging ? 0.4 : 1,
+    // Fully hide the original while dragging: the DragOverlay is the visible preview, and
+    // rectSortingStrategy translates neighbors over this cell — at partial opacity they'd stack.
+    opacity: isDragging ? 0 : 1,
     gridColumn: `span ${colSpan}`,
     gridRow: `span ${widget.rowSpan}`,
   };
