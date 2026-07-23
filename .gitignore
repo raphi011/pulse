@@ -3,7 +3,6 @@
 .superpowers/
 
 # dependencies
-/node_modules
 frontend/node_modules/
 /.pnp
 .pnp.*
@@ -44,11 +43,3 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
-
-# local database
-dashboard.db
-dashboard.db-*
-
-# next.js build artifacts (legacy, pre-Tauri rebuild)
-.next/
-next-env.d.ts
