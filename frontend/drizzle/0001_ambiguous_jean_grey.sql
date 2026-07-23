@@ -1,1 +1,0 @@
-ALTER TABLE `widgets` ADD `accent` text;
