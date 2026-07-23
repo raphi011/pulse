@@ -11,7 +11,5 @@ export default defineConfig({
   resolve: { alias: { "@": resolve(__dirname, "./src") } },
   build: {
     outDir: "dist",
-    // better-sqlite3 is only used by the test transport + drizzle-kit; never bundle it for the webview.
-    rollupOptions: { external: ["better-sqlite3"] },
   },
 });

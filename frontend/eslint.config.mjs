@@ -8,11 +8,11 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   // `dist` at any depth (incl. build bundles inside nested worktree checkouts).
-  // `drizzle` holds generated SQL migrations, `bindings` is wails3-generated
-  // TS bound to Go services/events — neither is source to lint. Sibling dirs
-  // outside frontend/ (src-tauri/target, ../.claude/worktrees) are outside this
-  // config's lint root (cwd is frontend/) and don't need an ignore entry.
-  { ignores: ["**/dist", "drizzle", "bindings"] },
+  // `bindings` is wails3-generated TS bound to Go services/events — not
+  // source to lint. Sibling dirs outside frontend/ (../.claude/worktrees) are
+  // outside this config's lint root (cwd is frontend/) and don't need an
+  // ignore entry.
+  { ignores: ["**/dist", "bindings"] },
   {
     // Webview code cannot reach Node builtins/globals — they throw at runtime.
     // Scoped to src/ only; tests legitimately run on Node.
@@ -23,7 +23,7 @@ export default tseslint.config(
         {
           patterns: [
             {
-              // Bare `node:` builtins only — NOT the `@tauri-apps/plugin-fs` etc. packages.
+              // Bare `node:` builtins only.
               group: ["node:*"],
               message: NODE_API_MESSAGE,
             },

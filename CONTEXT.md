@@ -10,8 +10,10 @@ named. It defines *what* the terms mean — not *how* to build them (see the
 ### Modules & widgets
 
 **Module**:
-A self-contained integration living under `src/modules/<name>/` (e.g. `github`,
-`gws`). A module owns one or more widget types and everything they need.
+A self-contained integration living under `internal/modules/<name>/` (Go
+manifests + fetch) with a matching `frontend/src/modules/<name>/` (React
+render side), e.g. `github`, `gws`. A module owns one or more widget types and
+everything they need.
 _Avoid_: plugin, integration, package, extension.
 
 **Widget type**:
@@ -80,9 +82,7 @@ flag. Layout *is* the set of widgets, not a separate structure.
 _Avoid_: grid, arrangement, positions.
 
 **Repo**:
-The persistence layer for the widget cache and config (`cache-repo`,
-`config-repo`). Its functions are async — `await` them. They reach the DB via
-`getDb()` (`src/db/client.ts`), a `sqlite-proxy` async seam whose transport is
-`tauri-plugin-sql` in the app and better-sqlite3 in tests; atomic
-multi-statement writes use `db.batch()`, not `db.transaction()`.
+A module-owned persistence layer for local user data (e.g. bookmarks,
+pomodoro sessions): a `repo.go` with a `Repo` type and CRUD methods against a
+module-owned table, exposed to widgets through a Wails-bound service.
 _Avoid_: dao, store, model.

@@ -19,7 +19,11 @@ process-model CLI), `gws` (payload-model CLI, options, mutation service),
   be nil** (`[]T{}`) — nil marshals to JSON `null`.
 - `Manifests() []module.Manifest`: `{Type, Title, Refreshable, Integration,
   ConfigFields}`. Field kinds: `FieldString/FieldNumber/FieldBoolean/
-  FieldStringList/FieldEnum`. **Numeric defaults are float64 literals**
+  FieldStringList/FieldEnum/FieldAsyncEnum/FieldAsyncMultiEnum`. The async
+  kinds are dynamic dropdowns (e.g. Jira boards, GWS calendars): set
+  `OptionsKey` instead of `Options`, and implement `module.OptionsSource`'s
+  `FieldOptions() map[string]module.OptionsProvider` to serve the options for
+  that key at fetch time (see `gws`). **Numeric defaults are float64 literals**
   (`20.0`), `Min`/`Max` are `*float64` (use a local `f64` helper).
 - `Fetch(ctx, widgetType, config)`: switch on type; decode config with
   `module.DecodeConfig[cfgStruct](config)`; return the payload struct.

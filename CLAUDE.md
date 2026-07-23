@@ -39,8 +39,11 @@ config)`), plus a frontend render side `frontend/src/modules/<name>/`
 `registerRender(TYPE, { Component, icon, ... })`, `widgets/*.tsx`).
 
 The server owns manifests and config validation; config forms are generated from
-`module.ConfigField` (kinds: string, number, boolean, stringList, enum —
-`ConfigField` serializes `def`, not `default`). `module.DecodeConfig[T]` turns
+`module.ConfigField` (kinds: string, number, boolean, stringList, enum,
+asyncEnum, asyncMultiEnum — `ConfigField` serializes `def`, not `default`).
+The two async kinds are dynamic dropdowns: their options come from the
+module's `OptionsProvider` at runtime, wired via `OptionsSource`/`OptionsKey`
+(see `gws`) rather than a static `Options` list. `module.DecodeConfig[T]` turns
 the validated map into a typed struct at the top of `Fetch`.
 
 Wiring a module (all in the same commit — two parity tests enforce it):
@@ -87,7 +90,8 @@ options providers, mutation service).
 - Stored config is validated against the manifest on every read; additive schema
   changes backfill via field defaults, breaking ones surface as an in-card
   error. Widget bodies are wrapped in a per-card ErrorBoundary.
-- DB file: `~/Library/Application Support/com.pulse.dashboard/dashboard.db`.
+- DB file: `~/Library/Application Support/com.pulse.dashboard/pulse.db`. The
+  old Tauri-era `dashboard.db` in the same dir is unused.
 
 ## Design & docs
 
