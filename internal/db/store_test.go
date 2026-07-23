@@ -116,16 +116,16 @@ func TestDeleteTabRemovesWidgetsCache(t *testing.T) {
 func TestPrefFallback(t *testing.T) {
 	ctx := context.Background()
 	s := NewStore(open(t))
-	v, err := s.Pref(ctx, "theme", "dark")
-	if err != nil || v != "dark" {
-		t.Fatalf("want fallback dark, got %q %v", v, err)
+	v, err := s.Pref(ctx, "ui.activeTab", "default")
+	if err != nil || v != "default" {
+		t.Fatalf("want fallback default, got %q %v", v, err)
 	}
-	if err := s.SetPref(ctx, "theme", "light"); err != nil {
+	if err := s.SetPref(ctx, "ui.activeTab", "t2"); err != nil {
 		t.Fatal(err)
 	}
-	v, err = s.Pref(ctx, "theme", "dark")
-	if err != nil || v != "light" {
-		t.Fatalf("want light, got %q %v", v, err)
+	v, err = s.Pref(ctx, "ui.activeTab", "default")
+	if err != nil || v != "t2" {
+		t.Fatalf("want t2, got %q %v", v, err)
 	}
 }
 
@@ -309,5 +309,89 @@ func TestSetTabOrderRoundTrip(t *testing.T) {
 	}
 	if orders["t1"] != 9 || orders["t2"] != 3 {
 		t.Fatalf("order not updated correctly: %+v", orders)
+	}
+}
+
+func TestCacheWipeRemovesAllRows(t *testing.T) {
+	ctx := context.Background()
+	s := NewStore(open(t))
+	for _, id := range []string{"w1", "w2"} {
+		if err := s.AddWidget(ctx, Widget{ID: id, Type: "x", TabID: "default", Config: json.RawMessage(`{}`)}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := s.CacheSet(ctx, CacheRow{WidgetID: id, Status: "ok", Payload: json.RawMessage(`{}`)}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := s.CacheWipe(ctx); err != nil {
+		t.Fatal(err)
+	}
+	var n int
+	if err := s.DB.QueryRowContext(ctx, `SELECT COUNT(*) FROM widget_cache`).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	if n != 0 {
+		t.Fatalf("want empty cache after wipe, got %d rows", n)
+	}
+}
+
+// A temp trigger that aborts on a sentinel order value lets us fail the batch
+// mid-transaction and assert the earlier updates rolled back.
+func installOrderAbortTrigger(t *testing.T, s *Store, table string) {
+	t.Helper()
+	_, err := s.DB.Exec(`CREATE TRIGGER boom BEFORE UPDATE ON ` + table +
+		` WHEN NEW."order" = 999 BEGIN SELECT RAISE(ABORT, 'boom'); END`)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestSetPositionsRollsBackOnMidBatchFailure(t *testing.T) {
+	ctx := context.Background()
+	s := NewStore(open(t))
+	for _, id := range []string{"w1", "w2"} {
+		if err := s.AddWidget(ctx, Widget{ID: id, Type: "x", TabID: "default", Order: 1, ColSpan: 1, RowSpan: 6, Config: json.RawMessage(`{}`)}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	installOrderAbortTrigger(t, s, "widgets")
+	err := s.SetPositions(ctx, []Position{
+		{ID: "w1", Order: 5, ColSpan: 2, RowSpan: 3}, // applies, then must roll back
+		{ID: "w2", Order: 999, ColSpan: 1, RowSpan: 6},
+	})
+	if err == nil {
+		t.Fatal("want mid-batch failure, got nil")
+	}
+	w1, err := s.Widget(ctx, "w1")
+	if err != nil || w1 == nil {
+		t.Fatalf("widget read failed: %+v %v", w1, err)
+	}
+	if w1.Order != 1 || w1.ColSpan != 1 || w1.RowSpan != 6 {
+		t.Fatalf("w1 update not rolled back: %+v", w1)
+	}
+}
+
+func TestSetTabOrderRollsBackOnMidBatchFailure(t *testing.T) {
+	ctx := context.Background()
+	s := NewStore(open(t))
+	if err := s.AddTab(ctx, Tab{ID: "t1", Name: "A", Order: 1}); err != nil {
+		t.Fatal(err)
+	}
+	installOrderAbortTrigger(t, s, "tabs")
+	err := s.SetTabOrder(ctx, []TabOrder{
+		{ID: "t1", Order: 5}, // applies, then must roll back
+		{ID: "default", Order: 999},
+	})
+	if err == nil {
+		t.Fatal("want mid-batch failure, got nil")
+	}
+	tabs, err := s.Tabs(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tb := range tabs {
+		if tb.ID == "t1" && tb.Order != 1 {
+			t.Fatalf("t1 update not rolled back: %+v", tb)
+		}
 	}
 }

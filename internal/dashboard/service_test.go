@@ -396,6 +396,36 @@ func TestUpdateWidgetInvalidConfigNotStored(t *testing.T) {
 	}
 }
 
+func TestUpdateWidgetUnknownTypeStoresConfigVerbatim(t *testing.T) {
+	store := openStore(t)
+	mod := &fakeModule{manifests: []module.Manifest{widgetManifest()}}
+	svc := NewService(store, newRegistry(t, mod), &recorder{})
+
+	// A widget whose type has no registered manifest (e.g. its module was
+	// removed) — UpdateWidget must store the patch verbatim, not validate it.
+	seed := db.Widget{ID: "ghost1", Type: "ghost", TabID: "default", Config: json.RawMessage(`{}`)}
+	if err := store.AddWidget(context.Background(), seed); err != nil {
+		t.Fatal(err)
+	}
+
+	raw := json.RawMessage(`{"n":"not-a-number","extra":true}`)
+	result, err := svc.UpdateWidget("ghost1", WidgetPatch{Config: &raw})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(result.Config) != string(raw) {
+		t.Fatalf("want config stored verbatim, got %s", result.Config)
+	}
+
+	stored, err := store.Widget(context.Background(), "ghost1")
+	if err != nil || stored == nil {
+		t.Fatalf("widget read failed: %+v %v", stored, err)
+	}
+	if string(stored.Config) != string(raw) {
+		t.Fatalf("want stored config verbatim, got %s", stored.Config)
+	}
+}
+
 func TestUpdateWidgetSetTitleNilClears(t *testing.T) {
 	store := openStore(t)
 	mod := &fakeModule{manifests: []module.Manifest{widgetManifest()}}
@@ -476,9 +506,6 @@ func TestLayoutActiveTabFallsBackToFirstTabWhenSavedMissing(t *testing.T) {
 	}
 	if snapshot.ActiveTabID != snapshot.Tabs[0].ID {
 		t.Fatalf("want active tab to fall back to first tab %q, got %q", snapshot.Tabs[0].ID, snapshot.ActiveTabID)
-	}
-	if snapshot.Prefs.Theme != "dark" {
-		t.Fatalf("want default theme dark, got %q", snapshot.Prefs.Theme)
 	}
 }
 
