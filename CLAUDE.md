@@ -90,8 +90,7 @@ options providers, mutation service).
 - Stored config is validated against the manifest on every read; additive schema
   changes backfill via field defaults, breaking ones surface as an in-card
   error. Widget bodies are wrapped in a per-card ErrorBoundary.
-- DB file: `~/Library/Application Support/com.pulse.dashboard/pulse.db`. The
-  old Tauri-era `dashboard.db` in the same dir is unused.
+- DB file: `~/Library/Application Support/com.pulse.dashboard/pulse.db`.
 
 ## Design & docs
 

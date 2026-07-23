@@ -1,5 +1,5 @@
-// Package apppath resolves where pulse.db lives: the same app-data dir the
-// Tauri app used, but a new file — the old dashboard.db is never touched.
+// Package apppath resolves where pulse.db lives: com.pulse.dashboard's
+// app-data directory.
 package apppath
 
 import (
