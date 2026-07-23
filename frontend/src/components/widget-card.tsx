@@ -3,7 +3,7 @@ import { getRenderWidget } from "@/modules/render-registry";
 import type { Widget } from "@/lib/backend";
 import { WidgetShell, type WidgetState, type DragHandle } from "./widget-shell";
 import { useWidgetData } from "./use-widget-data";
-import { useManifest } from "./use-manifests";
+import { useManifests } from "./use-manifests";
 import { CardMenu } from "./card-menu";
 import { BrandIcon } from "./brand-icon";
 import { WidgetErrorBoundary } from "./widget-error-boundary";
@@ -19,8 +19,11 @@ export function WidgetCard({
   dragHandle?: DragHandle;
 }) {
   const def = getRenderWidget(widget.type);
-  const manifest = useManifest(widget.type);
-  const refreshable = manifest?.refreshable !== false;
+  const { manifests, isPending: manifestsPending } = useManifests();
+  const manifest = manifests.find((m) => m.type === widget.type);
+  // Treat the widget as non-refreshable until manifests resolve — otherwise the
+  // refresh button/timestamp flash on non-refreshable widgets and then vanish.
+  const refreshable = !manifestsPending && manifest?.refreshable !== false;
   const { data, isLoading, isError, error: queryError, refresh, isRefreshing } = useWidgetData(widget.id);
 
   if (!def) {

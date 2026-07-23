@@ -4,16 +4,23 @@ import { WidgetShell } from "@/components/widget-shell";
 import { CardMenu } from "@/components/card-menu";
 
 vi.mock("@/components/use-widget-data", () => ({ useWidgetData: vi.fn() }));
-// WidgetCard also reads the server-owned manifest via useManifest; stub it out so
+// WidgetCard also reads the server-owned manifests via useManifests; stub it out so
 // this test never has to import the real @/lib/backend (Wails bindings).
-vi.mock("@/components/use-manifests", () => ({ useManifest: () => undefined, useManifests: () => [] }));
+vi.mock("@/components/use-manifests", () => ({ useManifest: vi.fn(), useManifests: vi.fn() }));
 import { useWidgetData } from "@/components/use-widget-data";
+import { useManifests } from "@/components/use-manifests";
 import { WidgetCard } from "@/components/widget-card";
-import { registerFixtureRenderWidget, FIXTURE_TYPE } from "../helpers/fixture-widget";
+import { registerFixtureRenderWidget, FIXTURE_TYPE, fixtureManifest } from "../helpers/fixture-widget";
 import type { Widget } from "@/lib/backend";
+import { beforeEach } from "vitest";
 
 registerFixtureRenderWidget();
 const mockUseWidgetData = useWidgetData as unknown as ReturnType<typeof vi.fn>;
+const mockUseManifests = useManifests as unknown as ReturnType<typeof vi.fn>;
+
+beforeEach(() => {
+  mockUseManifests.mockReturnValue({ manifests: [], isPending: false, isError: false });
+});
 const fixtureWidget: Widget = {
   id: "w1", type: FIXTURE_TYPE, title: null, accent: null,
   order: 0, colSpan: 1, rowSpan: 6, hidden: false, tabId: "default", config: { label: "" },
@@ -37,6 +44,37 @@ describe("WidgetCard load-failure state (F6)", () => {
     });
     render(<WidgetCard widget={fixtureWidget} />);
     expect(screen.getByText("Nothing here yet.")).toBeInTheDocument();
+  });
+});
+
+describe("WidgetCard refresh affordance while manifests load", () => {
+  const okData = {
+    data: { payload: { ok: true }, status: "ok", fetchedAt: 1721700000000, error: null, errorKind: null },
+    isLoading: false, isError: false, error: null, refresh: vi.fn(), isRefreshing: false,
+  };
+
+  it("hides the refresh button and timestamp until the manifests query resolves", () => {
+    mockUseWidgetData.mockReturnValue(okData);
+    mockUseManifests.mockReturnValue({ manifests: [], isPending: true, isError: false });
+    render(<WidgetCard widget={fixtureWidget} />);
+    expect(screen.queryByLabelText("Refresh")).not.toBeInTheDocument();
+    expect(screen.queryByText(/ago|now/)).not.toBeInTheDocument();
+  });
+
+  it("keeps them hidden for a non-refreshable widget after manifests resolve", () => {
+    mockUseWidgetData.mockReturnValue(okData);
+    mockUseManifests.mockReturnValue({
+      manifests: [{ ...fixtureManifest, refreshable: false }], isPending: false, isError: false,
+    });
+    render(<WidgetCard widget={fixtureWidget} />);
+    expect(screen.queryByLabelText("Refresh")).not.toBeInTheDocument();
+  });
+
+  it("shows them for a refreshable widget after manifests resolve", () => {
+    mockUseWidgetData.mockReturnValue(okData);
+    mockUseManifests.mockReturnValue({ manifests: [fixtureManifest], isPending: false, isError: false });
+    render(<WidgetCard widget={fixtureWidget} />);
+    expect(screen.getByLabelText("Refresh")).toBeInTheDocument();
   });
 });
 
