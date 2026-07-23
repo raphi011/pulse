@@ -1,46 +1,39 @@
 # Work Dashboard
 
-*Mid-rewrite: this branch is porting the app from Tauri (Rust) to Wails v3 (Go). Backend logic
-lives in Go under `internal/`, frontend in `frontend/` (Vite/React); run via `wails3 dev`. The
-Tauri-stack sections below are stale until the Plan-3 cutover rewrite.*
-
-Local, single-user, pluggable work dashboard.
+Local, single-user, pluggable work dashboard. Wails v3 (Go backend) + Vite/React
+webview. Personal project.
 
 ## Prerequisites
 
 macOS. To build and run the app you need:
 
-- **Node.js** 18+ (20 LTS recommended; developed on 24) and **npm** — the Vite + React frontend.
-- **Rust** (stable, ≥ 1.77.2) via [rustup](https://rustup.rs) — the Tauri backend. `cargo` must be on your `PATH`.
-- **Xcode Command Line Tools** — provides the C compiler/linker Tauri links against. Install with `xcode-select --install`.
+- **Go** ≥ 1.25 — the backend (`internal/`).
+- **Wails v3 CLI** — `go install github.com/wailsapp/wails/v3/cmd/wails3@latest`
+  (the repo pins `v3.0.0-alpha2.114` in `go.mod`).
+- **Task** — `brew install go-task` (Wails drives the build through `Taskfile.yml`).
+- **Node.js** 20+ and **npm** — the Vite + React frontend.
+- **Xcode Command Line Tools** — `xcode-select --install`.
 
-Then `npm install` to pull the JS dependencies (Rust crates are fetched on first build).
+Then `cd frontend && npm install`.
 
-Optional, only if you enable the matching module (each is a CLI the app shells out to):
+Optional, only if you enable the matching module (each is a CLI the app shells
+out to):
 
-- [`gh`](https://cli.github.com) — GitHub module (must be authenticated: `gh auth login`).
+- [`gh`](https://cli.github.com) — GitHub / GitHub-stats modules (`gh auth login`).
 - [`jira`](https://github.com/ankitpokhrel/jira-cli) — Jira module.
 - `gws` — Google Workspace module.
+- [`ccusage`](https://github.com/ryoppippi/ccusage) — Claude-spend module.
 
 ## Run
-- `npm start` — build the release `.app` and open it (one command to run the real app)
+
+- `task start` — package the release `.app` and open it (one command to run the real app)
 
 ## Develop
-- `npm run dev` — start dev server (`tauri dev`: Rust + webview)
-- `npm test` — run tests
-- `npm run db:generate` — schema migration files (applied in-app on launch, no separate migrate step)
 
-## Build
-- `npm run build` (`tauri build`) produces a release `.app` (and `.dmg`) under
-  `src-tauri/target/release/bundle/`. First release compile can take a while.
-- These are unsigned local builds: a `.app` you build yourself opens straight from
-  Finder (no quarantine). Only a `.app` you *downloaded* would need
-  `xattr -cr <path-to-app>` to clear the quarantine flag before it'll open.
+- `wails3 dev` (or `task dev`) — dev mode with hot reload
+- `go test -race ./internal/... ./cmd/...` — backend tests
+- `cd frontend && npm test` — frontend tests
+- `wails3 generate bindings -ts -i` — regenerate the (gitignored) TS bindings
+  after changing any bound service
 
-## Add a module
-1. Create `src/modules/<name>/manifest.ts` (export `<name>Manifest` via `defineManifest({ type, title, configSchema, defaultConfig, refreshable?, integration? })`).
-2. `fetch.ts` — call `registerFetch(manifest, { fetch })`.
-3. `widgets/*.tsx` + `render.ts` — call `registerRender(manifest, { Component, icon?, count?, HeaderControls?, formEditable? })`.
-4. Add `import "./<name>/fetch"` to `src/modules/fetch.ts` and `import "./<name>/render"` to `src/modules/render.ts`.
-
-Storage lives in `dashboard.db` (SQLite). Layout is the `widgets` table; cached fetch results live in `widget_cache`.
+The app stores its data in `~/Library/Application Support/com.pulse.dashboard/`.

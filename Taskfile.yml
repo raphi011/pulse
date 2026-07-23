@@ -39,6 +39,12 @@ tasks:
     cmds:
       - wails3 dev -config ./build/config.yml -port {{.VITE_PORT}}
 
+  start:
+    summary: Packages a release .app and opens it (daily-use entry point)
+    cmds:
+      - task: package
+      - open {{.BIN_DIR}}/{{.APP_NAME}}.app
+
   setup:docker:
     summary: Builds Docker image for cross-compilation (~800MB download)
     cmds:
