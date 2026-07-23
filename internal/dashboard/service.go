@@ -51,9 +51,6 @@ type LayoutSnapshot struct {
 	Widgets     []db.Widget `json:"widgets"`
 	Tabs        []db.Tab    `json:"tabs"`
 	ActiveTabID string      `json:"activeTabId"`
-	Prefs       struct {
-		Theme string `json:"theme"`
-	} `json:"prefs"`
 }
 
 // WidgetPatch is a partial widget update. Config/Title/Accent are pointers
@@ -92,9 +89,9 @@ func (s *Service) FieldOptions(key string) ([]module.FieldOption, error) {
 	return s.registry.FieldOptions(context.Background(), key)
 }
 
-// Layout reads the whole board: widgets, tabs, theme pref (default "dark"),
-// and the active tab (saved pref if it still names an existing tab, else the
-// first tab, else "default").
+// Layout reads the whole board: widgets, tabs, and the active tab (saved
+// pref if it still names an existing tab, else the first tab, else
+// "default").
 func (s *Service) Layout() (LayoutSnapshot, error) {
 	ctx := context.Background()
 
@@ -103,10 +100,6 @@ func (s *Service) Layout() (LayoutSnapshot, error) {
 		return LayoutSnapshot{}, err
 	}
 	tabs, err := s.store.Tabs(ctx)
-	if err != nil {
-		return LayoutSnapshot{}, err
-	}
-	theme, err := s.store.Pref(ctx, "theme", "dark")
 	if err != nil {
 		return LayoutSnapshot{}, err
 	}
@@ -130,9 +123,7 @@ func (s *Service) Layout() (LayoutSnapshot, error) {
 		activeTabID = tabs[0].ID
 	}
 
-	snapshot := LayoutSnapshot{Widgets: widgets, Tabs: tabs, ActiveTabID: activeTabID}
-	snapshot.Prefs.Theme = theme
-	return snapshot, nil
+	return LayoutSnapshot{Widgets: widgets, Tabs: tabs, ActiveTabID: activeTabID}, nil
 }
 
 // CreateWidget adds a widget of widgetType (defaults from its manifest's
@@ -303,10 +294,6 @@ func (s *Service) ReorderTabs(orders []db.TabOrder) error {
 
 func (s *Service) SetActiveTab(id string) error {
 	return s.store.SetPref(context.Background(), "ui.activeTab", id)
-}
-
-func (s *Service) SetTheme(theme string) error {
-	return s.store.SetPref(context.Background(), "theme", theme)
 }
 
 // GetWidgetData is cache-first: refresh==false returns the cached row

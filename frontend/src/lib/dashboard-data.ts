@@ -9,7 +9,6 @@ export type LayoutSnapshot = {
   widgets: Widget[];
   tabs: Tab[];
   activeTabId: string;
-  prefs: { theme: string };
 };
 
 export async function fetchLayout(): Promise<LayoutSnapshot> {
@@ -18,7 +17,6 @@ export async function fetchLayout(): Promise<LayoutSnapshot> {
     widgets: snap.widgets ?? [],
     tabs: snap.tabs ?? [],
     activeTabId: snap.activeTabId,
-    prefs: snap.prefs,
   };
 }
 
