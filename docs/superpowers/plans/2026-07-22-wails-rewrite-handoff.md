@@ -81,21 +81,9 @@ across 8 modules total. Also done:
   with the old TS fetchers.
 - `frontend/legacy-modules/` deleted; tsconfig/vitest excludes for it removed.
 
-## Plan 3 (last): cutover
+## Plan 3 (done): cutover
 
-What actually remains:
-- Delete `src-tauri/` and the root scripts that drove it (Tauri-era `npm start`
-  equivalent); replace with a Wails equivalent (`wails3 package` + open the `.app`).
-- Prune `frontend/package.json`: remove the `zod`/Drizzle/`tauri-plugin-*`/
-  `@tauri-apps/*` dependencies and the `db:generate` script — nothing in the ported
-  Go modules uses them anymore (schema-form/config validation now lives server-side
-  in Go; `better-sqlite3` test-only transport is also gone with `legacy-modules`).
-  Also drop `frontend/drizzle.config.ts`.
-- Rewrite `CLAUDE.md`, `README`, and the `create-module` skill for the Go world
-  (shell-scope/capabilities gotchas no longer apply; document the Go
-  manifest/fetch/render split instead).
-- Merge `worktree-wails` → `main`; delete the old Tauri `dashboard.db` manually
-  whenever.
+Tauri stack deleted (`src-tauri/`, root scripts); frontend deps pruned (`zod`, Drizzle, tauri plugins, better-sqlite3). `CLAUDE.md`, `README.md`, and `create-module` skill rewritten per `docs/superpowers/plans/2026-07-23-wails-rewrite-3-cutover.md`. Old `dashboard.db` left for manual deletion.
 
 ## Known follow-ups (accepted, non-blocking — from final review)
 
