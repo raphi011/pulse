@@ -29,9 +29,13 @@ type Monitor struct {
 	lastTx  uint64
 }
 
+// NewMonitor primes the delta-based counters so the first Sample reports a
+// delta, not the boot total. Note: cpu.Percent(0, …) keeps its previous-sample
+// state in a gopsutil package-global, not in Monitor — construct at most one
+// Monitor per process, or concurrent Samples will corrupt each other's deltas.
 func NewMonitor() *Monitor {
 	m := &Monitor{lastNet: time.Now()}
-	m.netTotals() // prime the counters so the first Sample reports a delta, not the boot total
+	m.netTotals()
 	cpu.Percent(0, false)
 	return m
 }

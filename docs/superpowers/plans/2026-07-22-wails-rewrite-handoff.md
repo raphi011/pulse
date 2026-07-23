@@ -85,16 +85,15 @@ across 8 modules total. Also done:
 
 Tauri stack deleted (`src-tauri/`, root scripts); frontend deps pruned (`zod`, Drizzle, tauri plugins, better-sqlite3). `CLAUDE.md`, `README.md`, and `create-module` skill rewritten per `docs/superpowers/plans/2026-07-23-wails-rewrite-3-cutover.md`. Old `dashboard.db` left for manual deletion.
 
-## Known follow-ups (accepted, non-blocking — from final review)
+## Known follow-ups (all addressed post-cutover, 2026-07-23)
 
-- Refresh button/timestamp can flash on non-refreshable widgets before the manifests
-  query resolves.
-- Theme pref is vestigial (SetTheme bound, never called; `index.html` hardcodes dark)
-  — same as the old app.
-- Test hardening: CacheWipe, SetPositions/SetTabOrder rollback paths,
-  UpdateWidget unknown-type verbatim-store branch.
-- gopsutil cpu.Percent keeps package-global delta state (one Monitor per process —
-  add comment if refactoring).
+- ~~Refresh button/timestamp flash on non-refreshable widgets~~ — fixed: widget-card
+  treats widgets as non-refreshable until the manifests query resolves.
+- ~~Vestigial theme pref~~ — removed: `SetTheme`, `LayoutSnapshot.Prefs`, and the
+  frontend `prefs` passthrough deleted (dark stays hardcoded in `index.html`).
+- ~~Test hardening~~ — added: CacheWipe, SetPositions/SetTabOrder mid-batch rollback
+  (via a RAISE(ABORT) trigger), UpdateWidget unknown-type verbatim-store.
+- ~~gopsutil cpu.Percent global delta state~~ — documented on `NewMonitor`.
 - `.superpowers/sdd/task-*-report.md` files (worktree, gitignored) hold per-task
   implementation reports incl. the bindings layout notes (task-10) — useful while
   they last, not durable.
