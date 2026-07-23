@@ -5,6 +5,9 @@ import { resolve } from "node:path";
 export default defineConfig({
   plugins: [react()],
   clearScreen: false,
+  // Wails' dev-server asset proxy dials tcp4 127.0.0.1; without an explicit
+  // host Vite binds `localhost`, which Node ≥17 may resolve to ::1 only.
+  server: { host: "127.0.0.1" },
   resolve: { alias: { "@": resolve(__dirname, "./src") } },
   build: {
     outDir: "dist",
